@@ -1,13 +1,16 @@
 name: Build & Release
 
-# Runs when you publish a new version tag (e.g. v1.5.1) — from GitHub "Releases → Draft a new release" or `git tag v1.5.1 && git push --tags`
+# Manual only: Actions → "Build & Release" → Run workflow → choose the version tag.
+# (Releases are published by hand; this just builds an installer if you want one.)
 on:
-  push:
-    tags: ['v*']
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build (e.g. 1.5.2)'
+        required: true
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   windows:
@@ -23,7 +26,7 @@ jobs:
       - name: Version from tag
         shell: bash
         run: |
-          VER="${GITHUB_REF_NAME#v}"
+          VER="${{ github.event.inputs.version }}"; VER="${VER#v}"
           if [[ ! "$VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then VER=$(node -p "require('./package.json').version"); fi
           echo "VER=$VER" >> $GITHUB_ENV
           npm version "$VER" --no-git-tag-version --allow-same-version
@@ -47,11 +50,8 @@ jobs:
           New-Item -ItemType Directory -Force release | Out-Null
           & "C:\Program Files (x86)\NSIS\makensis.exe" /V2 "/DVER=$env:VER" build\installer.nsi
 
-      - name: Publish release
-        uses: softprops/action-gh-release@v2
+      - name: Upload installer (download it from this run's Artifacts)
+        uses: actions/upload-artifact@v4
         with:
-          name: MC Pack Studio ${{ env.VER }}
-          files: release/*.exe
-          body_path: RELEASE_NOTES.md
-          generate_release_notes: true
-          make_latest: true
+          name: MC-Pack-Studio-Setup-${{ env.VER }}
+          path: release/*.exe
