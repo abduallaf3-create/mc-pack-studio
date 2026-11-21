@@ -50,5 +50,8 @@ jobs:
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
+          name: MC Pack Studio ${{ env.VER }}
           files: release/*.exe
+          body_path: RELEASE_NOTES.md
           generate_release_notes: true
+          make_latest: true
