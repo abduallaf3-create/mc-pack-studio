@@ -2,7 +2,7 @@ Unicode true
 !include "MUI2.nsh"
 !define APP "MC Pack Studio"
 !ifndef VER
-  !define VER "1.5.0"
+  !define VER "1.5.1"
 !endif
 !define EXE "MC Pack Studio.exe"
 !define UNKEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\MCPackStudio"
