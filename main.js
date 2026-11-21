@@ -655,7 +655,7 @@ ipcMain.handle('cfg:write', (_e, dir, rel, text) => {
 const UPDATE_REPO = require('./package.json').updateRepo || 'abduallaf3-create/mc-pack-studio';
 const semverGt = (a, b) => { const x = String(a).replace(/^v/, '').split('.').map(Number), y = String(b).replace(/^v/, '').split('.').map(Number); for (let i = 0; i < 3; i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); } return false; };
 ipcMain.handle('update:check', async () => {
-  const r = await net.fetch(`https://api.github.com/repos/${UPDATE_REPO}/releases/latest`, { headers: { 'User-Agent': 'MC-Pack-Studio', Accept: 'application/vnd.github+json' } });
+  const r = await net.fetch(`${process.env.MCS_UPDATE_API || 'https://api.github.com'}/repos/${UPDATE_REPO}/releases/latest`, { headers: { 'User-Agent': 'MC-Pack-Studio', Accept: 'application/vnd.github+json' } });
   if (r.status === 404) return { available: false, current: app.getVersion(), none: true };
   if (!r.ok) throw new Error('HTTP ' + r.status);
   const rel = await r.json();
