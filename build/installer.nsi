@@ -1,7 +1,9 @@
 Unicode true
 !include "MUI2.nsh"
 !define APP "MC Pack Studio"
-!define VER "1.4.0"
+!ifndef VER
+  !define VER "1.5.0"
+!endif
 !define EXE "MC Pack Studio.exe"
 !define UNKEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\MCPackStudio"
 
@@ -12,7 +14,7 @@ InstallDirRegKey HKCU "Software\MCPackStudio" "InstallDir"
 RequestExecutionLevel user
 SetCompressor /SOLID lzma
 BrandingText "${APP} ${VER}"
-VIProductVersion "1.4.0.0"
+VIProductVersion "${VER}.0"
 VIAddVersionKey "ProductName" "${APP}"
 VIAddVersionKey "FileDescription" "${APP} Setup"
 VIAddVersionKey "FileVersion" "${VER}"
@@ -42,6 +44,7 @@ FunctionEnd
 
 Section "Install"
   nsExec::Exec 'taskkill /F /IM "${EXE}"'
+  Sleep 800
   SetOutPath "$INSTDIR"
   File /r "..\dist\MC Pack Studio-win32-x64\*.*"
   WriteUninstaller "$INSTDIR\Uninstall.exe"
@@ -59,6 +62,11 @@ Section "Install"
   WriteRegDWORD HKCU "${UNKEY}" "NoModify" 1
   WriteRegDWORD HKCU "${UNKEY}" "NoRepair" 1
 SectionEnd
+
+Function .onInstSuccess
+  IfSilent 0 +2
+  Exec '"$INSTDIR\${EXE}"'
+FunctionEnd
 
 Section "Uninstall"
   nsExec::Exec 'taskkill /F /IM "${EXE}"'

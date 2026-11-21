@@ -1,0 +1,54 @@
+name: Build & Release
+
+# Runs when you publish a new version tag (e.g. v1.5.1) — from GitHub "Releases → Draft a new release" or `git tag v1.5.1 && git push --tags`
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Version from tag
+        shell: bash
+        run: |
+          VER="${GITHUB_REF_NAME#v}"
+          if [[ ! "$VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then VER=$(node -p "require('./package.json').version"); fi
+          echo "VER=$VER" >> $GITHUB_ENV
+          npm version "$VER" --no-git-tag-version --allow-same-version
+
+      - run: npm ci
+
+      - name: Package app
+        shell: bash
+        run: |
+          npx @electron/packager . "MC Pack Studio" --platform=win32 --arch=x64 --out=dist --overwrite --asar \
+            --icon=build/icon.ico --app-version="$VER" \
+            --ignore='^/test' --ignore='^/dist' --ignore='^/release' --ignore='^/\.github' --ignore='\.nsi$' --ignore='\.bmp$'
+
+      - name: Install NSIS (if missing)
+        shell: pwsh
+        run: if (-not (Test-Path "C:\Program Files (x86)\NSIS\makensis.exe")) { choco install nsis -y }
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force release | Out-Null
+          & "C:\Program Files (x86)\NSIS\makensis.exe" /V2 "/DVER=$env:VER" build\installer.nsi
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*.exe
+          generate_release_notes: true

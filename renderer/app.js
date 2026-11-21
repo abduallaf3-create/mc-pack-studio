@@ -1295,7 +1295,8 @@ async function renderSettings(main) {
       <h3 style="margin:10px 0 0">${icon('star', 18)} اللون الأساسي</h3>
       <div class="accent-pick">${Object.entries(ACCENTS).map(([k, [a, b]]) => `<button data-acc="${k}" class="${S.settings.accent === k ? 'on' : ''}" style="background:linear-gradient(135deg,${a},${b})"></button>`).join('')}</div></div>
     <div class="card" style="margin-top:16px"><h3>معلومات</h3>
-      <div class="kv"><span class="muted">الإصدار</span><span class="ltr">MC Pack Studio ${esc(info.version)}</span></div>
+      <div class="kv"><span class="muted">الإصدار</span><span class="row"><span class="ltr">MC Pack Studio ${esc(info.version)}</span><button class="btn sm primary" id="oupd">${icon('reset', 14)} تحقق من التحديثات</button></span></div>
+      <div class="kv"><span class="muted">تحقق تلقائي من التحديثات</span><label class="switch"><input type="checkbox" id="oauto" ${S.settings.autoUpdate !== false ? 'checked' : ''}><span></span></label></div>
       <div class="kv"><span class="muted">مجلد ماينكرافت</span><span class="ltr small">${esc(info.mcDir)}</span></div>
       <div class="kv"><span class="muted">مكان حفظ ملفاتك</span><span class="row"><span class="ltr small">${esc(info.dataDir)}</span><button class="btn sm ghost icon" id="odata">${icon('folder', 15)}</button></span></div>
       <div class="kv"><span class="muted">ملفات اللعبة المحمّلة</span><span class="row"><button class="btn sm" id="owiz">${icon('download', 15)} معالج الإعداد</button><button class="btn sm ghost icon" id="ogame">${icon('folder', 15)}</button></span></div>
@@ -1306,6 +1307,8 @@ async function renderSettings(main) {
   $('#odata', main).onclick = () => api.fs.open(info.dataDir);
   $('#obak', main).onclick = async () => api.fs.open(await api.mods.backups());
   $('#owiz', main).onclick = () => openWizard();
+  $('#oupd', main).onclick = () => checkUpdates(true);
+  $('#oauto', main).onchange = async (e) => { S.settings.autoUpdate = e.target.checked; await api.settings.set(S.settings); };
   $('#ogame', main).onclick = async () => api.fs.open(await api.game.dir());
 }
 
@@ -1601,6 +1604,27 @@ async function autoFetchGame() {
     if (S.project) { const had = S.project.baseJar; S.project.baseJar = null; S.project.baseApprox = null; await autoBase(S.project, false); if (S.project.baseJar !== had) render(); }
   }
 }
+
+// ------------------------------------------------------------- updates
+async function checkUpdates(manual) {
+  let r;
+  try { r = await api.update.check(); } catch (e) { if (manual) toast('ما قدرت أتحقق من التحديثات — تأكد من النت', 'err'); return; }
+  if (!r.available) { if (manual) toast(r.none ? 'ما فيه إصدارات منشورة للحين' : `عندك آخر نسخة (${esc(r.current)}) ✓`); return; }
+  if (!manual && S.settings.skipVersion === r.version) return;
+  const notes = esc(r.notes || '').replace(/\r?\n/g, '<br>').slice(0, 3000);
+  const m = modal({ title: `${icon('download', 18)} فيه تحديث جديد: ${esc(r.version)}`, sub: `نسختك الحالية ${esc(r.current)}`,
+    body: `<div class="stack">${notes ? `<div class="card" style="max-height:260px;overflow:auto;line-height:1.8">${notes}</div>` : '<p class="muted">تحسينات وإصلاحات.</p>'}
+      <div id="upb" style="display:none"><div class="bar"><i id="upi"></i></div><span class="muted small ltr" id="ups"></span></div></div>`,
+    foot: `<button class="btn primary" id="upgo">${icon('download', 16)} حدّث الحين</button><button class="btn ghost" id="uplater">بعدين</button><span class="spacer"></span><button class="btn ghost small" id="upskip">تجاهل هذي النسخة</button>` });
+  $('#uplater', m.el).onclick = () => m.close(true);
+  $('#upskip', m.el).onclick = async () => { S.settings.skipVersion = r.version; await api.settings.set(S.settings); m.close(true); };
+  $('#upgo', m.el).onclick = async () => {
+    $$('.modal-f button', m.el).forEach((x) => x.disabled = true); $('#upb', m.el).style.display = '';
+    api.onUpdateProgress((d) => { if (d.total) { $('#upi', m.el).style.width = Math.round(d.got / d.total * 100) + '%'; $('#ups', m.el).textContent = `${(d.got / 1048576).toFixed(1)} / ${(d.total / 1048576).toFixed(1)} MB`; } });
+    try { await api.update.install(r.url, r.version); $('#ups', m.el).textContent = 'يتثبّت التحديث... التطبيق بيقفل ويرجع يفتح لحاله'; }
+    catch (e) { toast('فشل تحميل التحديث', 'err'); $$('.modal-f button', m.el).forEach((x) => x.disabled = false); }
+  };
+}
 // ------------------------------------------------------------- boot
 (async function boot() {
   S.settings = await api.settings.get(); applyAccent();
@@ -1609,4 +1633,5 @@ async function autoFetchGame() {
   renderRail(); render();
   if (S.settings.setupVersion !== 2) openWizard();
   autoFetchGame();
+  if (S.settings.autoUpdate !== false) setTimeout(() => checkUpdates(false), 4000);
 })();

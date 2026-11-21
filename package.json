@@ -1,6 +1,6 @@
 {
   "name": "mc-pack-studio",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Minecraft resource pack & mod studio",
   "main": "main.js",
   "scripts": {
@@ -54,5 +54,10 @@
       "multiLanguageInstaller": false,
       "deleteAppDataOnUninstall": false
     }
+  },
+  "updateRepo": "abduallaf3-create/mc-pack-studio",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/abduallaf3-create/mc-pack-studio.git"
   }
 }

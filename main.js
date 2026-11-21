@@ -650,6 +650,35 @@ ipcMain.handle('cfg:write', (_e, dir, rel, text) => {
   fs.writeFileSync(f, text); return true;
 });
 
+
+// ---------------------------------------------------------------- auto update (GitHub Releases)
+const UPDATE_REPO = require('./package.json').updateRepo || 'abduallaf3-create/mc-pack-studio';
+const semverGt = (a, b) => { const x = String(a).replace(/^v/, '').split('.').map(Number), y = String(b).replace(/^v/, '').split('.').map(Number); for (let i = 0; i < 3; i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); } return false; };
+ipcMain.handle('update:check', async () => {
+  const r = await net.fetch(`https://api.github.com/repos/${UPDATE_REPO}/releases/latest`, { headers: { 'User-Agent': 'MC-Pack-Studio', Accept: 'application/vnd.github+json' } });
+  if (r.status === 404) return { available: false, current: app.getVersion(), none: true };
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const rel = await r.json();
+  const asset = (rel.assets || []).find((a) => /setup.*\.exe$/i.test(a.name)) || (rel.assets || []).find((a) => /\.exe$/i.test(a.name));
+  const version = String(rel.tag_name || '').replace(/^v/, '');
+  return { available: !!asset && semverGt(version, app.getVersion()), current: app.getVersion(), version, notes: rel.body || '', name: rel.name || version, url: asset && asset.browser_download_url, size: asset && asset.size, page: rel.html_url };
+});
+ipcMain.handle('update:install', async (e, url, version) => {
+  if (!/^https:\/\/github\.com\/|^https:\/\/objects\.githubusercontent\.com\//.test(url)) throw new Error('bad url');
+  const res = await net.fetch(url, { headers: { 'User-Agent': 'MC-Pack-Studio' } });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const total = +res.headers.get('content-length') || 0; const reader = res.body.getReader();
+  const chunks = []; let got = 0, last = 0;
+  for (;;) { const { done, value } = await reader.read(); if (done) break; chunks.push(Buffer.from(value)); got += value.length; if (Date.now() - last > 150) { last = Date.now(); try { e.sender.send('update:progress', { got, total }); } catch {} } }
+  const file = path.join(os.tmpdir(), `MC-Pack-Studio-Setup-${String(version).replace(/[^\w.-]/g, '')}.exe`);
+  fs.writeFileSync(file, Buffer.concat(chunks));
+  // run the installer silently; it closes this app, installs, then starts the new version
+  require('child_process').spawn(file, ['/S'], { detached: true, stdio: 'ignore' }).unref();
+  setTimeout(() => app.quit(), 800);
+  return true;
+});
+ipcMain.handle('update:open', (_e, u) => { if (/^https:\/\/github\.com\//.test(u)) shell.openExternal(u); return true; });
+
 // ---------------------------------------------------------------- window
 let win;
 function createWindow() {
