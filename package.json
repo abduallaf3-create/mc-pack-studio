@@ -1,0 +1,58 @@
+{
+  "name": "mc-pack-studio",
+  "version": "1.4.0",
+  "description": "Minecraft resource pack & mod studio",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": [],
+  "author": "MC Pack Studio",
+  "license": "ISC",
+  "dependencies": {
+    "adm-zip": "^0.5.18",
+    "wasm-media-encoders": "^0.7.0"
+  },
+  "devDependencies": {
+    "@electron/packager": "^20.3.0",
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8",
+    "resedit": "^2.0.3"
+  },
+  "productName": "MC Pack Studio",
+  "build": {
+    "appId": "com.mcpackstudio.app",
+    "productName": "MC Pack Studio",
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "MC Pack Studio",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "runAfterFinish": true,
+      "artifactName": "MC-Pack-Studio-Setup-${version}.exe",
+      "language": "1025",
+      "multiLanguageInstaller": false,
+      "deleteAppDataOnUninstall": false
+    }
+  }
+}
