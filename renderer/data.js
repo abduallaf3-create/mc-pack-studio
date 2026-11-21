@@ -1,16 +1,7 @@
 // Versions, texture catalog and icons
-window.VERSIONS = [
-  { id: '1.8.9', pf: 1, label: '1.8.9 (PvP)' },
-  { id: '1.12.2', pf: 3, label: '1.12.2' },
-  { id: '1.16.5', pf: 6, label: '1.16.5' },
-  { id: '1.20.1', pf: 15, label: '1.20.1' },
-  { id: '1.20.4', pf: 22, label: '1.20.4' },
-  { id: '1.21.1', pf: 34, label: '1.21.1' },
-  { id: '1.21.4', pf: 46, label: '1.21.4' },
-  { id: '1.21.8', pf: 64, label: '1.21.8' },
-  { id: '1.21.10', pf: 69, label: '1.21.10' },
-  { id: '1.21.11', pf: 75, label: '1.21.11 (الأحدث)' },
-];
+// only 1.21.11 and newer; the real list comes live from Mojang at startup (see loadVersions in app.js)
+window.KNOWN_PF = { '1.21.11': 75 };
+window.VERSIONS = [{ id: '1.21.11', pf: 75, label: '1.21.11' }];
 
 const T = 'textures/';
 const L = (p) => [1, 3, T + p];        // 1.8 - 1.12

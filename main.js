@@ -26,8 +26,8 @@ fs.mkdirSync(BACKUP_DIR, { recursive: true });
 // ---------------------------------------------------------------- clients
 const CLIENTS = [
   { id: 'lunar', name: 'Lunar Client', color: '#5b8cff', type: 'instances', roots: ['{home}/.lunarclient/profiles'], subs: [''], rpSub: 'resourcepacks', modsSub: 'mods',
-    extra: [{ name: '1.8.9 / الافتراضي (.minecraft)', rp: '{mc}/resourcepacks', mods: '' }],
-    note: 'Lunar الجديد (1.21) يحفظ الباكات داخل البروفايل حقك في .lunarclient/profiles. نسخة 1.8.9 تستخدم .minecraft. Lunar ما يحفظ تكسترات اللعبة بالجهاز، فالتطبيق يحمّلها من Mojang.' },
+    extra: [{ name: 'الافتراضي (.minecraft)', rp: '{mc}/resourcepacks', mods: '' }],
+    note: 'Lunar يحفظ الباكات داخل البروفايل حقك في .lunarclient/profiles. وما يحفظ تكسترات اللعبة بالجهاز، فالتطبيق يحمّلها من Mojang.' },
   { id: 'badlion', name: 'Badlion Client', color: '#ff4d5e', type: 'single', rp: '{mc}/resourcepacks', mods: null, note: 'يستخدم مجلد ريسورس باك ماينكرافت الأساسي. لا يدعم مودات خارجية.' },
   { id: 'feather', name: 'Feather Client', color: '#3fd0c9', type: 'single', rp: '{mc}/resourcepacks', mods: '{appdata}/.feather/user-mods', note: 'المودات الخاصة في مجلد user-mods (تقدر تغيّر المسار).' },
   { id: 'labymod', name: 'LabyMod 4', color: '#4fa3ff', type: 'single', rp: '{mc}/resourcepacks', mods: '{mc}/labymod-neo/addons', note: 'الإضافات (Addons) في مجلد labymod-neo.' },
@@ -599,12 +599,37 @@ ipcMain.handle('held:build', (_e, project, cfg) => {
 });
 ipcMain.handle('file:getRaw', (_e, id, rel) => { const f = path.join(filesDir(id), safeRel(rel)); return exists(f) ? fs.readFileSync(f, 'utf8') : null; });
 
+
+// ---------------------------------------------------------------- supported versions (1.21.11 and newer, live from Mojang)
+const MIN_VERSION = '1.21.11';
+ipcMain.handle('versions:list', async () => {
+  const cache = path.join(GAME_DIR, 'manifest.json');
+  let man = null;
+  try { man = await fetchJSON(MANIFEST); writeJSON(cache, man); } catch { man = readJSON(cache, null); }
+  if (!man || !man.versions) return [{ id: MIN_VERSION }];
+  const min = man.versions.find((v) => v.id === MIN_VERSION);
+  const minTime = min ? Date.parse(min.releaseTime) : 0;
+  const out = man.versions.filter((v) => v.type === 'release' && Date.parse(v.releaseTime) >= minTime).map((v) => ({ id: v.id, time: v.releaseTime }));
+  return out.length ? out : [{ id: MIN_VERSION }];
+});
+// exact resource pack format from the game's own version.json
+ipcMain.handle('jar:packFormat', (_e, jarPath) => {
+  const z = openJar(jarPath); const e = z && z.getEntry('version.json'); if (!e) return null;
+  try {
+    const pv = JSON.parse(e.getData().toString('utf8')).pack_version;
+    if (typeof pv === 'number') return [pv, 0];
+    if (pv && typeof pv.resource === 'number') return [pv.resource, 0];
+    if (pv && pv.resource_major !== undefined) return [pv.resource_major, pv.resource_minor || 0];
+  } catch {}
+  return null;
+});
+
 // ---------------------------------------------------------------- build / install
 function buildZip(project, extra) {
   const zip = new AdmZip();
   const pf = project.packFormat;
   const meta = { pack: { description: project.description || project.name } };
-  if (pf >= 65) { meta.pack.min_format = [pf, 0]; meta.pack.max_format = [pf, 0]; }
+  if (pf >= 65) { const mn = project.packFormatMinor || 0; meta.pack.min_format = [pf, mn]; meta.pack.max_format = [pf, mn]; }
   else { meta.pack.pack_format = pf; if (pf >= 18) meta.pack.supported_formats = [pf, 64]; }
   zip.addFile('pack.mcmeta', Buffer.from(JSON.stringify(meta, null, 2)));
   const icon = path.join(projDir(project.id), 'pack.png');

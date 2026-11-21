@@ -205,13 +205,14 @@ async function makeIcon(name, color) {
 }
 
 function openProjectForm(edit) {
-  const p = edit ? { ...edit } : { name: '', description: '', clientId: (S.clients.find((c) => c.detected) || S.clients[0]).id, version: '1.8.9', activate: false };
+  const p = edit ? { ...edit } : { name: '', description: '', clientId: (S.clients.find((c) => c.detected) || S.clients[0]).id, version: VERSIONS[0].id, activate: false };
+  const verList = VERSIONS.some((v) => v.id === p.version) ? VERSIONS : [...VERSIONS, { id: p.version, pf: p.packFormat, label: p.version + ' (قديمة)' }];
   const m = modal({
     cls: 'lg', title: edit ? 'إعدادات الملف' : 'ملف جديد', sub: edit ? '' : 'اختر الكلاينت والنسخة، وكل شي ثاني تقدر تغيّره بعدين',
     body: `<div class="stack" style="gap:20px">
       <div class="grid" style="grid-template-columns:1fr 1fr">
         <label class="f">اسم الباك<input class="inp" id="f-name" placeholder="مثلاً: Purple PvP 16x" value="${esc(p.name)}"></label>
-        <label class="f">نسخة ماينكرافت<select class="inp" id="f-ver">${VERSIONS.map((v) => `<option value="${v.id}" ${v.id === p.version ? 'selected' : ''}>${v.label}</option>`).join('')}</select></label>
+        <label class="f">نسخة ماينكرافت<select class="inp" id="f-ver">${verList.map((v) => `<option value="${v.id}" ${v.id === p.version ? 'selected' : ''}>${v.label}</option>`).join('')}</select></label>
       </div>
       <label class="f">الوصف (يطلع تحت اسم الباك باللعبة)<input class="inp" id="f-desc" value="${esc(p.description)}" placeholder="§dMade with MC Pack Studio"></label>
       <div><div class="row" style="margin-bottom:10px"><b>الكلاينت</b><span class="muted small">الأخضر = موجود على جهازك</span></div>
@@ -263,7 +264,7 @@ function openProjectForm(edit) {
     p.description = $('#f-desc', el).value.trim();
     const verChanged = p.version !== $('#f-ver', el).value;
     p.version = $('#f-ver', el).value;
-    p.packFormat = VERSIONS.find((v) => v.id === p.version).pf;
+    p.packFormat = (verList.find((v) => v.id === p.version) || VERSIONS[0]).pf;
     p.rpPath = $('#f-rp', el).value.trim(); p.modsPath = $('#f-mods', el).value.trim();
     p.activate = $('#f-act', el).checked;
     p.clientName = clientOf(p.clientId).name;
@@ -480,7 +481,7 @@ async function openTexEditor(t, after, startImg, cur) {
 
 // find the real game textures for a pack: client files first, exact version preferred
 async function autoBase(p, allowDownload) {
-  if (p.baseJar && !p.baseApprox && await api.jar.valid(p.baseJar)) return true;
+  if (p.baseJar && !p.baseApprox && await api.jar.valid(p.baseJar)) { await syncPackFormat(p); return true; }
   if (p.baseJar && !(await api.jar.valid(p.baseJar))) { p.baseJar = null; p.baseApprox = null; }
   let j = await api.jar.find(p.version);
   if (!j.exact) { const t = toastLoading('أدوّر على تكسترات ماينكرافت بملفات الكلاينتات...'); await api.game.scan(); t(); j = await api.jar.find(p.version); }
@@ -490,6 +491,7 @@ async function autoBase(p, allowDownload) {
   if (!path) return false;
   p.baseJar = path; p.baseApprox = approx;
   if (S.project && S.project.id === p.id) { S.project = p; await saveProject(); } else await api.projects.save(p);
+  await syncPackFormat(p);
   return true;
 }
 function toastLoading(msg) {
@@ -508,7 +510,7 @@ async function pickClientFiles() {
       lunar ? 'Lunar يحمّل ملفات اللعبة وقت التشغيل وما يخليها بالجهاز، عشان كذا ما لقيت التكسترات الأصلية داخل مجلده.<br><br>أحمّلها لك الحين من سيرفرات Mojang الرسمية؟ (نفس التكسترات بالضبط، مرة وحدة بس)'
         : 'ما لقيت ملفات ماينكرافت داخل هذا المجلد. أحمّل التكسترات الأصلية من سيرفرات Mojang الرسمية؟', 'حمّل من Mojang');
     if (!ok) return null;
-    const v = S.project ? S.project.version : '1.21.11';
+    const v = S.project ? S.project.version : VERSIONS[0].id;
     const j = await ensureGameFiles(v, true);
     if (j && S.project) { S.project.baseJar = j; S.project.baseApprox = null; await saveProject(); render(); }
     return null;
@@ -1771,7 +1773,7 @@ async function openWizard() {
 // download the original game textures automatically in the background (no clicks needed)
 async function autoFetchGame() {
   const projects = await api.projects.list();
-  const want = [...new Set(['1.21.11', '1.8.9', ...projects.map((p) => p.version)])];
+  const want = [...new Set([VERSIONS[0].id, ...projects.map((p) => p.version).filter((v) => VERSIONS.some((x) => x.id === v))])];
   const found = new Set((await api.game.found()).filter((f) => f.downloaded).map((f) => f.version));
   const missing = want.filter((v) => !found.has(v));
   if (!missing.length) return;
@@ -1811,11 +1813,30 @@ async function checkUpdates(manual) {
     catch (e) { toast('فشل تحميل التحديث', 'err'); $$('.modal-f button', m.el).forEach((x) => x.disabled = false); }
   };
 }
+// ------------------------------------------------------------- versions (1.21.11+, live)
+async function loadVersions() {
+  let list = [];
+  try { list = await api.versions.list(); } catch {}
+  if (!list.length) list = [{ id: '1.21.11' }];
+  const saved = S.settings.knownPf || {};
+  window.VERSIONS = list.map((v, i) => ({ id: v.id, pf: saved[v.id] || KNOWN_PF[v.id] || 999, label: v.id + (i === 0 ? ' (الأحدث)' : '') }));
+}
+// after the game files are available, store the exact pack format for the version
+async function syncPackFormat(p) {
+  if (!p || !p.baseJar || p.baseApprox) return;
+  const pf = await api.jar.packFormat(p.baseJar); if (!pf) return;
+  const [maj, min] = pf;
+  S.settings.knownPf = Object.assign({}, S.settings.knownPf, { [p.version]: maj }); api.settings.set(S.settings);
+  const v = VERSIONS.find((x) => x.id === p.version); if (v) v.pf = maj;
+  if (p.packFormat !== maj || (p.packFormatMinor || 0) !== min) { p.packFormat = maj; p.packFormatMinor = min; if (S.project && S.project.id === p.id) await saveProject(); else await api.projects.save(p); }
+}
+
 // ------------------------------------------------------------- boot
 (async function boot() {
   S.settings = await api.settings.get(); applyAccent();
   S.clients = await api.clients.list();
   S.projects = await api.projects.list();
+  await loadVersions();
   renderRail(); render();
   if (S.settings.setupVersion !== 2) openWizard();
   autoFetchGame();
