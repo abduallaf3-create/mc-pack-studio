@@ -238,6 +238,7 @@ ipcMain.handle('tex:put', (_e, id, rel, b64, meta) => {
   fs.mkdirSync(path.dirname(f), { recursive: true });
   fs.writeFileSync(f, Buffer.from(b64, 'base64'));
   if (meta) fs.writeFileSync(f + '.mcmeta', meta);
+  else if (meta === '') fs.rmSync(f + '.mcmeta', { force: true });
   return true;
 });
 ipcMain.handle('tex:reset', (_e, id, rel) => {
@@ -480,6 +481,124 @@ ipcMain.handle('snap:restore', (_e, id, sid) => {
 });
 ipcMain.handle('snap:delete', (_e, id, sid) => { fs.rmSync(path.join(snapDir(id), String(sid).replace(/[^\w-]/g, '')), { recursive: true, force: true }); return true; });
 
+
+// ---------------------------------------------------------------- merge packs
+const mergeZips = new Map();
+function packEntries(zipPath) {
+  if (!mergeZips.has(zipPath)) mergeZips.set(zipPath, new AdmZip(zipPath));
+  const z = mergeZips.get(zipPath);
+  const all = z.getEntries().filter((e) => !e.isDirectory);
+  const mc = all.find((e) => /(^|\/)pack\.mcmeta$/.test(e.entryName));
+  const prefix = mc ? mc.entryName.replace(/pack\.mcmeta$/, '') : '';
+  return { z, prefix, all };
+}
+ipcMain.handle('merge:open', async () => {
+  const r = testPicks ? { canceled: !testPicks.length, filePaths: testPicks.splice(0) } : await dialog.showOpenDialog(win, { title: 'اختر الباكات اللي تبي تدمجها', filters: [{ name: 'Resource Pack', extensions: ['zip'] }], properties: ['openFile', 'multiSelections'] });
+  if (r.canceled) return null;
+  return r.filePaths.map((f) => {
+    try {
+      const { prefix, all } = packEntries(f);
+      const files = all.filter((e) => e.entryName.startsWith(prefix + 'assets/')).map((e) => e.entryName.slice(prefix.length));
+      let icon = null; const ic = all.find((e) => e.entryName === prefix + 'pack.png'); if (ic) icon = ic.getData().toString('base64');
+      return { path: f, name: path.basename(f, '.zip'), files, icon };
+    } catch (e) { return { path: f, name: path.basename(f), error: String(e.message), files: [] }; }
+  });
+});
+ipcMain.handle('merge:read', (_e, zipPath, rel) => {
+  const { z, prefix } = packEntries(zipPath); const e = z.getEntry(prefix + rel);
+  return e ? e.getData().toString('base64') : null;
+});
+ipcMain.handle('merge:copy', (_e, id, zipPath, rels) => {
+  const { z, prefix } = packEntries(zipPath); let n = 0;
+  for (const rel of rels) {
+    const e = z.getEntry(prefix + rel);
+    if (!e) { if (rel.endsWith('.mcmeta')) fs.rmSync(path.join(filesDir(id), safeRel(rel)), { force: true }); continue; }
+    const f = path.join(filesDir(id), safeRel(rel)); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, e.getData()); n++;
+  }
+  return n;
+});
+
+// ---------------------------------------------------------------- pack checker
+function pngSize(buf) { if (buf.length < 24 || buf.readUInt32BE(0) !== 0x89504e47) return null; return [buf.readUInt32BE(16), buf.readUInt32BE(20)]; }
+ipcMain.handle('pack:check', (_e, project) => {
+  const dir = filesDir(project.id); const files = walk(dir); const set = new Set(files); const issues = [];
+  let base = null; if (project.baseJar && exists(project.baseJar)) { const n = zipNames(project.baseJar); if (n) base = new Set(n); }
+  let total = 0;
+  for (const rel of files) {
+    const f = path.join(dir, rel); const st = fs.statSync(f); total += st.size;
+    if (rel.endsWith('.png')) {
+      const buf = Buffer.alloc(32); const fd = fs.openSync(f, 'r'); fs.readSync(fd, buf, 0, 32, 0); fs.closeSync(fd);
+      const sz = pngSize(buf);
+      if (!sz) { issues.push({ level: 'err', file: rel, msg: 'الملف مو صورة PNG صحيحة', fix: 'delete' }); continue; }
+      const [w, h] = sz;
+      if (w > 1024 || h > 4096) issues.push({ level: 'warn', file: rel, msg: `الصورة كبيرة جداً (${w}×${h}) — تثقّل اللعبة` });
+      const unused = rel.startsWith('assets/minecraft/textures/') && base && !base.has(rel) && !/optifine|mcpatcher/.test(rel);
+      if (!unused && rel.startsWith('assets/minecraft/textures/') && h > w && h % w === 0 && !set.has(rel + '.mcmeta') && !(base && base.has(rel + '.mcmeta')) && !/gui|font|colormap|environment|misc|entity/.test(rel))
+        issues.push({ level: 'warn', file: rel, msg: 'صورة أنيميشن بدون ملف mcmeta (بتطلع ممطوطة)', fix: 'addmeta' });
+      if (unused)
+        issues.push({ level: 'warn', file: rel, msg: `${project.version} ما يستخدم هذا الملف (اسمه أو مكانه غلط لهالنسخة)`, fix: 'delete' });
+      if (base && base.has(rel)) {
+        const vz = openJar(project.baseJar); const ve = vz && vz.getEntry(rel);
+        if (ve) { const vs = pngSize(ve.getData().subarray(0, 32)); if (vs && (w / vs[0] !== h / vs[1]) && !(h > w && vs[1] > vs[0])) issues.push({ level: 'warn', file: rel, msg: `المقاس ${w}×${h} مو بنفس نسبة الأصلي ${vs[0]}×${vs[1]} — ممكن يطلع مشوّه` }); }
+      }
+    } else if (rel.endsWith('.mcmeta')) {
+      if (!set.has(rel.replace(/\.mcmeta$/, '')) && rel !== 'pack.mcmeta') issues.push({ level: 'info', file: rel, msg: 'ملف mcmeta بدون صورة', fix: 'delete' });
+      try { JSON.parse(fs.readFileSync(f, 'utf8')); } catch { issues.push({ level: 'err', file: rel, msg: 'ملف mcmeta فيه خطأ JSON', fix: 'addmeta-replace' }); }
+    } else if (rel.endsWith('.json')) {
+      try { JSON.parse(fs.readFileSync(f, 'utf8').replace(/^﻿/, '')); } catch (e) { issues.push({ level: 'err', file: rel, msg: 'ملف JSON فيه خطأ: ' + String(e.message).slice(0, 60) }); }
+    } else if (rel.endsWith('.ogg')) {
+      const b = Buffer.alloc(64); const fd = fs.openSync(f, 'r'); fs.readSync(fd, b, 0, 64, 0); fs.closeSync(fd);
+      if (b.toString('latin1', 0, 4) !== 'OggS' || !b.toString('latin1').includes('vorbis')) issues.push({ level: 'err', file: rel, msg: 'الصوت مو OGG Vorbis — اللعبة ما بتشغله', fix: 'delete' });
+    }
+  }
+  if (total > 50 * 1048576) issues.push({ level: 'warn', file: '', msg: `حجم الباك كبير (${(total / 1048576).toFixed(1)} MB) — ممكن يبطّئ تحميل اللعبة` });
+  return { issues, files: files.length, size: total };
+});
+ipcMain.handle('pack:fix', (_e, project, items) => {
+  const dir = filesDir(project.id); let n = 0;
+  for (const it of items) {
+    const f = path.join(dir, safeRel(it.file));
+    if (it.fix === 'delete') { fs.rmSync(f, { force: true }); fs.rmSync(f + '.mcmeta', { force: true }); n++; }
+    if (it.fix === 'addmeta') { fs.writeFileSync(f + '.mcmeta', JSON.stringify({ animation: { frametime: 2 } }, null, 2)); n++; }
+    if (it.fix === 'addmeta-replace') { fs.writeFileSync(f, JSON.stringify({ animation: { frametime: 2 } }, null, 2)); n++; }
+  }
+  return n;
+});
+
+
+// ---------------------------------------------------------------- held item size (low sword / small items)
+ipcMain.handle('held:build', (_e, project, cfg) => {
+  const z = openJar(project.baseJar); if (!z) return { error: 'nojar', extras: {}, count: 0 };
+  const pre = 'assets/minecraft/models/item/';
+  const names = z.getEntries().map((e) => e.entryName).filter((n) => n.startsWith(pre) && n.endsWith('.json')).map((n) => n.slice(pre.length, -5)).filter((n) => !n.includes('/'));
+  const read = (n) => { const e = z.getEntry(pre + n + '.json'); if (!e) return null; try { return JSON.parse(e.getData().toString('utf8')); } catch { return null; } };
+  const isTool = (n) => /(_sword|_axe|_pickaxe|_shovel|_hoe|_spear)$/.test(n) || /^(stick|blaze_rod|breeze_rod|bone|fishing_rod|carrot_on_a_stick|warped_fungus_on_a_stick|mace|handheld|handheld_rod|handheld_mace|trident)$/.test(n);
+  const skip = (n) => /^(shield|shield_blocking|template_|air)/.test(n);
+  const mod = (m, lower, scale, xs) => {
+    let ch = false;
+    for (const k of Object.keys(m.display || {})) {
+      if (!/^firstperson/.test(k)) continue;
+      const d = m.display[k];
+      d.translation = [...(d.translation || [0, 0, 0])];
+      d.translation[1] = +(d.translation[1] - lower).toFixed(3);
+      if (xs) d.translation[0] = +(d.translation[0] + xs).toFixed(3);
+      d.scale = (d.scale || [1, 1, 1]).map((v) => +(v * scale).toFixed(3));
+      ch = true;
+    }
+    return ch;
+  };
+  const out = {};
+  const groups = [];
+  if (cfg.hOn) groups.push([names.filter((n) => isTool(n) && !skip(n)), cfg.hLower, cfg.hScale, cfg.hX]);
+  if (cfg.gOn) groups.push([names.filter((n) => !isTool(n) && !skip(n)), cfg.gLower, cfg.gScale, 0]);
+  for (const [list, lower, scale, xs] of groups) for (const n of list) {
+    const m = read(n); if (!m || !m.display) continue; // only models that define their own hand position
+    if (mod(m, +lower || 0, +scale || 1, +xs || 0)) out[pre + n + '.json'] = JSON.stringify(m, null, 2);
+  }
+  return { extras: out, count: Object.keys(out).length };
+});
+ipcMain.handle('file:getRaw', (_e, id, rel) => { const f = path.join(filesDir(id), safeRel(rel)); return exists(f) ? fs.readFileSync(f, 'utf8') : null; });
+
 // ---------------------------------------------------------------- build / install
 function buildZip(project, extra) {
   const zip = new AdmZip();
@@ -490,7 +609,7 @@ function buildZip(project, extra) {
   zip.addFile('pack.mcmeta', Buffer.from(JSON.stringify(meta, null, 2)));
   const icon = path.join(projDir(project.id), 'pack.png');
   if (exists(icon)) zip.addFile('pack.png', fs.readFileSync(icon));
-  for (const rel of walk(filesDir(project.id))) zip.addFile(rel, fs.readFileSync(path.join(filesDir(project.id), rel)));
+  for (const rel of walk(filesDir(project.id))) { if (extra && extra[rel] !== undefined) continue; zip.addFile(rel, fs.readFileSync(path.join(filesDir(project.id), rel))); }
   for (const [rel, content] of Object.entries(extra || {})) zip.addFile(rel, Buffer.from(content));
   return zip;
 }

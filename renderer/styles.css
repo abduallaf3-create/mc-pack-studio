@@ -426,3 +426,11 @@ html[data-theme="light"] .btn.danger:hover { background: #fde8ea; }
 .sp-side h4 { margin: 0 0 10px; font-size: 11px; color: var(--dim); letter-spacing: 1.2px; font-weight: 800; }
 .sp-side .seg { flex-wrap: wrap; }
 .modal-h h2 { display: flex; gap: 8px; align-items: center; }
+.v3d { height: 460px; border-radius: 18px; overflow: hidden; background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--a1) 28%, #141824), #07080d 75%); border: 1px solid var(--line2); }
+.v3d canvas { width: 100%; height: 100%; display: block; cursor: grab; }
+.mrow { display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 12px; border: 1px solid var(--line); margin-bottom: 6px; background: var(--panel); }
+.mopt { width: 120px; height: 84px; border-radius: 10px; border: 2px solid transparent; background: rgba(255,255,255,.03); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; cursor: pointer; flex: none; }
+.mopt canvas { width: 40px; height: 40px; image-rendering: pixelated; }
+.mopt.on { border-color: var(--a1); box-shadow: var(--glow); }
+.mopt.off { cursor: default; opacity: .4; }
+.chk { display: flex; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); }

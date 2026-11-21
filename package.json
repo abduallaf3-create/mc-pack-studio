@@ -1,6 +1,6 @@
 {
   "name": "mc-pack-studio",
-  "version": "1.5.1",
+  "version": "1.6.0",
   "description": "Minecraft resource pack & mod studio",
   "main": "main.js",
   "scripts": {

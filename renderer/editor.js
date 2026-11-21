@@ -76,8 +76,12 @@ window.openPixelEditor = function (opts) {
   let img = opts.image ? IMG.clone(opts.image) : IMG.blank(dw, dh);
   const st = { tool: 'pencil', color: [255, 255, 255, 255], hex: '#ffffff', alpha: 255, mirror: false, grid: true, zoom: 1, frame: 0, adjBase: null, dirty: false };
   const undo = [], redo = [];
-  const frames = () => (img.height > img.width && img.height % img.width === 0 ? img.height / img.width : 1);
-  const fh = () => (frames() > 1 ? img.width : img.height);
+  const guessFh = (im) => (im.height > im.width && im.height % im.width === 0 ? im.width : im.height);
+  st.fhv = guessFh(img);
+  let meta0 = {}; try { meta0 = (JSON.parse(opts.meta || '{}').animation) || {}; } catch {}
+  st.ft = meta0.frametime || 2; st.interp = !!meta0.interpolate; st.play = false; st.pf = 0;
+  const frames = () => Math.max(1, Math.round(img.height / st.fhv));
+  const fh = () => st.fhv;
 
   const tb = (t, ic, tip) => `<button class="tool" data-tool="${t}" title="${tip}">${icon(ic, 20)}</button>`;
   const m = modal({
@@ -119,13 +123,17 @@ window.openPixelEditor = function (opts) {
           <div class="slider-row"><span>التباين</span><input type="range" min="-100" max="100" value="0" data-adj="c"><output class="ltr">0</output></div>
           <div class="row"><input type="color" class="tintc" value="#ef4444" title="لون الصبغ"><button class="btn sm" data-act="tint">${icon('wand', 16)} صبغ باللون</button><button class="btn sm ghost" data-act="adjreset">تصفير</button></div>
         </div>
-        <div class="frames-box" style="display:none"><h4>الإطارات (Animation)</h4><div class="frames"></div></div>
+        <div class="frames-box"><h4>الأنيميشن (الإطارات)</h4><div class="frames"></div>
+          <div class="row" style="margin-top:8px;gap:6px"><button class="btn sm" data-act="addfr" title="إطار جديد (نسخة من الحالي)">${icon('plus', 14)} إطار</button><button class="btn sm ghost" data-act="delfr" title="احذف الإطار الحالي">${icon('trash', 14)}</button><button class="btn sm" data-act="playfr">${icon('play', 14)} شغّل</button></div>
+          <div class="fr-opts" style="margin-top:8px"><div class="slider-row" style="grid-template-columns:70px 1fr 40px;margin:0"><span>السرعة</span><input type="range" class="ftr" min="1" max="20" value="${st.ft}"><output class="ltr"></output></div>
+          <label class="check small" style="margin-top:6px"><span class="switch"><input type="checkbox" class="ipl" ${st.interp ? 'checked' : ''}><span></span></span>انتقال ناعم بين الإطارات</label></div></div>
         <div><h4>معاينة</h4><div class="mini-prev"><canvas class="p1"></canvas><canvas class="p2"></canvas></div></div>
         <div><h4>استيراد تصميمك</h4>
           <div class="stack" style="gap:8px">
             <button class="btn sm" data-act="import">${icon('image', 16)} استيراد صورة (نفس المقاس)</button>
             <button class="btn sm" data-act="importhd">${icon('image', 16)} استيراد HD (بدقة الصورة)</button>
             <button class="btn sm ghost" data-act="exportpng">${icon('download', 16)} حفظ كـ PNG</button>
+            <button class="btn sm" data-act="view3d">${icon('cube', 16)} معاينة 3D</button>
           </div></div>
       </div></div>`,
     foot: `<button class="btn primary" data-act="save">${icon('check', 16)} حفظ التكستر</button>
@@ -166,10 +174,12 @@ window.openPixelEditor = function (opts) {
     // minis
     const p1 = $('.p1'), p2 = $('.p2');
     const s1 = Math.max(1, Math.round(48 / Math.max(w, h))), s2 = Math.max(1, Math.round(96 / Math.max(w, h)));
-    [[p1, s1], [p2, s2]].forEach(([c, s]) => { c.width = w * s; c.height = h * s; const x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.drawImage(full, 0, st.frame * h, w, h, 0, 0, w * s, h * s); });
+    const mf = st.play ? st.pf % frames() : st.frame;
+    [[p1, s1], [p2, s2]].forEach(([c, s]) => { c.width = w * s; c.height = h * s; const x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.drawImage(full, 0, mf * h, w, h, 0, 0, w * s, h * s); });
     // frames
     const n = frames();
-    $('.frames-box').style.display = n > 1 ? '' : 'none';
+    $('.fr-opts').style.display = n > 1 ? '' : 'none'; $('[data-act=delfr]').disabled = n < 2; $('[data-act=playfr]').disabled = n < 2;
+    $('.ftr').nextElementSibling.textContent = (st.ft / 20).toFixed(2) + 's';
     if (n > 1 && $('.frames').children.length !== n) $('.frames').innerHTML = Array.from({ length: n }, (_, i) => `<button data-fr="${i}">${i + 1}</button>`).join('');
     $$('.frames button').forEach((b) => b.classList.toggle('on', +b.dataset.fr === st.frame));
     renderPal();
@@ -263,6 +273,8 @@ window.openPixelEditor = function (opts) {
   $('.cpick').oninput = (e) => setColor(e.target.value);
   $('.hexin').onchange = (e) => { const v = e.target.value.trim(); if (/^#?[0-9a-f]{6}$/i.test(v)) setColor(v[0] === '#' ? v : '#' + v); };
   $('.alpha').oninput = (e) => setColor(st.hex, +e.target.value);
+  $('.ftr').oninput = (e) => { st.ft = +e.target.value; st.dirty = true; if (st.play) { st.play = false; acts.playfr(); } render(); };
+  $('.ipl').onchange = (e) => { st.interp = e.target.checked; st.dirty = true; };
 
   const adj = { h: 0, s: 0, b: 0, c: 0 };
   $$('[data-adj]').forEach((r) => r.oninput = () => {
@@ -285,7 +297,7 @@ window.openPixelEditor = function (opts) {
       if (n > 1 && im.height >= im.width * n) { img = IMG.resize(im, im.width, im.width * n); }
       else img = IMG.resize(im, w, n > 1 ? w * n : h);
       if (n > 1 && im.height < im.width * n) { const one = IMG.resize(im, w, w); const all = new ImageData(w, w * n); for (let i = 0; i < n; i++) all.data.set(one.data, i * one.data.length); img = all; }
-      st.frame = 0;
+      st.frame = 0; st.fhv = n > 1 ? img.width : img.height; $('.frames').innerHTML = '';
     } else {
       const w = img.width, h = fh();
       if (im.width === img.width && im.height === img.height) img = IMG.resize(im, img.width, img.height);
@@ -295,18 +307,38 @@ window.openPixelEditor = function (opts) {
   }
 
   const acts = {
-    undo() { if (!undo.length) return; redo.push(IMG.clone(img)); img = undo.pop(); adjCommit(); st.frame = Math.min(st.frame, frames() - 1); fit(); },
-    redo() { if (!redo.length) return; undo.push(IMG.clone(img)); img = redo.pop(); st.frame = Math.min(st.frame, frames() - 1); fit(); },
+    undo() { if (!undo.length) return; redo.push(IMG.clone(img)); img = undo.pop(); if (img.width !== st.fhv && img.height % st.fhv) st.fhv = guessFh(img); adjCommit(); st.frame = Math.min(st.frame, frames() - 1); $('.frames').innerHTML = ''; fit(); },
+    redo() { if (!redo.length) return; undo.push(IMG.clone(img)); img = redo.pop(); if (img.height % st.fhv) st.fhv = guessFh(img); st.frame = Math.min(st.frame, frames() - 1); $('.frames').innerHTML = ''; fit(); },
     flipH() { push(); const w = img.width, h = fh(), o = IMG.clone(img); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const s = ((y + oy()) * w + x) * 4, d = ((y + oy()) * w + (w - 1 - x)) * 4; for (let k = 0; k < 4; k++) img.data[d + k] = o.data[s + k]; } render(); },
     flipV() { push(); const w = img.width, h = fh(), o = IMG.clone(img); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const s = ((y + oy()) * w + x) * 4, d = ((h - 1 - y + oy()) * w + x) * 4; for (let k = 0; k < 4; k++) img.data[d + k] = o.data[s + k]; } render(); },
     rot() { const w = img.width, h = fh(); if (w !== h) return toast('التدوير متاح للتكسترات المربعة فقط', 'err'); push(); const o = IMG.clone(img); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const s = ((y + oy()) * w + x) * 4, d = ((x + oy()) * w + (w - 1 - y)) * 4; for (let k = 0; k < 4; k++) img.data[d + k] = o.data[s + k]; } render(); },
+    addfr() {
+      push(); const w = img.width, h = fh(), n = frames(), at = st.frame + 1;
+      const out = new ImageData(w, h * (n + 1)); const src = img.data, dst = out.data, fb = w * h * 4;
+      dst.set(src.subarray(0, at * fb), 0); dst.set(src.subarray(st.frame * fb, (st.frame + 1) * fb), at * fb); dst.set(src.subarray(at * fb), (at + 1) * fb);
+      img = out; st.frame = at; $('.frames').innerHTML = ''; fit();
+    },
+    delfr() {
+      const n = frames(); if (n < 2) return; push(); const w = img.width, h = fh(), fb = w * h * 4;
+      const out = new ImageData(w, h * (n - 1)); out.data.set(img.data.subarray(0, st.frame * fb), 0); out.data.set(img.data.subarray((st.frame + 1) * fb), st.frame * fb);
+      img = out; st.frame = Math.min(st.frame, n - 2); $('.frames').innerHTML = ''; fit();
+    },
+    playfr() {
+      st.play = !st.play; const b = m.el.querySelector('[data-act=playfr]'); b.innerHTML = st.play ? `${icon('pause', 14)} وقّف` : `${icon('play', 14)} شغّل`;
+      clearInterval(st.timer); if (st.play) st.timer = setInterval(() => { if (!document.body.contains(m.el)) return clearInterval(st.timer); st.pf++; render(); }, st.ft * 50);
+    },
+    view3d() { if (window.open3D) open3D(img, { slim: opts.slim, skin: img.width === 64 && (img.height === 64 || img.height === 32) && opts.skin !== false, title: opts.title }); },
     clear() { push(); const w = img.width; img.data.fill(0, oy() * w * 4, (oy() + fh()) * w * 4); render(); },
     zin() { st.zoom = Math.min(64, st.zoom + 1); render(); }, zout() { st.zoom = Math.max(1, st.zoom - 1); render(); },
     tint() { push(); adjCommit(); img = IMG.tint(img, $('.tintc').value, 1, true); render(); },
     adjreset() { if (st.adjBase) { img = st.adjBase; } adjCommit(); render(); },
     import() { importImg(false); }, importhd() { importImg(true); },
     async exportpng() { const p = await api.fs.saveB64((opts.fileName || 'texture') + '.png', IMG.toB64(img)); if (p) toast('انحفظت الصورة'); },
-    async save() { adjCommit(); await opts.onSave(img); st.dirty = false; m.close(true); },
+    async save() {
+      adjCommit(); clearInterval(st.timer);
+      const meta = frames() > 1 ? JSON.stringify({ animation: Object.assign({ frametime: st.ft }, st.interp ? { interpolate: true } : {}, st.fhv !== img.width ? { width: img.width, height: st.fhv } : {}) }, null, 2) : '';
+      await opts.onSave(img, meta); st.dirty = false; m.close(true);
+    },
     async reset() { if (!(await confirmBox('رجوع للأصلي', 'ترجع التكستر للأصلي وتحذف تعديلاتك؟', 'رجّع', true))) return; await opts.onReset(); st.dirty = false; m.close(true); },
     close() { m.close(); },
   };
@@ -396,7 +428,7 @@ window.openSkinPainter = function (opts) {
         <div><h4>اللون</h4><div class="row" style="flex-wrap:nowrap"><input type="color" id="spc" value="${st.hex}"><input class="inp mono" id="sph" value="${st.hex}" style="height:40px"></div>
           <div class="swatches" style="margin-top:10px" id="spsw"></div><div class="muted small" style="margin:10px 0 6px">ألوان البشرة</div><div class="swatches" id="spsk"></div></div>
         <div><h4>لوّن جزء كامل (يحافظ على الظل)</h4><div class="grid" style="grid-template-columns:1fr 1fr;gap:6px">${Object.entries(SKIN_PARTS).map(([k, [n]]) => `<button class="btn sm" data-part="${k}">${n}</button>`).join('')}</div></div>
-        <div class="row"><button class="btn sm" data-a="undo">${icon('undo', 15)} تراجع</button><button class="btn sm" data-a="redo">${icon('redo', 15)} إعادة</button><button class="btn sm ghost" data-a="adv">${icon('grid', 15)} المحرر المتقدم</button></div>
+        <div class="row"><button class="btn sm" data-a="undo">${icon('undo', 15)} تراجع</button><button class="btn sm" data-a="redo">${icon('redo', 15)} إعادة</button><button class="btn sm" data-a="v3d">${icon('cube', 15)} 3D</button><button class="btn sm ghost" data-a="adv">${icon('grid', 15)} المحرر المتقدم</button></div>
       </div></div>`,
     foot: `<button class="btn primary" data-a="save">${icon('check', 16)} حفظ السكن</button><span class="spacer"></span><button class="btn ghost" data-a="close">إلغاء</button>`,
     beforeClose: () => !st.dirty || confirmBox('تعديلات ما انحفظت', 'رسمت أشياء ما انحفظت، تطلع بدون حفظ؟', 'اطلع بدون حفظ', true),
@@ -469,6 +501,7 @@ window.openSkinPainter = function (opts) {
   const acts = {
     undo() { if (!undo.length) return; redo.push(IMG.clone(img)); img = undo.pop(); draw(); },
     redo() { if (!redo.length) return; undo.push(IMG.clone(img)); img = redo.pop(); draw(); },
+    v3d() { open3D(img, { skin: true, slim: st.slim }); },
     adv() { openPixelEditor({ title: 'المحرر المتقدم (ملف السكن)', size: [64, 64], image: img, extraTitle: 'شكل الشخصية', renderExtra: (box, full) => { box.innerHTML = ''; box.append(drawDoll(document.createElement('canvas'), full, { scale: 4, slim: st.slim }), drawDoll(document.createElement('canvas'), full, { scale: 4, back: true, slim: st.slim })); }, onSave: (im) => { push(); img = im; draw(); } }); },
     async save() { st.dirty = false; await opts.onSave(img, st.slim); m.close(true); },
     close() { m.close(); },
