@@ -101,5 +101,36 @@
     if (l2 && parts.legs) { const k = l2.width / 64; boxQuads(l2, k, 16, 16, 8, 12, 4, 0, 2, 0, 0.5, q); boxQuads(l2, k, 0, 16, 4, 12, 4, -2, -10, 0, 0.5, q); boxQuads(l2, k, 0, 16, 4, 12, 4, 2, -10, 0, 0.5, q); }
     return q;
   }
-  window.Lite3D = { itemQuads, skinQuads, armorQuads, boxQuads, viewer };
+
+  // ---- transforms (rotate quads about a pivot; used for elytra / flying pose)
+  function rot(q, ax, ang, piv = [0, 0, 0]) {
+    const c = Math.cos(ang), s = Math.sin(ang);
+    const r = ([x, y, z]) => {
+      if (ax === 'x') return [x, y * c - z * s, y * s + z * c];
+      if (ax === 'y') return [x * c + z * s, y, -x * s + z * c];
+      return [x * c - y * s, x * s + y * c, z];
+    };
+    const f = (p) => { const v = r([p[0] - piv[0], p[1] - piv[1], p[2] - piv[2]]); return [v[0] + piv[0], v[1] + piv[1], v[2] + piv[2]]; };
+    return q.map((o) => ({ p: o.p.map(f), c: o.c, n: r(o.n) }));
+  }
+  const mirrorX = (q) => q.map((o) => ({ p: o.p.map(([x, y, z]) => [-x, y, z]), c: o.c, n: [-o.n[0], o.n[1], o.n[2]] }));
+  // elytra wings (64x32 texture, wing box at uv 22,0 size 10x20x2), spread 0 = folded, 1 = gliding
+  function elytraQuads(img, spread = 1) {
+    if (!img) return [];
+    const k = img.width / 64, w = [];
+    boxQuads(img, k, 22, 0, 10, 20, 2, 0, -10, -3, 0, w); // centred so pivot is at its top-right corner
+    const piv = [5, 0, -2];
+    let a = w.map((o) => ({ p: o.p.map(([x, y, z]) => [x, y + 8, z]), c: o.c, n: o.n })); // top at body top (y=8)
+    const xr = 0.2618 + (0.3490 - 0.2618) * spread, zr = 0.2618 + (Math.PI / 2 - 0.2618) * spread;
+    const pv = [piv[0], 8, piv[2]];
+    a = rot(rot(a, 'x', xr, pv), 'z', zr, pv);
+    return [...a, ...mirrorX(a)];
+  }
+  // player lying in the air with the elytra open (seen from above/behind)
+  function flyingQuads(skin, elytra, spread = 1) {
+    let q = [...skinQuads(skin, false, true), ...elytraQuads(elytra, spread)];
+    q = rot(q, 'x', Math.PI / 2 * (0.25 + 0.75 * spread), [0, 0, 0]);
+    return q;
+  }
+  window.Lite3D = { itemQuads, skinQuads, armorQuads, boxQuads, viewer, elytraQuads, flyingQuads, rot };
 })();

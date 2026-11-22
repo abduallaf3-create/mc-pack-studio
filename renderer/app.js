@@ -35,7 +35,7 @@ window.modal = ({ cls = '', title, sub, body, foot, onClose, beforeClose }) => {
   return m;
 };
 function bytesToB64(u8) { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
-function confirmBox(title, text, okLabel = 'تأكيد', danger = false) {
+function confirmBox(title, text, okLabel = 'أكيد', danger = false) {
   return new Promise((res) => {
     const m = modal({ title, body: `<p class="muted" style="margin:0;line-height:1.8">${text}</p>`,
       foot: `<button class="btn ${danger ? 'danger' : 'primary'}" data-ok>${okLabel}</button><button class="btn ghost" data-no>إلغاء</button>`, onClose: () => res(false) });
@@ -150,7 +150,7 @@ async function renderHome(main) {
       <div><span class="chip-tag"><i></i>${detected.length ? `${detected.length} كلاينت جاهز على جهازك` : 'جاهز'}</span>
         <h1>صمّم <span class="grad-text">الباك</span> حقك<br>وخلّه على كيفك</h1>
         <p>سيوف، فاير قصير، شيلد قصير، توتم، كروس هير، سكنات، وكل تكستر باللعبة — وبضغطة زر ينزل في الكلاينت.</p>
-        <div class="row"><button class="btn primary lg" id="newp">${icon('plus', 20)} باك جديد</button><button class="btn lg" id="impp">${icon('upload', 18)} افتح باك من صاحبك</button>
+        <div class="row"><button class="btn primary lg" id="newp">${icon('plus', 20)} باك جديد</button><button class="btn lg" id="impp">${icon('upload', 18)} افتح باك من خويك</button>
           ${S.projects[0] ? `<button class="btn lg" id="cont">${icon('play', 18)} كمّل على "${esc(S.projects[0].name)}"</button>` : ''}</div></div>
     </div>
     <div class="stats">
@@ -159,7 +159,7 @@ async function renderHome(main) {
       <div class="stat"><div class="si">${icon('user', 20)}</div><div><b>${skins.length}</b><span>سكن محفوظ</span></div></div>
       <div class="stat"><div class="si">${icon('image', 20)}</div><div><b>+${TEXTURES.length}</b><span>تكستر جاهز للتعديل</span></div></div>
     </div>
-    <div class="sec-h"><h2>آخر الباكات</h2><div class="line"></div>${S.projects.length > 7 ? '<button class="btn sm ghost" id="all">عرض الكل</button>' : ''}</div>
+    <div class="sec-h"><h2>آخر الباكات</h2><div class="line"></div>${S.projects.length > 7 ? '<button class="btn sm ghost" id="all">شوف الكل</button>' : ''}</div>
     <div class="grid card-grid">
       <div class="pcard new" id="newp2"><div><div class="plus">${icon('plus', 26)}</div><b>باك جديد</b><div class="small" style="margin-top:4px">لأي كلاينت</div></div></div>
       ${S.projects.slice(0, 7).map(packCard).join('')}
@@ -181,7 +181,7 @@ async function renderPacks(main) {
   S.projects = await api.projects.list();
   main.innerHTML = `<div class="view"><div class="row" style="margin-bottom:22px"><div style="flex:1"><h1>باكاتي</h1><p class="sub" style="margin:0">كل الباكات اللي سويتها</p></div>
     <div class="search" style="width:280px"><input class="inp" id="ps" placeholder="ابحث...">${icon('search', 18)}</div>
-    <button class="btn" id="impp">${icon('upload', 18)} افتح باك من صاحبك</button><button class="btn primary" id="newp">${icon('plus', 18)} باك جديد</button></div>
+    <button class="btn" id="impp">${icon('upload', 18)} افتح باك من خويك</button><button class="btn primary" id="newp">${icon('plus', 18)} باك جديد</button></div>
     <div class="grid card-grid" id="pg"></div></div>`;
   $('#impp').onclick = importShared;
   const draw = () => {
@@ -231,7 +231,7 @@ function openProjectForm(edit) {
       <label class="check"><span class="switch"><input type="checkbox" id="f-act" ${p.activate ? 'checked' : ''}><span></span></span>
         <span>فعّل الباك تلقائياً في اللعبة بعد التثبيت <span class="dim small">(يعدّل options.txt — سكّر اللعبة قبل)</span></span></label>
     </div>`,
-    foot: `<button class="btn primary" id="f-save">${icon('check', 16)} ${edit ? 'حفظ' : 'إنشاء الملف'}</button><button class="btn ghost" id="f-cancel">إلغاء</button>`,
+    foot: `<button class="btn primary" id="f-save">${icon('check', 16)} ${edit ? 'حفظ' : 'سوّ الباك'}</button><button class="btn ghost" id="f-cancel">إلغاء</button>`,
   });
   const el = m.el;
   let first = !!edit;
@@ -297,7 +297,13 @@ async function openProject(id, p) {
 const saveProject = async () => { const saved = await api.projects.save(S.project); S.project.id = saved.id; S.project.updated = saved.updated; };
 
 // ------------------------------------------------------------- project workspace
-const TABS = [['textures', 'التكسترات', 'star'], ['all', 'كل الملفات', 'layers'], ['tweaks', 'تحسينات PvP', 'wand'], ['held', 'حجم الأدوات', 'sword'], ['armor', 'ألوان الدروع', 'shield'], ['font', 'الخط', 'edit'], ['cit', 'أسماء مخصصة', 'star'], ['sky', 'السما', 'sun'], ['sounds', 'الأصوات', 'sound'], ['fire', 'الفاير', 'fire'], ['shield', 'الشيلد', 'shield'], ['theme', 'سمة الألوان', 'palette'], ['mods', 'المودات', 'puzzle'], ['configs', 'إعدادات المودات', 'file'], ['psettings', 'إعدادات الباك', 'gear']];
+const TAB_GROUPS = [
+  ['الشكل', [['textures', 'التكسترات', 'star'], ['armor', 'الدروع والإليترا', 'shield'], ['particles', 'الجزيئات', 'wand'], ['fire', 'الفاير', 'fire'], ['shield', 'الشيلد', 'shield'], ['sky', 'السما', 'sun'], ['font', 'الخط', 'edit']]],
+  ['PvP', [['tweaks', 'تحسينات PvP', 'wand'], ['held', 'حجم الأدوات', 'sword'], ['cit', 'أسماء مخصصة', 'star']]],
+  ['الصوت', [['sounds', 'الأصوات', 'sound']]],
+  ['متقدم', [['all', 'كل الملفات', 'layers'], ['theme', 'سمة الألوان', 'palette'], ['mods', 'المودات', 'puzzle'], ['configs', 'إعدادات المودات', 'file'], ['psettings', 'إعدادات الباك', 'gear']]],
+];
+const TABS = TAB_GROUPS.flatMap((g) => g[1]);
 async function renderProject(main) {
   const p = S.project, c = clientOf(p.clientId);
   main.innerHTML = `<div class="ws-banner"><div class="bg" id="pbg"></div>
@@ -311,20 +317,40 @@ async function renderProject(main) {
       <button class="btn" id="exp">${icon('zip', 17)} تصدير ZIP</button>
       <button class="btn primary lg" id="inst">${icon('play', 18)} تثبيت في ${esc(c.name)}</button>
     </div>
-    <div class="tabs">${TABS.map(([id, n, ic]) => `<button class="tab ${S.tab === id ? 'on' : ''}" data-t="${id}">${icon(ic, 16)}${n}</button>`).join('')}</div>
-    <div class="ws-body" id="wsb"></div>`;
+    <div class="tabs">${TAB_GROUPS.map(([g, list]) => `<span class="tgrp">${g}</span>` + list.map(([id, n, ic]) => `<button class="tab ${S.tab === id ? 'on' : ''}" data-t="${id}">${icon(ic, 16)}${n}</button>`).join('')).join('')}</div>
+    <div id="wsh"></div><div class="ws-body" id="wsb"></div>`;
   api.file.icon(p.id).then((b) => { if (b) { const u = 'data:image/png;base64,' + b; $('#picon').src = u; $('#pbg').style.backgroundImage = `url(${u})`; } });
   $('#picon').onclick = editPackIcon;
   $$('.tab').forEach((t) => t.onclick = () => { S.tab = t.dataset.t; $$('.tab').forEach((x) => x.classList.toggle('on', x === t)); renderTab(); });
   $('#inst').onclick = () => installPack();
+  if (!(S.settings.tours || {}).project && !$('.tour-box')) setTimeout(() => { if (S.view === 'project' && !$('.tour-box') && !$('.modal-bg')) startTour('project'); }, 900);
   $('#chk').onclick = () => openChecker();
   $('#live').onclick = async () => { p.live = !p.live; $('#live').classList.toggle('on', p.live); await saveProject(); toast(p.live ? 'التثبيت التلقائي شغال — عدّل واحفظ، وباللعبة اضغط F3+T' : 'وقّفت التثبيت التلقائي'); if (p.live) installPack(true); };
   $('#exp').onclick = async () => { const r = await api.pack.export(S.project, await buildExtras()); if (r) toast('انحفظ الباك', 'ok', { label: 'افتح', fn: () => api.fs.reveal(r.path) }); };
   renderTab();
 }
+const TAB_HINTS = {
+  textures: 'اضغط على أي شي تبي تغيّره (سيف، توتم، سكن...) — تقدر تعدّل على الأصلي أو ترسم من الصفر.',
+  armor: 'لوّن كل نوع درع بلونه — مثلاً الدايموند أزرق والنذرايت أحمر. فعّل الأنواع اللي تبيها واضغط "طبّق الألوان". وتحت تشوف الإليترا وأنت طاير.',
+  particles: 'غيّر شكل ولون الجزيئات — مثلاً خل السويب نار أو ثلج، أو حط شكل من عندك (صورة أو GIF).',
+  fire: 'نزّل الفاير عشان ما يغطي الشاشة، وغيّر لونه.',
+  shield: 'قصّر الشيلد عشان تشوف أكثر وقت البلوك، أو غيّر شكله.',
+  sky: 'حط صورك بالسما — صورة لكل جهة أو صورة بانوراما وحدة.',
+  font: 'غيّر خط الشات والقوائم لأي خط على جهازك.',
+  tweaks: 'تحسينات PvP بضغطة زر: زجاج شفاف، بدون قرعة، كروس هير، وغيرها.',
+  held: 'كبّر أو صغّر الأدوات اللي بيدك. وتحت تقدر تبحث عن أي أداة وتعطيها حجمها الخاص.',
+  cit: 'خل السيف يتغيّر شكله لما تسميه بالسندان — مثلاً سمّه "Fire" ويطلع بشكل ثاني.',
+  sounds: 'غيّر أي صوت باللعبة — صوت الضربة، الـ XP، وغيرها. تقدر تحط أي صوت من جهازك.',
+  all: 'كل ملفات الباك. هذا للمحترفين — لو أنت جديد استخدم الأقسام الثانية.',
+  theme: 'غيّر ألوان واجهة اللعبة (القوائم والأزرار) بلون واحد.',
+  mods: 'المودات حقت الكلاينت — فعّل أو عطّل أو عدّل فيها.',
+  configs: 'إعدادات المودات — للمحترفين.',
+  psettings: 'اسم الباك ووصفه ونسخته.',
+};
 function renderTab() {
   const b = $('#wsb'); if (!b) return;
-  ({ textures: tabTextures, all: tabAll, tweaks: tabTweaks, held: tabHeld, armor: tabArmor, font: tabFont, cit: tabCIT, sky: tabSky, sounds: tabSounds, fire: tabFire, shield: tabShield, theme: tabTheme, mods: tabMods, configs: tabConfigs, psettings: tabPSettings })[S.tab](b);
+  const h = $('#wsh'); if (h) h.innerHTML = TAB_HINTS[S.tab] ? tabHint(TAB_HINTS[S.tab]) : '';
+  ({ textures: tabTextures, all: tabAll, tweaks: tabTweaks, held: tabHeld, armor: tabArmor, particles: tabParticles, font: tabFont, cit: tabCIT, sky: tabSky, sounds: tabSounds, fire: tabFire, shield: tabShield, theme: tabTheme, mods: tabMods, configs: tabConfigs, psettings: tabPSettings })[S.tab](b);
 }
 
 let liveT = null, liveBusy = false;
@@ -341,7 +367,7 @@ async function installPack(silent) {
   }
   try {
     const r = await api.pack.install(S.project, await buildExtras(), S.project.activate);
-    toast(`تم التثبيت ✓ ${r.activated ? '— وتفعّل في اللعبة' : ''}<div class="dim small ltr" style="margin-top:3px">${esc(r.path)}</div>`, 'ok', { label: 'افتح المجلد', fn: () => api.fs.reveal(r.path) });
+    toast(`انثبّت ✓ ${r.activated ? '— وتفعّل في اللعبة' : ''}<div class="dim small ltr" style="margin-top:3px">${esc(r.path)}</div>`, 'ok', { label: 'افتح المجلد', fn: () => api.fs.reveal(r.path) });
   } catch (e) { toast(String(e.message || e).replace(/^Error invoking remote method '[^']+': (Error: )?/, ''), 'err'); }
 }
 
@@ -374,14 +400,14 @@ async function tabTextures(b) {
     <div class="row" style="margin-bottom:16px"><div class="cats" style="margin:0;flex:1">${CATEGORIES.map((c) => `<button class="chip ${S.cat === c.id ? 'on' : ''}" data-cat="${c.id}">${icon(c.icon, 15)}${c.name}<span class="n">${counts[c.id] || 0}</span></button>`).join('')}</div>
       <button class="btn sm" data-a="merge">${icon('layers', 15)} دمج باكات</button><button class="btn sm" data-a="importpack">${icon('upload', 15)} استيراد باك جاهز</button></div>
     <div class="tex-grid" id="tg"></div>`;
-  $$('[data-cat]', b).forEach((c) => c.onclick = () => { S.cat = c.dataset.cat; tabTextures(b); });
+  $$('[data-cat]', b).forEach((c) => c.onclick = () => { S.cat = c.dataset.cat; tabTextures(b); if (S.cat === 'totem') totemPop(); });
   drawHotbar($('#hb', b));
   bindBaseActions(b);
   $('[data-a=merge]', b).onclick = () => openMerge();
   $('[data-a=importpack]', b).onclick = async () => {
     const r = await api.pack.import(p.id); if (!r) return;
     if (r.description && !p.description) { p.description = r.description; await saveProject(); }
-    toast(`تم استيراد ${r.count} ملف من "${esc(r.name)}"`); tabTextures(b);
+    toast(`انضاف ${r.count} ملف من "${esc(r.name)}"`); tabTextures(b);
   };
   const tg = $('#tg', b);
   let list;
@@ -430,6 +456,7 @@ function bindBaseActions(b) {
 // asks how to start, then opens the editor
 async function editTexture(t, after) {
   const p = S.project;
+  if (t.id === 'totem') totemPop();
   const cur = await api.tex.get(p, t.path);
   const base = await api.tex.get(p, t.path, true);
   const curImg = cur ? await IMG.fromB64(cur.data) : null;
@@ -607,14 +634,14 @@ async function ensureGameFiles(version, force) {
   if (st[0].downloaded && !force) return (await api.jar.find(version)).exact?.path;
   const m = modal({ title: 'تحميل ملفات ماينكرافت ' + esc(version), body: `<div class="stack" style="align-items:center;text-align:center;padding:10px 0">
       <div class="dl-ring"><div class="dl-cube">${icon('cube', 34)}</div></div>
-      <b id="dlt">جاري الاتصال بسيرفرات Mojang...</b>
+      <b id="dlt">قاعد أتصل بسيرفرات Mojang...</b>
       <div class="bar"><i id="dlb"></i></div><span class="muted small ltr" id="dls"></span>
       <span class="dim small">الملفات تنحمّل من Mojang الرسمي (نفس اللانشر). نحتاجها عشان التكسترات تطلع بشكلها الأصلي.</span></div>` });
   api.onGameProgress((d) => {
     if (d.version !== version) return;
     const pct = d.total ? Math.round(d.got / d.total * 100) : 0;
     $('#dlb', m.el) && ($('#dlb', m.el).style.width = (d.stage === 'meta' ? 4 : pct) + '%');
-    if (d.stage === 'jar') { $('#dlt', m.el).textContent = `جاري التحميل... ${pct}%`; $('#dls', m.el).textContent = `${(d.got / 1048576).toFixed(1)} / ${(d.total / 1048576).toFixed(1)} MB`; }
+    if (d.stage === 'jar') { $('#dlt', m.el).textContent = `قاعد أحمّل... ${pct}%`; $('#dls', m.el).textContent = `${(d.got / 1048576).toFixed(1)} / ${(d.total / 1048576).toFixed(1)} MB`; }
   });
   try {
     const path = await api.game.download(version);
@@ -634,7 +661,7 @@ async function ensureGameFiles(version, force) {
 function addCustomTexture() {
   const pf = S.project.packFormat;
   const ex = pf <= 3 ? 'textures/items/stick.png' : 'textures/item/stick.png';
-  const m = modal({ title: 'إضافة تكستر بالمسار', body: `<div class="stack">
+  const m = modal({ title: 'أضف تكستر بالمسار', body: `<div class="stack">
     <label class="f">المسار داخل assets/minecraft/<input class="inp mono" id="cp" placeholder="${ex}" value="${ex}"></label>
     <div class="grid" style="grid-template-columns:1fr 1fr"><label class="f">العرض<input class="inp" id="cw" type="number" value="16"></label><label class="f">الطول<input class="inp" id="ch" type="number" value="16"></label></div>
     <span class="muted small">إذا الملف موجود في ملفات الفانيلا بيفتح هو، غير كذا بيفتح كانفس فاضي بالمقاس.</span></div>`,
@@ -1165,7 +1192,7 @@ async function openMerge() {
 async function openChecker() {
   const p = S.project;
   const r = await api.pack.check(p);
-  const lv = { err: ['خطأ', 'var(--err)', 'x'], warn: ['تنبيه', 'var(--warn)', 'sun'], info: ['ملاحظة', 'var(--a2)', 'check'] };
+  const lv = { err: ['خطأ', 'var(--err)', 'x'], warn: ['انتبه', 'var(--warn)', 'sun'], info: ['ملاحظة', 'var(--a2)', 'check'] };
   const fixable = r.issues.filter((x) => x.fix);
   const m = modal({ cls: 'lg', title: `${icon('check', 18)} فحص الباك`, sub: `${r.files} ملف · ${(r.size / 1048576).toFixed(2)} MB`,
     body: r.issues.length ? `<div class="stack" style="gap:8px">${r.issues.map((x) => `<div class="chk"><span class="ci" style="color:${lv[x.level][1]}">${icon(lv[x.level][2], 18)}</span><div style="flex:1;min-width:0"><b class="small">${esc(x.msg)}</b>${x.file ? `<div class="dim small ltr" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.file.replace('assets/minecraft/', ''))}</div>` : ''}</div>${x.fix ? `<span class="badge">${x.fix === 'delete' ? 'بينحذف' : 'بيتصلّح'}</span>` : ''}</div>`).join('')}</div>`
@@ -1180,60 +1207,374 @@ const ARMOR_MATS = [['diamond', 'دايموند'], ['netherite', 'نذرايت']
 const armorPaths = (mat, pf) => pf >= 42
   ? [`textures/entity/equipment/humanoid/${mat}.png`, `textures/entity/equipment/humanoid_leggings/${mat}.png`]
   : [`textures/models/armor/${mat}_layer_1.png`, `textures/models/armor/${mat}_layer_2.png`];
+const ARMOR_DEF = { diamond: '#3b82f6', netherite: '#ef4444', iron: '#e5e7eb', gold: '#facc15', chainmail: '#9ca3af', leather: '#a16207' };
+const armorItemPaths = (mat) => { const n = mat === 'gold' ? 'golden' : mat; return ['helmet', 'chestplate', 'leggings', 'boots'].map((x) => `textures/item/${n}_${x}.png`); };
 async function tabArmor(b) {
-  const p = S.project, ap = p.armorTint || {};
+  const p = S.project;
+  p.armorTint = p.armorTint || {};
+  const st = (m) => (p.armorTint[m] = p.armorTint[m] || { color: ARMOR_DEF[m], s: 0.85, on: false, icons: true });
   let mat = 'diamond';
-  b.innerHTML = `${p.baseJar ? '' : noBaseNotice()}<div class="two" style="grid-template-columns:400px 1fr">
+  b.innerHTML = `${p.baseJar ? '' : noBaseNotice()}
+  <div class="two" style="grid-template-columns:430px 1fr">
     <div class="card stack">
-      <h3 style="margin:0">${icon('shield', 18)} لون الدرع</h3>
-      <div class="seg" id="amat" style="flex-wrap:wrap">${ARMOR_MATS.map(([k, n]) => `<button data-m="${k}" ${k === mat ? 'class="on"' : ''}>${n}</button>`).join('')}</div>
-      <div class="row"><input type="color" id="acol" value="#ef4444"><div class="row" style="gap:6px">${['#ef4444', '#f97316', '#facc15', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#ffffff', '#1f1f1f'].map((c) => `<button class="sw" data-c="${c}" style="width:24px;height:24px;background:${c}"></button>`).join('')}</div></div>
-      <div class="slider-row" style="grid-template-columns:70px 1fr 46px"><span>القوة</span><input type="range" id="astr" min="10" max="100" value="85"><output class="ltr"></output></div>
+      <h3 style="margin:0">${icon('shield', 18)} ألوان الدروع</h3>
+      <div class="mat-list" id="mats">${ARMOR_MATS.map(([k, n]) => `<div class="mat-row ${k === mat ? 'sel' : ''}" data-m="${k}">
+          <label class="switch" title="فعّل لون هذا الدرع"><input type="checkbox" data-on ${st(k).on ? 'checked' : ''}><span></span></label>
+          <span class="mat-name">${n}</span>
+          <input type="color" data-col value="${st(k).color}">
+          <span class="mat-state small">${st(k).on ? 'متلوّن' : 'أصلي'}</span></div>`).join('')}</div>
+      <div class="slider-row" style="grid-template-columns:90px 1fr 46px"><span>قوة اللون</span><input type="range" id="astr" min="10" max="100"><output class="ltr"></output></div>
+      <div class="row" style="gap:6px">${['#ef4444', '#f97316', '#facc15', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#ffffff', '#1f1f1f'].map((c) => `<button class="sw" data-c="${c}" style="width:24px;height:24px;background:${c}" title="حط هذا اللون للدرع المختار"></button>`).join('')}</div>
+      <label class="check small"><span class="switch"><input type="checkbox" id="aicons"><span></span></span>لوّن أيقونات الدروع بعد (بالإنفنتوري)</label>
       <div class="muted small">القطع اللي تبان بالمعاينة:</div>
       <div class="row" id="aparts">${[['helmet', 'خوذة'], ['chest', 'صدرية'], ['legs', 'بنطلون'], ['boots', 'بوت']].map(([k, n]) => `<label class="check small"><span class="switch"><input type="checkbox" data-p="${k}" checked><span></span></span>${n}</label>`).join('')}</div>
-      <div class="row"><button class="btn primary" id="aapply">${icon('check', 16)} لوّن الدرع</button><button class="btn ghost" id="areset">${icon('reset', 16)} الأصلي</button></div>
-      <div style="border-top:1px solid var(--line);padding-top:14px" class="stack">
-        <h3 style="margin:0">${icon('wand', 18)} لون الإليترا</h3>
-        <div class="row"><input type="color" id="ecol" value="#8b5cf6"><canvas id="epv" style="width:128px;height:64px;image-rendering:pixelated;border-radius:8px;background:rgba(0,0,0,.3)"></canvas></div>
-        <div class="row"><button class="btn primary" id="eapply">${icon('check', 16)} لوّن الإليترا</button><button class="btn ghost" id="ereset">${icon('reset', 16)} الأصلي</button></div>
-      </div>
+      <div class="row"><button class="btn primary" id="aapply">${icon('check', 16)} طبّق الألوان</button><button class="btn ghost" id="areset">${icon('reset', 16)} رجّع الكل للأصلي</button></div>
     </div>
-    <div class="card"><h3>معاينة 3D</h3><div class="v3d" style="height:520px"><canvas id="a3d"></canvas></div></div></div>`;
+    <div class="card"><h3>معاينة 3D <span class="muted small" id="amatn"></span></h3><div class="v3d" style="height:520px"><canvas id="a3d"></canvas></div></div></div>
+  <div class="two" style="grid-template-columns:430px 1fr;margin-top:16px">
+    <div class="card stack">
+      <h3 style="margin:0">${icon('wand', 18)} الإليترا</h3>
+      <span class="muted small" style="line-height:1.7">شوف الإليترا وأنت طاير وعدّل عليها — اللون أو ارسمها بيدك.</span>
+      <div class="row"><input type="color" id="ecol" value="${(p.elytraTint && p.elytraTint.color) || '#8b5cf6'}"><label class="check small"><span class="switch"><input type="checkbox" id="etint" ${p.elytraTint && p.elytraTint.on ? 'checked' : ''}><span></span></span>لوّنها</label></div>
+      <div class="slider-row" style="grid-template-columns:90px 1fr 46px"><span>فرد الجناح</span><input type="range" id="espread" min="0" max="100" value="100"><output class="ltr"></output></div>
+      <div class="row"><button class="btn primary" id="eapply">${icon('check', 16)} احفظ اللون</button><button class="btn" id="edraw">${icon('edit', 16)} ارسمها وأنت طاير</button><button class="btn ghost" id="ereset">${icon('reset', 16)} الأصلي</button></div>
+    </div>
+    <div class="card"><h3>وأنت طاير ✈</h3><div class="v3d sky3d" style="height:420px"><canvas id="e3d"></canvas></div></div></div>`;
   bindBaseActions(b);
   const skin = (await realSteve()) || defaultSkin();
-  let base1 = null, base2 = null, v = null;
+  const bases = {}; let v = null;
   const parts = () => Object.fromEntries($$('#aparts input', b).map((x) => [x.dataset.p, x.checked]));
-  const cur = () => ({ color: $('#acol', b).value, s: +$('#astr', b).value / 100 });
-  async function loadMat() {
-    const [r1, r2] = armorPaths(mat, p.packFormat);
-    base1 = await texImg(p, r1); base2 = await texImg(p, r2);
-    draw();
+  async function baseOf(m) {
+    if (!bases[m]) { const [r1, r2] = armorPaths(m, p.packFormat); bases[m] = [await texImg(p, r1), await texImg(p, r2)]; }
+    return bases[m];
   }
-  function draw() {
-    $('#astr', b).nextElementSibling.textContent = $('#astr', b).value + '%';
-    const c = cur(); const t1 = base1 && IMG.tint(base1, c.color, c.s, false), t2 = base2 && IMG.tint(base2, c.color, c.s, false);
-    const q = [...Lite3D.skinQuads(skin, false, true), ...Lite3D.armorQuads(t1, t2, false, parts())];
+  async function draw() {
+    const s = st(mat); $('#astr', b).value = Math.round(s.s * 100); $('#astr', b).nextElementSibling.textContent = Math.round(s.s * 100) + '%';
+    $('#aicons', b).checked = s.icons !== false;
+    $('#amatn', b).textContent = '— ' + ARMOR_MATS.find((x) => x[0] === mat)[1];
+    const [b1, b2] = await baseOf(mat);
+    const t = (im) => im && (s.on ? IMG.tint(im, s.color, s.s, false) : im);
+    const q = [...Lite3D.skinQuads(skin, false, true), ...Lite3D.armorQuads(t(b1), t(b2), false, parts())];
     if (!v) v = Lite3D.viewer($('#a3d', b), q, { dist: 62, pitch: 0.15 }); else v.set(q);
   }
-  $$('#amat button', b).forEach((x) => x.onclick = () => { mat = x.dataset.m; $$('#amat button', b).forEach((y) => y.classList.toggle('on', y === x)); loadMat(); });
-  $$('.sw[data-c]', b).forEach((x) => x.onclick = () => { $('#acol', b).value = x.dataset.c; draw(); });
-  $('#acol', b).oninput = draw; $('#astr', b).oninput = draw; $$('#aparts input', b).forEach((x) => x.onchange = draw);
+  const row = (m) => $(`.mat-row[data-m="${m}"]`, b);
+  const refreshRow = (m) => { row(m).querySelector('.mat-state').textContent = st(m).on ? 'متلوّن' : 'أصلي'; row(m).querySelector('[data-on]').checked = st(m).on; row(m).querySelector('[data-col]').value = st(m).color; };
+  const select = (m) => { mat = m; $$('.mat-row', b).forEach((r) => r.classList.toggle('sel', r.dataset.m === m)); draw(); };
+  $$('.mat-row', b).forEach((r) => {
+    const m = r.dataset.m;
+    r.onclick = (e) => { if (!e.target.closest('input,label')) select(m); };
+    r.querySelector('[data-on]').onchange = (e) => { st(m).on = e.target.checked; refreshRow(m); select(m); };
+    r.querySelector('[data-col]').oninput = (e) => { st(m).color = e.target.value; st(m).on = true; refreshRow(m); if (mat !== m) select(m); else draw(); };
+  });
+  $$('.sw[data-c]', b).forEach((x) => x.onclick = () => { st(mat).color = x.dataset.c; st(mat).on = true; refreshRow(mat); draw(); });
+  $('#astr', b).oninput = () => { st(mat).s = +$('#astr', b).value / 100; draw(); };
+  $('#aicons', b).onchange = () => { st(mat).icons = $('#aicons', b).checked; };
+  $$('#aparts input', b).forEach((x) => x.onchange = draw);
   $('#aapply', b).onclick = async () => {
-    if (!base1 && !base2) return toast('ما لقيت تكستر الدرع — حمّل ملفات اللعبة', 'err');
-    const c = cur(); const [r1, r2] = armorPaths(mat, p.packFormat);
-    if (base1) await api.tex.put(p.id, r1, IMG.toB64(IMG.tint(base1, c.color, c.s, false)));
-    if (base2) await api.tex.put(p.id, r2, IMG.toB64(IMG.tint(base2, c.color, c.s, false)));
-    toast(`تلوّن درع ${ARMOR_MATS.find((x) => x[0] === mat)[1]} ✓`);
+    let n = 0;
+    for (const [m] of ARMOR_MATS) {
+      const s = st(m), [r1, r2] = armorPaths(m, p.packFormat), [b1, b2] = await baseOf(m);
+      if (!b1 && !b2) continue;
+      if (s.on) {
+        if (b1) await api.tex.put(p.id, r1, IMG.toB64(IMG.tint(b1, s.color, s.s, false)));
+        if (b2) await api.tex.put(p.id, r2, IMG.toB64(IMG.tint(b2, s.color, s.s, false)));
+        for (const ip of armorItemPaths(m)) { const im = await texImg(p, ip); if (!im) continue; if (s.icons !== false) await api.tex.put(p.id, ip, IMG.toB64(IMG.tint(im, s.color, s.s, false))); else await api.tex.reset(p.id, ip); }
+        n++;
+      } else if (s.applied) { await api.tex.reset(p.id, r1); await api.tex.reset(p.id, r2); for (const ip of armorItemPaths(m)) await api.tex.reset(p.id, ip); }
+      s.applied = s.on;
+    }
+    await saveProject();
+    if (!n && !Object.values(p.armorTint).some((x) => x.applied === false)) return toast('ما لقيت تكستر الدرع — حمّل ملفات اللعبة', 'err');
+    celebrate(); toast(n ? `تلوّنت ${n} أنواع دروع ✓` : 'رجعت الدروع للأصلي');
   };
-  $('#areset', b).onclick = async () => { const [r1, r2] = armorPaths(mat, p.packFormat); await api.tex.reset(p.id, r1); await api.tex.reset(p.id, r2); toast('رجع الأصلي'); };
-  // elytra
+  $('#areset', b).onclick = async () => {
+    for (const [m] of ARMOR_MATS) { const [r1, r2] = armorPaths(m, p.packFormat); await api.tex.reset(p.id, r1); await api.tex.reset(p.id, r2); for (const ip of armorItemPaths(m)) await api.tex.reset(p.id, ip); st(m).on = false; st(m).applied = false; refreshRow(m); }
+    await saveProject(); draw(); toast('رجعت كل الدروع للأصلي');
+  };
+  // ---- elytra, previewed while flying
   const eRel = texPath(TEXTURES.find((t) => t.id === 'elytra_wings'), p.packFormat);
-  const eBase = eRel ? await texImg(p, eRel) : null;
-  const drawE = () => { const cv = $('#epv', b); if (!eBase) return; const t = IMG.tint(eBase, $('#ecol', b).value, 0.85, false); cv.width = t.width; cv.height = t.height; cv.getContext('2d').putImageData(t, 0, 0); };
-  $('#ecol', b).oninput = drawE; drawE();
-  $('#eapply', b).onclick = async () => { if (!eBase) return toast('ما لقيت تكستر الإليترا', 'err'); await api.tex.put(p.id, eRel, IMG.toB64(IMG.tint(eBase, $('#ecol', b).value, 0.85, false))); toast('تلوّنت الإليترا ✓'); };
-  $('#ereset', b).onclick = async () => { if (eRel) await api.tex.reset(p.id, eRel); toast('رجعت الأصلي'); };
-  loadMat();
+  const eOrig = eRel ? await texImg(p, eRel) : null;
+  let eCur = eRel ? await texImg(p, eRel, false) : null, ev = null;
+  const eTex = () => { const im = eCur || eOrig; if (!im) return null; return $('#etint', b).checked ? IMG.tint(im, $('#ecol', b).value, 0.85, false) : im; };
+  const drawE = () => {
+    const sp = +$('#espread', b).value / 100; $('#espread', b).nextElementSibling.textContent = Math.round(sp * 100) + '%';
+    const q = Lite3D.flyingQuads(skin, eTex(), sp);
+    if (!ev) ev = Lite3D.viewer($('#e3d', b), q, { dist: 70, pitch: 0.55, yaw: Math.PI }); else ev.set(q);
+  };
+  $('#ecol', b).oninput = () => { $('#etint', b).checked = true; drawE(); }; $('#etint', b).onchange = drawE; $('#espread', b).oninput = drawE;
+  drawE();
+  $('#eapply', b).onclick = async () => {
+    if (!eOrig) return toast('ما لقيت تكستر الإليترا', 'err');
+    p.elytraTint = { color: $('#ecol', b).value, on: $('#etint', b).checked }; await saveProject();
+    await api.tex.put(p.id, eRel, IMG.toB64(eTex())); eCur = eTex(); $('#etint', b).checked = false; drawE(); celebrate(); toast('انحفظت الإليترا ✓');
+  };
+  $('#edraw', b).onclick = () => {
+    if (!eOrig) return toast('ما لقيت تكستر الإليترا', 'err');
+    let fv = null;
+    openPixelEditor({
+      title: 'الإليترا — ارسم وأنت طاير', image: eTex(), original: eOrig, size: [64, 32], fileName: 'elytra', extraTitle: 'وأنت طاير ✈',
+      renderExtra(box, cv) {
+        const img = cv.getContext ? cv.getContext('2d').getImageData(0, 0, cv.width, cv.height) : cv;
+        if (!fv || !box.querySelector('canvas')) { box.innerHTML = '<div class="v3d sky3d" style="height:260px"><canvas></canvas></div>'; fv = Lite3D.viewer(box.querySelector('canvas'), Lite3D.flyingQuads(skin, img, 1), { dist: 70, pitch: 0.55, yaw: Math.PI }); return; }
+        cancelAnimationFrame(fv.pend); fv.pend = requestAnimationFrame(() => fv.set(Lite3D.flyingQuads(skin, img, 1)));
+      },
+      onSave: async (img) => { await api.tex.put(p.id, eRel, IMG.toB64(img)); eCur = img; $('#etint', b).checked = false; drawE(); toast('انحفظت الإليترا ✓'); },
+      onReset: async () => { await api.tex.reset(p.id, eRel); eCur = null; drawE(); },
+    });
+  };
+  $('#ereset', b).onclick = async () => { if (eRel) await api.tex.reset(p.id, eRel); eCur = null; $('#etint', b).checked = false; drawE(); toast('رجعت الأصلي'); };
+  draw();
+}
+
+// ------------------------------------------------------------- guided tour (first run)
+const TOURS = {
+  app: [
+    { t: 'هلا فيك 👋', d: 'هذا MC Pack Studio — تسوي فيه ريسورس باك لماينكرافت بسهولة وبدون خبرة. خلني أوريك كل شي بسرعة.' },
+    { el: '#newp', t: 'سوّ باك جديد', d: 'من هنا تبدأ. تختار الكلاينت (Lunar أو غيره) وقالب جاهز مثل PvP، وخلاص.' },
+    { el: '#side [data-v=packs]', t: 'باكاتي', d: 'كل الباكات اللي سويتها تلقاها هنا. تقدر تكمّل عليها بأي وقت.' },
+    { el: '#side [data-v=skins]', t: 'السكنات', d: 'ارسم سكنك على الشخصية مباشرة، وشوفه 3D.' },
+    { el: '#side [data-v=mods]', t: 'المودات', d: 'فعّل أو عطّل أو احذف المودات حقت الكلاينت.' },
+    { el: '#side [data-v=clients]', t: 'الكلاينتات', d: 'الكلاينتات اللي على جهازك. الأخضر يعني لقيته.' },
+    { el: '#side [data-v=settings]', t: 'الإعدادات', d: 'غيّر شكل التطبيق واللغة، وتقدر تشغّل هذا الشرح مرة ثانية من هنا.' },
+    { t: 'يلا نبدأ! 🎉', d: 'اضغط "باك جديد" وسوّ أول باك لك. وإذا علقت بشي، كل صفحة فوقها سطر يشرح وش تسوي.' },
+  ],
+  project: [
+    { t: 'هذا المحرر ✏', d: 'هنا تعدّل الباك حقك. خلني أوريك وين كل شي.' },
+    { el: '.tabs', t: 'الأقسام', d: 'كل قسم يغيّر شي: التكسترات، الدروع، الجزيئات، الفاير، السما، الأصوات... الأقسام مقسّمة: الشكل، PvP، الصوت، ومتقدم.' },
+    { el: '#wsb', t: 'التكسترات', d: 'اضغط على أي شي (سيف، توتم...) وبيفتح لك تعدّل عليه أو تبدأ من الصفر.' },
+    { el: '#live', t: 'تثبيت تلقائي', d: 'شغّله وكل ما تحفظ، الباك ينزل في الكلاينت لحاله. باللعبة اضغط F3+T يتحدّث.' },
+    { el: '#inst', t: 'ثبّت الباك', d: 'لما تخلص اضغط هنا، والباك ينزل في مجلد الكلاينت. بعدها فعّله من إعدادات الريسورس باك باللعبة.' },
+  ],
+};
+function startTour(name) {
+  const steps = TOURS[name]; if (!steps) return; let i = 0;
+  const shade = document.createElement('div'); shade.className = 'tour-click';
+  const hole = document.createElement('div'); hole.className = 'tour-hole';
+  const box = document.createElement('div'); box.className = 'tour-box';
+  document.body.append(shade, hole, box);
+  const end = async () => { shade.remove(); hole.remove(); box.remove(); removeEventListener('keydown', key); S.settings.tours = { ...(S.settings.tours || {}), [name]: true }; await api.settings.set(S.settings); };
+  const key = (e) => { if (e.key === 'Escape') end(); if (e.key === 'ArrowLeft' || e.key === 'Enter') next(1); if (e.key === 'ArrowRight') next(-1); };
+  addEventListener('keydown', key);
+  function show() {
+    const s = steps[i], el = s.el && document.querySelector(s.el);
+    box.innerHTML = `<h4>${s.t}</h4><p>${s.d}</p><div class="row" style="align-items:center"><div class="dots">${steps.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div><span class="spacer"></span>
+      <button class="btn ghost sm" data-x>${i === steps.length - 1 ? '' : 'تخطّي'}</button>${i ? '<button class="btn sm" data-b>رجوع</button>' : ''}<button class="btn primary sm" data-n>${i === steps.length - 1 ? 'يلا!' : 'التالي'}</button></div>`;
+    if (!box.querySelector('[data-x]').textContent) box.querySelector('[data-x]').remove(); else box.querySelector('[data-x]').onclick = end;
+    box.querySelector('[data-n]').onclick = () => next(1); const bb = box.querySelector('[data-b]'); if (bb) bb.onclick = () => next(-1);
+    if (el) {
+      el.scrollIntoView({ block: 'nearest' });
+      const r = el.getBoundingClientRect(), pad = 6;
+      Object.assign(hole.style, { display: '', left: r.left - pad + 'px', top: r.top - pad + 'px', width: r.width + pad * 2 + 'px', height: Math.min(r.height, innerHeight - 40) + pad * 2 + 'px' });
+      const bw = 340, below = r.bottom + 16 + 200 < innerHeight;
+      let left = Math.min(innerWidth - bw - 16, Math.max(16, r.left + r.width / 2 - bw / 2));
+      if (r.width < 300 && r.height > 20 && r.left > innerWidth / 2) left = Math.max(16, r.left - bw - 20); // sidebar on the right (Arabic)
+      else if (r.width < 300 && r.right < innerWidth / 2) left = r.right + 20;
+      const top = r.width < 300 ? Math.min(innerHeight - 220, Math.max(16, r.top - 20)) : below ? r.bottom + 16 : Math.max(16, r.top - 216);
+      Object.assign(box.style, { left: left + 'px', top: top + 'px' });
+    } else {
+      Object.assign(hole.style, { display: '', left: innerWidth / 2 + 'px', top: innerHeight / 2 + 'px', width: '0px', height: '0px' });
+      Object.assign(box.style, { left: innerWidth / 2 - 170 + 'px', top: innerHeight / 2 - 100 + 'px' });
+    }
+  }
+  function next(d) { i += d; if (i >= steps.length) { end(); if (name === 'app') celebrate(); return; } if (i < 0) i = 0; show(); }
+  show();
+}
+
+// ------------------------------------------------------------- fun: animations & tips
+const fxOn = () => !S.settings || S.settings.anim !== false;
+function tabHint(txt) { return `<div class="tab-hint">${icon('star', 15)}<span>${txt}</span></div>`; }
+function celebrate() {
+  if (!fxOn()) return;
+  const c = document.createElement('canvas'); c.className = 'fx-layer'; document.body.append(c);
+  const W = c.width = innerWidth, H = c.height = innerHeight, x = c.getContext('2d');
+  const cols = ['#a78bfa', '#f472b6', '#facc15', '#34d399', '#60a5fa', '#fb923c'];
+  const ps = Array.from({ length: 70 }, () => ({ x: W / 2 + (Math.random() - 0.5) * 120, y: H * 0.35, vx: (Math.random() - 0.5) * 14, vy: -6 - Math.random() * 9, s: 5 + Math.random() * 6, c: cols[(Math.random() * cols.length) | 0], r: Math.random() * 6 }));
+  const t0 = performance.now();
+  (function f(t) {
+    const k = (t - t0) / 1300; x.clearRect(0, 0, W, H);
+    for (const p of ps) { p.x += p.vx; p.y += p.vy; p.vy += 0.45; p.r += 0.2; x.save(); x.globalAlpha = Math.max(0, 1 - k); x.translate(p.x, p.y); x.rotate(p.r); x.fillStyle = p.c; x.fillRect(-p.s / 2, -p.s / 2, p.s, p.s); x.restore(); }
+    if (k < 1) requestAnimationFrame(f); else c.remove();
+  })(t0);
+}
+// the in-game "totem of undying" pop, using the pack's own totem texture
+async function totemPop() {
+  if (!fxOn() || !S.project) return;
+  const rel = texPath(TEXTURES.find((t) => t.id === 'totem'), S.project.packFormat); if (!rel) return;
+  const im = await texImg(S.project, rel, false); if (!im) return;
+  const c = document.createElement('canvas'); c.className = 'fx-layer'; document.body.append(c);
+  const W = c.width = innerWidth, H = c.height = innerHeight, x = c.getContext('2d'), src = IMG.toCanvas(im);
+  const ps = Array.from({ length: 90 }, () => ({ a: Math.random() * Math.PI * 2, v: 2 + Math.random() * 7, s: 4 + Math.random() * 6, c: Math.random() < 0.5 ? '#facc15' : '#4ade80' }));
+  const t0 = performance.now();
+  (function f(t) {
+    const k = (t - t0) / 1100; x.clearRect(0, 0, W, H); x.imageSmoothingEnabled = false;
+    const e = k < 0.35 ? k / 0.35 : 1, size = Math.min(W, H) * (0.18 + 0.32 * Math.sin(e * Math.PI / 2)) * (k > 0.7 ? 1 - (k - 0.7) / 0.3 : 1);
+    x.save(); x.globalAlpha = k > 0.75 ? Math.max(0, 1 - (k - 0.75) / 0.25) : 1; x.translate(W / 2, H / 2 - k * 60); x.rotate(Math.sin(k * 9) * 0.25 * (1 - k)); x.drawImage(src, -size / 2, -size / 2, size, size); x.restore();
+    for (const p of ps) { const d = p.v * k * 90; x.globalAlpha = Math.max(0, 1 - k); x.fillStyle = p.c; x.fillRect(W / 2 + Math.cos(p.a) * d, H / 2 + Math.sin(p.a) * d + k * k * 120, p.s, p.s); }
+    x.globalAlpha = 1;
+    if (k < 1) requestAnimationFrame(f); else c.remove();
+  })(t0);
+}
+
+// ------------------------------------------------------------- particle studio (sweep, crit...)
+const PARTICLES = [
+  { id: 'sweep', name: 'السويب (ضربة السيف)', frames: 8, file: (i) => `textures/particle/sweep_${i}.png`, size: 32, big: true, hint: 'الضربة اللي تطلع لما تضرب بالسيف وأنت ماشي' },
+  { id: 'crit', name: 'الكريتكال', frames: 1, file: () => 'textures/particle/critical_hit.png', size: 8, hint: 'النجوم اللي تطلع لما تضرب وأنت نازل من نطة' },
+  { id: 'enchanted_hit', name: 'ضربة الإنشانت', frames: 1, file: () => 'textures/particle/enchanted_hit.png', size: 8, hint: 'الجزيئات الزرقا لما تضرب بسيف مإنشانت' },
+  { id: 'damage', name: 'قلوب الضرر', frames: 1, file: () => 'textures/particle/damage.png', size: 8, hint: 'القلوب السودا اللي تطلع من اللاعب لما ينضرب' },
+  { id: 'glitter', name: 'جزيئات التوتم', frames: 8, file: (i) => `textures/particle/glitter_${i}.png`, size: 8, hint: 'اللي تطلع لما ينكسر التوتم' },
+  { id: 'flame', name: 'لهب', frames: 1, file: () => 'textures/particle/flame.png', size: 8, hint: 'لهب الشموع والفرن والسبونر' },
+  { id: 'explosion', name: 'الانفجار', frames: 16, file: (i) => `textures/particle/explosion_${i}.png`, size: 32, big: true, hint: 'دخان انفجار التي إن تي والكريبر' },
+];
+const P_STYLES = [
+  ['orig', 'الأصلي', null],
+  ['fire', 'نار 🔥', ['#2a0000', '#b91c1c', '#f97316', '#facc15', '#fffbe6']],
+  ['ice', 'ثلج ❄', ['#06142e', '#1d4ed8', '#38bdf8', '#e0f2fe', '#ffffff']],
+  ['bolt', 'برق ⚡', ['#14002b', '#6d28d9', '#a78bfa', '#f5f3ff', '#ffffff']],
+  ['toxic', 'سم ☣', ['#03140a', '#15803d', '#4ade80', '#ecfccb', '#ffffff']],
+  ['blood', 'دم 🩸', ['#120000', '#7f1d1d', '#dc2626', '#fca5a5', '#fff1f2']],
+  ['gold', 'ذهب ✨', ['#1c1000', '#a16207', '#eab308', '#fef08a', '#fffef0']],
+  ['rainbow', 'قوس قزح 🌈', 'rainbow'],
+  ['custom', 'لون من عندك', 'custom'],
+  ['hide', 'شيلها (مخفية)', 'hide'],
+];
+const P_SHAPES = [['orig', 'الشكل الأصلي'], ['arc', 'قوس'], ['ring', 'دائرة'], ['slash', 'ضربة'], ['star', 'نجمة'], ['heart', 'قلب'], ['spark', 'شرار'], ['own', 'صورة من جهازك']];
+const hexRgb = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+function gradMap(stops, t) { const n = stops.length - 1, i = Math.min(n - 1, Math.floor(t * n)), f = t * n - i, a = hexRgb(stops[i]), b = hexRgb(stops[i + 1]); return a.map((v, k) => v + (b[k] - v) * f); }
+function hslRgb(h, s, l) { const k = (n) => (n + h * 12) % 12, a = s * Math.min(l, 1 - l), f = (n) => l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1)); return [f(0) * 255, f(8) * 255, f(4) * 255]; }
+function colorFrame(im, style, color, fi, nf) {
+  const out = IMG.clone(im), d = out.data, W = im.width;
+  if (style === 'orig') return out;
+  const st = P_STYLES.find((x) => x[0] === style)[2];
+  const stops = st === 'custom' ? ['#000000', color, '#ffffff'] : st;
+  for (let i = 0; i < d.length; i += 4) {
+    if (st === 'hide') { d[i + 3] = 0; continue; }
+    if (!d[i + 3]) continue;
+    const l = (0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]) / 255;
+    let c;
+    if (st === 'rainbow') { const x = (i / 4) % W; c = hslRgb(((x / W) + fi / Math.max(1, nf)) % 1, 0.9, 0.25 + l * 0.6); }
+    else c = gradMap(stops, Math.min(1, Math.max(0, l)));
+    d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2];
+  }
+  return out;
+}
+// draws a white shape (brightness = intensity) for frame t (0..1)
+function shapeFrame(shape, S, t) {
+  const c = document.createElement('canvas'); c.width = c.height = S; const x = c.getContext('2d');
+  const fade = t < 0.6 ? 1 : 1 - (t - 0.6) / 0.4, m = S / 2;
+  x.globalAlpha = Math.max(0.05, fade); x.lineCap = 'round';
+  const grad = (r) => { const g = x.createRadialGradient(m, m, 0, m, m, r); g.addColorStop(0, '#ffffff'); g.addColorStop(1, '#8a8a8a'); return g; };
+  if (shape === 'arc') { const a = Math.PI * (0.25 + 0.9 * Math.min(1, t * 1.6)); x.strokeStyle = grad(m); x.lineWidth = S * 0.16; x.beginPath(); x.arc(m, m * 1.35, m * 0.95, -Math.PI / 2 - a / 2, -Math.PI / 2 + a / 2); x.stroke(); x.strokeStyle = '#ffffff'; x.lineWidth = S * 0.05; x.stroke(); }
+  else if (shape === 'ring') { const r = m * (0.3 + 0.6 * t); x.strokeStyle = '#ffffff'; x.lineWidth = Math.max(1, S * 0.12 * (1 - t * 0.6)); x.beginPath(); x.arc(m, m, r, 0, Math.PI * 2); x.stroke(); }
+  else if (shape === 'slash') { const L = S * (0.3 + 0.6 * Math.min(1, t * 1.5)); x.strokeStyle = grad(m); x.lineWidth = S * 0.14; x.beginPath(); x.moveTo(m - L / 2, m + L / 2); x.lineTo(m + L / 2, m - L / 2); x.stroke(); x.strokeStyle = '#fff'; x.lineWidth = S * 0.05; x.stroke(); }
+  else if (shape === 'star') { const R = m * (0.55 + 0.35 * Math.sin(t * Math.PI)), r = R * 0.42; x.fillStyle = grad(R); x.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5 + t; const rr = i % 2 ? r : R; x.lineTo(m + Math.cos(a) * rr, m + Math.sin(a) * rr); } x.fill(); }
+  else if (shape === 'heart') { const s = S * (0.8 + 0.12 * Math.sin(t * Math.PI)) / 16; x.fillStyle = grad(m); x.save(); x.translate(m, m); x.scale(s, s); x.beginPath(); x.moveTo(0, 5); x.bezierCurveTo(-8, -1, -6, -8, 0, -3.5); x.bezierCurveTo(6, -8, 8, -1, 0, 5); x.fill(); x.restore(); }
+  else if (shape === 'spark') { x.strokeStyle = '#fff'; x.lineWidth = Math.max(1, S / 12); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, r0 = m * 0.15 + m * 0.5 * t, r1 = r0 + m * 0.35 * (1 - t * 0.5); x.beginPath(); x.moveTo(m + Math.cos(a) * r0, m + Math.sin(a) * r0); x.lineTo(m + Math.cos(a) * r1, m + Math.sin(a) * r1); x.stroke(); } }
+  return x.getImageData(0, 0, S, S);
+}
+async function decodeImageFrames(path) {
+  const ext = path.split('.').pop().toLowerCase(), b64 = await api.fs.readB64(path);
+  if (ext === 'gif' && window.ImageDecoder) {
+    try {
+      const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+      const dec = new ImageDecoder({ data: bytes, type: 'image/gif' }); await dec.tracks.ready;
+      const n = Math.min(dec.tracks.selectedTrack.frameCount, 64), out = [];
+      for (let i = 0; i < n; i++) { const { image } = await dec.decode({ frameIndex: i }); const c = document.createElement('canvas'); c.width = image.displayWidth; c.height = image.displayHeight; c.getContext('2d').drawImage(image, 0, 0); out.push(c.getContext('2d').getImageData(0, 0, c.width, c.height)); image.close(); }
+      if (out.length) return out;
+    } catch {}
+  }
+  const im0 = await IMG.load(`data:image/${ext === 'jpg' ? 'jpeg' : ext};base64,` + b64);
+  const im = IMG.resize(im0, im0.width, im0.height);
+  // a strip of square frames (horizontal or vertical) → split it
+  const cut = (n, horiz) => Array.from({ length: n }, (_, i) => { const c = IMG.toCanvas(im), s = horiz ? im.height : im.width; return c.getContext('2d').getImageData(horiz ? i * s : 0, horiz ? 0 : i * s, s, s); });
+  if (im.width >= im.height * 2 && im.width % im.height === 0) return cut(im.width / im.height, true);
+  if (im.height >= im.width * 2 && im.height % im.width === 0) return cut(im.height / im.width, false);
+  return [im];
+}
+async function tabParticles(b) {
+  const p = S.project; p.particles = p.particles || {};
+  let cur = PARTICLES[0], base = [], own = null, anim = null;
+  const cfg = () => (p.particles[cur.id] = p.particles[cur.id] || { shape: 'orig', style: 'orig', color: '#f97316' });
+  b.innerHTML = `${p.baseJar ? '' : noBaseNotice()}
+  <div class="two" style="grid-template-columns:420px 1fr">
+    <div class="card stack">
+      <h3 style="margin:0">${icon('wand', 18)} اختر الجزيء</h3>
+      <div class="plist" id="plist">${PARTICLES.map((x) => `<button class="pchip" data-id="${x.id}"><canvas width="32" height="32"></canvas><span>${x.name}</span></button>`).join('')}</div>
+      <div class="muted small" id="phint"></div>
+      <h3 style="margin:6px 0 0">شكل الجزيء</h3>
+      <div class="seg wrap" id="pshape">${P_SHAPES.map(([k, n]) => `<button data-s="${k}">${n}</button>`).join('')}</div>
+      <h3 style="margin:6px 0 0">اللون</h3>
+      <div class="pstyles" id="pstyle">${P_STYLES.map(([k, n, st]) => `<button data-st="${k}" title="${n}"><i style="background:${Array.isArray(st) ? `linear-gradient(90deg,${st.join(',')})` : st === 'rainbow' ? 'linear-gradient(90deg,#ef4444,#f59e0b,#22c55e,#3b82f6,#a855f7)' : st === 'hide' ? 'repeating-linear-gradient(45deg,#333 0 4px,#222 4px 8px)' : st === 'custom' ? 'conic-gradient(red,yellow,lime,cyan,blue,magenta,red)' : '#888'}"></i>${n}</button>`).join('')}</div>
+      <div class="row" id="pcolrow"><input type="color" id="pcol"><span class="muted small">اختر لونك</span></div>
+      <div class="row"><button class="btn primary" id="papply">${icon('check', 16)} طبّق على الباك</button><button class="btn ghost" id="preset">${icon('reset', 16)} الأصلي</button></div>
+    </div>
+    <div class="card"><h3>كيف بتطلع باللعبة <span class="muted small">(معاينة متحركة)</span></h3>
+      <div class="pstage"><canvas id="pcv"></canvas></div>
+      <div class="pframes" id="pfr"></div></div></div>`;
+  bindBaseActions(b);
+  const frames = () => {
+    const c = cfg(), S0 = base[0] ? base[0].width : cur.size, n = cur.frames;
+    let src;
+    if (c.shape === 'orig') src = base.length ? base : Array.from({ length: n }, (_, i) => shapeFrame(cur.id === 'sweep' ? 'arc' : 'star', S0, n > 1 ? i / (n - 1) : 0.4));
+    else if (c.shape === 'own') src = own ? Array.from({ length: n }, (_, i) => { const f = own[Math.floor(i * own.length / n)]; let im = IMG.resize(IMG.toCanvas(f), S0, S0); if (own.length === 1 && n > 1) { const t = i / (n - 1), fade = t < 0.6 ? 1 : 1 - (t - 0.6) / 0.4; im = IMG.clone(im); for (let k = 3; k < im.data.length; k += 4) im.data[k] *= fade; } return im; }) : (base.length ? base : []);
+    else src = Array.from({ length: n }, (_, i) => shapeFrame(c.shape, S0, n > 1 ? i / (n - 1) : 0.4));
+    const style = c.shape === 'own' && c.style === 'orig' ? 'orig' : c.style;
+    return src.map((f, i) => colorFrame(f, style, c.color, i, src.length));
+  };
+  function sync() {
+    const c = cfg();
+    $('#phint', b).textContent = cur.hint;
+    $$('#plist .pchip', b).forEach((x) => x.classList.toggle('on', x.dataset.id === cur.id));
+    $$('#pshape button', b).forEach((x) => x.classList.toggle('on', x.dataset.s === c.shape));
+    $$('#pstyle button', b).forEach((x) => x.classList.toggle('on', x.dataset.st === c.style));
+    $('#pcolrow', b).style.display = c.style === 'custom' ? '' : 'none'; $('#pcol', b).value = c.color;
+    play();
+  }
+  function play() {
+    cancelAnimationFrame(anim); const fr = frames(), cv = $('#pcv', b); if (!cv) return;
+    $('#pfr', b).innerHTML = ''; fr.forEach((f) => { const c = IMG.toCanvas(f); $('#pfr', b).append(c); });
+    const ctx = cv.getContext('2d'); const W = cv.width = cv.clientWidth * devicePixelRatio, H = cv.height = cv.clientHeight * devicePixelRatio;
+    const cvs = fr.map((f) => IMG.toCanvas(f)); let t0 = performance.now(); const parts = [];
+    const loop = (t) => {
+      if (!cv.isConnected) return; ctx.clearRect(0, 0, W, H); ctx.imageSmoothingEnabled = false;
+      if (!cvs.length) { anim = requestAnimationFrame(loop); return; }
+      if (cur.big) { // one big sprite in the middle, played like the game (fast), then a short pause
+        const dur = cur.frames * 60, k = (Math.max(0, t - t0) % (dur + 500)); const i = Math.max(0, Math.min(cvs.length - 1, Math.floor(k / 60)));
+        if (k < dur) { const s = Math.min(W, H) * 0.7; ctx.drawImage(cvs[i], W / 2 - s / 2, H / 2 - s / 2, s, s); }
+      } else { // a burst of little particles flying out
+        if (!parts.length || t - t0 > 1400) { t0 = t; parts.length = 0; for (let i = 0; i < 26; i++) { const a = Math.random() * Math.PI * 2, v = 0.5 + Math.random(); parts.push({ x: W / 2, y: H / 2, vx: Math.cos(a) * v * W / 400, vy: Math.sin(a) * v * H / 400 - H / 500, s: (0.6 + Math.random() * 0.6) * Math.min(W, H) / 14 }); } }
+        const age = Math.max(0, (t - t0) / 1400);
+        for (const q of parts) { q.x += q.vx; q.y += q.vy; q.vy += H / 30000; const i = Math.max(0, Math.min(cvs.length - 1, Math.floor(age * cvs.length))); ctx.globalAlpha = Math.max(0, 1 - age); ctx.drawImage(cvs[i], q.x - q.s / 2, q.y - q.s / 2, q.s, q.s); }
+        ctx.globalAlpha = 1;
+      }
+      anim = requestAnimationFrame(loop);
+    };
+    anim = requestAnimationFrame(loop);
+  }
+  async function load(pt) {
+    cur = pt; own = null; base = [];
+    for (let i = 0; i < pt.frames; i++) { const im = await texImg(p, pt.file(i)); if (im) base.push(im); }
+    if (base.length && base.length < pt.frames) base = [];
+    sync();
+  }
+  // chip icons
+  for (const x of PARTICLES) { const im = await texImg(p, x.file(Math.floor(x.frames / 2))); const cv = $(`.pchip[data-id="${x.id}"] canvas`, b); if (im && cv) { const c = cv.getContext('2d'); c.imageSmoothingEnabled = false; c.fillStyle = '#0b0e14'; c.fillRect(0, 0, 32, 32); c.drawImage(IMG.toCanvas(im), 0, 0, 32, 32); } }
+  $$('#plist .pchip', b).forEach((x) => x.onclick = () => load(PARTICLES.find((q) => q.id === x.dataset.id)));
+  $$('#pshape button', b).forEach((x) => x.onclick = async () => {
+    if (x.dataset.s === 'own') {
+      const f = await api.fs.pickFiles('اختر صورة أو GIF للجزيء', ['png', 'gif', 'jpg', 'jpeg', 'webp']); if (!f) return;
+      own = await decodeImageFrames(f[0]); toast(own.length > 1 ? `انقسمت لـ ${own.length} إطارات ✓` : 'انضافت الصورة ✓');
+    }
+    cfg().shape = x.dataset.s; sync();
+  });
+  $$('#pstyle button', b).forEach((x) => x.onclick = () => { cfg().style = x.dataset.st; sync(); });
+  $('#pcol', b).oninput = () => { cfg().color = $('#pcol', b).value; play(); };
+  $('#papply', b).onclick = async () => {
+    const fr = frames(); if (!fr.length) return toast('ما فيه شكل — حمّل ملفات اللعبة أو اختر شكل', 'err');
+    for (let i = 0; i < cur.frames; i++) await api.tex.put(p.id, cur.file(i), IMG.toB64(fr[Math.min(i, fr.length - 1)]));
+    await saveProject(); celebrate(); toast(`تغيّر ${cur.name} ✓ — ثبّت الباك وجربه`);
+  };
+  $('#preset', b).onclick = async () => { for (let i = 0; i < cur.frames; i++) await api.tex.reset(p.id, cur.file(i)); p.particles[cur.id] = null; own = null; await saveProject(); sync(); toast('رجع للأصلي'); };
+  load(cur);
 }
 
 // ------------------------------------------------------------- font generator
@@ -1247,7 +1588,7 @@ async function tabFont(b) {
       <label class="f">الخط<select class="inp" id="ff">${FONT_LIST.map((f) => `<option ${f === fs0.family ? 'selected' : ''} style="font-family:'${f}'">${f}</option>`).join('')}<option value="__c">خط ثاني (اكتب اسمه)...</option></select></label>
       <input class="inp" id="ffc" placeholder="اسم الخط مثل: Minecraftia" style="display:none">
       <div class="row"><label class="check small"><span class="switch"><input type="checkbox" id="fb" ${fs0.bold ? 'checked' : ''}><span></span></span>عريض</label><label class="check small"><span class="switch"><input type="checkbox" id="fp" ${fs0.pixel ? 'checked' : ''}><span></span></span>بكسلي (بدون تنعيم)</label></div>
-      <div class="slider-row" style="grid-template-columns:70px 1fr 46px"><span>الدقة</span><select class="inp" id="fc" style="height:34px;grid-column:span 2">${[8, 16, 32].map((n) => `<option value="${n}" ${n === fs0.cell ? 'selected' : ''}>${n * 16}×${n * 16}${n === 8 ? ' (زي الأصلي)' : n === 32 ? ' (ناعم جداً)' : ''}</option>`).join('')}</select></div>
+      <div class="slider-row" style="grid-template-columns:70px 1fr 46px"><span>الدقة</span><select class="inp" id="fc" style="height:34px;grid-column:span 2">${[8, 16, 32].map((n) => `<option value="${n}" ${n === fs0.cell ? 'selected' : ''}>${n * 16}×${n * 16}${n === 8 ? ' (زي الأصلي)' : n === 32 ? ' (ناعم مرة)' : ''}</option>`).join('')}</select></div>
       <div class="slider-row" style="grid-template-columns:70px 1fr 46px"><span>الحجم</span><input type="range" id="fsz" min="60" max="120" value="${fs0.scale}"><output class="ltr"></output></div>
       <div class="slider-row" style="grid-template-columns:70px 1fr 46px"><span>فوق/تحت</span><input type="range" id="fo" min="-4" max="4" step="0.5" value="${fs0.offset}"><output class="ltr"></output></div>
       <div class="row"><button class="btn primary" id="fapply">${icon('check', 16)} طبّق الخط</button><button class="btn ghost" id="freset">${icon('reset', 16)} الأصلي</button></div>
@@ -1361,7 +1702,7 @@ async function tabFire(b) {
       const out = fireTransform(await IMG.fromB64(src.data), c.lower, c.opacity, c.useTint ? c.tint : null);
       await api.tex.put(p.id, path, IMG.toB64(out), meta || '{"animation":{}}');
     }
-    toast('تم تعديل الفاير 🔥');
+    toast('تغيّر الفاير 🔥');
   };
   $('#freset', b).onclick = async () => { await api.tex.reset(p.id, p0); await api.tex.reset(p.id, p1); p.fire = null; await saveProject(); toast('رجع الفاير للأصلي'); tabFire(b); };
   $('#fedit', b).onclick = () => editTexture({ ...t0, path: p0 }, () => tabFire(b));
@@ -1425,7 +1766,7 @@ async function tabShield(b) {
       <div class="slider-row" style="grid-template-columns:110px 1fr 40px"><span>نزول الشيلد</span><input type="range" id="sl" min="0" max="12" step="0.5" value="${sh.lower}"><output class="ltr"></output></div>
       <div class="slider-row" style="grid-template-columns:110px 1fr 40px"><span>وقت البلوك</span><input type="range" id="sb" min="0" max="12" step="0.5" value="${sh.blockLower}"><output class="ltr"></output></div>
       <div class="slider-row" style="grid-template-columns:110px 1fr 40px"><span>الحجم</span><input type="range" id="ss" min="0.4" max="1.3" step="0.05" value="${sh.scale}"><output class="ltr"></output></div>
-      <div class="row" style="margin-top:6px"><button class="btn sm" data-pre="4,4,1">قصير</button><button class="btn sm" data-pre="7,7,0.9">قصير جداً</button><button class="btn sm" data-pre="10,10,0.75">أقصى شي</button><button class="btn sm ghost" data-pre="0,0,1">الأصلي</button></div>
+      <div class="row" style="margin-top:6px"><button class="btn sm" data-pre="4,4,1">قصير</button><button class="btn sm" data-pre="7,7,0.9">قصير مرة</button><button class="btn sm" data-pre="10,10,0.75">أقصى شي</button><button class="btn sm ghost" data-pre="0,0,1">الأصلي</button></div>
     </div>
     <div class="row"><button class="btn" id="stex">${icon('pencil', 16)} عدّل تكستر الشيلد</button></div>
     <span class="muted small" style="line-height:1.7">يتعدّل موديل <span class="mono">shield.json</span> و <span class="mono">shield_blocking.json</span> ويتضاف للباك وقت التثبيت.</span>
@@ -1539,7 +1880,7 @@ async function modsPanel(b, ctx) {
     <button class="btn" id="madd">${icon('plus', 16)} أضف مود</button>
     <button class="btn" id="mopen">${icon('folder', 16)} افتح المجلد</button>
     <button class="btn ghost icon" id="mref" title="تحديث">${icon('reset', 17)}</button></div>
-    <div class="muted small ltr" style="margin-bottom:12px">${esc(ctx.path)}</div><div id="ml"><div class="empty">...جاري التحميل</div></div>`;
+    <div class="muted small ltr" style="margin-bottom:12px">${esc(ctx.path)}</div><div id="ml"><div class="empty">...قاعد أحمّل</div></div>`;
   $('#madd', b).onclick = async () => { const f = await api.fs.pickFiles('اختر مودات', ['jar'], true); if (f) { await api.mods.add(ctx.path, f); toast(`انضاف ${f.length} مود`); modsPanel(b, ctx); } };
   $('#mopen', b).onclick = () => api.fs.open(ctx.path);
   $('#mref', b).onclick = () => modsPanel(b, ctx);
@@ -1672,7 +2013,7 @@ async function tabPSettings(b) {
       <div id="snl" class="stack" style="gap:6px;margin-top:10px"></div>
       <h3 style="margin-top:22px">ثبّت في أكثر من كلاينت</h3><div id="multi" class="stack" style="gap:6px"></div>
       <button class="btn" id="minst" style="margin-top:8px">${icon('download', 16)} ثبّت في المختار</button>
-      <h3 style="margin-top:22px">${icon('upload', 16)} شارك الباك</h3><p class="muted small" style="margin:0 0 8px">يطلع لك ملف <span class="ltr">.mcps</span> ترسله لصاحبك، يفتحه في التطبيق ويعدّل على نسخته.</p><button class="btn" id="sshare">${icon('upload', 16)} صدّر ملف للمشاركة</button>
+      <h3 style="margin-top:22px">${icon('upload', 16)} شارك الباك</h3><p class="muted small" style="margin:0 0 8px">يطلع لك ملف <span class="ltr">.mcps</span> ترسله لخويك، يفتحه في التطبيق ويعدّل على نسخته.</p><button class="btn" id="sshare">${icon('upload', 16)} صدّر ملف للمشاركة</button>
       <h3 style="margin-top:22px">إجراءات</h3><div class="row"><button class="btn" id="sdup">${icon('copy', 16)} نسخ الملف</button><button class="btn danger" id="sdel">${icon('trash', 16)} حذف الملف</button></div></div></div>`;
   const setI = async () => { const x = await api.file.icon(p.id); if (x) { $('#sicon', b).src = 'data:image/png;base64,' + x; const h = $('#picon'); if (h) h.src = $('#sicon', b).src; } };
   setI();
@@ -1735,6 +2076,9 @@ async function renderSettings(main) {
       <div class="accent-pick">${Object.entries(ACCENTS).map(([k, [a, b]]) => `<button data-acc="${k}" class="${S.settings.accent === k ? 'on' : ''}" style="background:linear-gradient(135deg,${a},${b})"></button>`).join('')}</div></div>
     <div class="card" style="margin-top:16px"><h3 style="margin:0 0 10px">${icon('edit', 18)} اللغة / Language</h3>
       <div class="lang-pick" data-noi18n><button data-lang="ar" class="${(S.settings.lang || 'ar') === 'ar' ? 'on' : ''}">العربية</button><button data-lang="en" class="${S.settings.lang === 'en' ? 'on' : ''}">English</button></div></div>
+    <div class="card" style="margin-top:16px"><h3 style="margin:0 0 10px">${icon('wand', 18)} الحركة والشرح</h3>
+      <div class="row"><label class="check"><span class="switch"><input type="checkbox" id="oanim" ${S.settings.anim !== false ? 'checked' : ''}><span></span></span>أنيميشن وحركات بالتطبيق</label>
+      <button class="btn" id="otour">${icon('play', 16)} شغّل الشرح من جديد</button></div></div>
     <div class="card" style="margin-top:16px"><h3>معلومات</h3>
       <div class="kv"><span class="muted">الإصدار</span><span class="row"><span class="ltr">MC Pack Studio ${esc(info.version)}</span><button class="btn sm primary" id="oupd">${icon('reset', 14)} تحقق من التحديثات</button></span></div>
       <div class="kv"><span class="muted">تحقق تلقائي من التحديثات</span><label class="switch"><input type="checkbox" id="oauto" ${S.settings.autoUpdate !== false ? 'checked' : ''}><span></span></label></div>
@@ -1742,7 +2086,7 @@ async function renderSettings(main) {
       <div class="kv"><span class="muted">مكان حفظ ملفاتك</span><span class="row"><span class="ltr small">${esc(info.dataDir)}</span><button class="btn sm ghost icon" id="odata">${icon('folder', 15)}</button></span></div>
       <div class="kv"><span class="muted">ملفات اللعبة المحمّلة</span><span class="row"><button class="btn sm" id="owiz">${icon('download', 15)} معالج الإعداد</button><button class="btn sm ghost icon" id="ogame">${icon('folder', 15)}</button></span></div>
       <div class="kv"><span class="muted">النسخ الاحتياطية للمودات</span><button class="btn sm ghost" id="obak">${icon('folder', 15)} افتح</button></div></div>
-    <p class="dim small" style="margin-top:18px;line-height:1.8">التطبيق ما يحتوي على أي ملفات من ماينكرافت — يقرأ التكسترات الأصلية من نسخة اللعبة المثبتة عندك. غير تابع لـ Mojang أو Microsoft.</p></div>`;
+    <p class="dim small" style="margin-top:18px;line-height:1.8">التطبيق ما فيه أي ملفات من ماينكرافت — يقرأ التكسترات الأصلية من نسخة اللعبة المثبتة عندك. مو تابع لـ Mojang أو Microsoft.</p></div>`;
   $$('[data-th]', main).forEach((x) => x.onclick = async () => { S.settings.theme = x.dataset.th; await api.settings.set(S.settings); applyAccent(); renderSettings(main); renderRail(); });
   $$('[data-acc]', main).forEach((x) => x.onclick = async () => { S.settings.accent = x.dataset.acc; await api.settings.set(S.settings); applyAccent(); renderSettings(main); renderRail(); });
   $('#odata', main).onclick = () => api.fs.open(info.dataDir);
@@ -1750,6 +2094,8 @@ async function renderSettings(main) {
   $('#owiz', main).onclick = () => openWizard();
   $('#oupd', main).onclick = () => checkUpdates(true);
   $$('[data-lang]', main).forEach((x) => x.onclick = () => setLang(x.dataset.lang));
+  $('#oanim', main).onchange = async (e) => { S.settings.anim = e.target.checked; document.documentElement.classList.toggle('no-anim', !e.target.checked); await api.settings.set(S.settings); };
+  $('#otour', main).onclick = () => { go('home'); setTimeout(() => startTour('app'), 300); };
   $('#oauto', main).onchange = async (e) => { S.settings.autoUpdate = e.target.checked; await api.settings.set(S.settings); };
   $('#ogame', main).onclick = async () => api.fs.open(await api.game.dir());
 }
@@ -1759,7 +2105,7 @@ const FOLDER_NAMES = { item: 'الآيتمز', items: 'الآيتمز', block: '
 async function tabAll(b) {
   const p = S.project;
   const all = await api.assets.list(p);
-  if (!all.length) { b.innerHTML = noBaseNotice() + `<div class="empty"><div class="big">${icon('layers', 30)}</div><h2>ما فيه ملفات للعرض</h2><p>حمّل ملفات اللعبة (فوق) أو استورد باك جاهز، وبيطلع لك هنا كل تكستر باللعبة.</p></div>`; bindBaseActions(b); return; }
+  if (!all.length) { b.innerHTML = noBaseNotice() + `<div class="empty"><div class="big">${icon('layers', 30)}</div><h2>ما فيه ملفات</h2><p>حمّل ملفات اللعبة (فوق) أو استورد باك جاهز، وبيطلع لك هنا كل تكستر باللعبة.</p></div>`; bindBaseActions(b); return; }
   const groups = {};
   for (const a of all) { const f = a.path.split('/')[1] || 'other'; (groups[f] = groups[f] || []).push(a); }
   const folders = Object.keys(groups).sort((x, y) => groups[y].length - groups[x].length);
@@ -1798,7 +2144,7 @@ async function tabAll(b) {
       g.append(el); io.observe(el);
     }
     shown += 120;
-    $('#amore', b).innerHTML = shown < list.length ? `<div style="text-align:center;margin-top:18px"><button class="btn" id="am">عرض المزيد (${list.length - shown})</button></div>` : '';
+    $('#amore', b).innerHTML = shown < list.length ? `<div style="text-align:center;margin-top:18px"><button class="btn" id="am">شوف أكثر (${list.length - shown})</button></div>` : '';
     if ($('#am', b)) $('#am', b).onclick = more;
   }
   let t; $('#as', b).oninput = () => { clearTimeout(t); t = setTimeout(draw, 200); };
@@ -1963,7 +2309,7 @@ async function openWizard() {
   w.innerHTML = `<div class="wiz-box"><div class="wiz-top" style="background-image:url(${bannerArt(3, 300, 70)})"></div><div class="wiz-steps"><i></i><i></i><i></i><i></i><i></i></div><div class="wiz-body"></div><div class="wiz-foot"></div></div>`;
   document.body.append(w);
   const body = $('.wiz-body', w), foot = $('.wiz-foot', w);
-  const finish = async () => { S.settings.setupDone = true; S.settings.setupVersion = 2; await api.settings.set(S.settings); w.remove(); render(); };
+  const finish = async () => { S.settings.setupDone = true; S.settings.setupVersion = 2; await api.settings.set(S.settings); w.remove(); go('home'); if (!(S.settings.tours || {}).app) setTimeout(() => startTour('app'), 500); };
   async function draw() {
     $$('.wiz-steps i', w).forEach((x, i) => x.classList.toggle('on', i <= step));
     if (step === 0) {
@@ -1997,10 +2343,10 @@ async function openWizard() {
         let fails = 0;
         for (const v of [...pick]) {
           const row = $(`.vrow[data-v="${v}"]`, body); if (!row || !$('.bar', row)) continue;
-          $('.bar', row).style.display = ''; $('.st', row).textContent = 'جاري...';
+          $('.bar', row).style.display = ''; $('.st', row).textContent = 'لحظة...';
           api.onGameProgress((d) => { if (d.version === v && d.total) { $('.bar i', row).style.width = Math.round(d.got / d.total * 100) + '%'; $('.st', row).textContent = Math.round(d.got / d.total * 100) + '%'; } });
           try { await api.game.download(v); $('.bar i', row).style.width = '100%'; $('.st', row).innerHTML = `<span class="badge ok">${icon('check', 12)} تم</span>`; }
-          catch (e) { fails++; $('.st', row).innerHTML = `<span style="color:var(--err)">فشل</span>`; }
+          catch (e) { fails++; $('.st', row).innerHTML = `<span style="color:var(--err)">ما زبط</span>`; }
         }
         $$('button', foot).forEach((x) => x.disabled = false);
         if (fails) toast(`ما قدرت أحمّل ${fails} نسخة — تأكد من النت`, 'err');
@@ -2067,7 +2413,7 @@ async function checkUpdates(manual) {
     $$('.modal-f button', m.el).forEach((x) => x.disabled = true); $('#upb', m.el).style.display = '';
     api.onUpdateProgress((d) => { if (d.total) { $('#upi', m.el).style.width = Math.round(d.got / d.total * 100) + '%'; $('#ups', m.el).textContent = `${(d.got / 1048576).toFixed(1)} / ${(d.total / 1048576).toFixed(1)} MB`; } });
     try { await api.update.install(r.url, r.version); $('#ups', m.el).textContent = 'يتثبّت التحديث... التطبيق بيقفل ويرجع يفتح لحاله'; }
-    catch (e) { toast('فشل تحميل التحديث', 'err'); $$('.modal-f button', m.el).forEach((x) => x.disabled = false); }
+    catch (e) { toast('ما قدرت أحمّل التحديث', 'err'); $$('.modal-f button', m.el).forEach((x) => x.disabled = false); }
   };
 }
 // ------------------------------------------------------------- versions (1.21.11+, live)
@@ -2085,18 +2431,20 @@ async function syncPackFormat(p) {
   const [maj, min] = pf;
   S.settings.knownPf = Object.assign({}, S.settings.knownPf, { [p.version]: maj }); api.settings.set(S.settings);
   const v = VERSIONS.find((x) => x.id === p.version); if (v) v.pf = maj;
-  if (p.packFormat !== maj || (p.packFormatMinor || 0) !== min) { p.packFormat = maj; p.packFormatMinor = min; if (S.project && S.project.id === p.id) await saveProject(); else await api.projects.save(p); }
+  if (p.packFormat !== maj || (p.packFormatMinor || 0) !== min) { p.packFormat = maj; p.packFormatMinor = min; if (S.project && S.project.id === p.id) { await saveProject(); const bd = $('.ws-banner .badge.ltr'); if (bd) bd.textContent = `${p.version} · pack_format ${maj}`; } else await api.projects.save(p); }
 }
 
 // ------------------------------------------------------------- boot
 (async function boot() {
   S.settings = await api.settings.get(); applyAccent();
   if (S.settings.lang === 'en') I18N.set('en');
+  document.documentElement.classList.toggle('no-anim', S.settings.anim === false);
   S.clients = await api.clients.list();
   S.projects = await api.projects.list();
   await loadVersions();
   renderRail(); render();
   if (S.settings.setupVersion !== 2) openWizard();
+  else if (!(S.settings.tours || {}).app) setTimeout(() => startTour('app'), 700);
   autoFetchGame();
   if (S.settings.autoUpdate !== false) setTimeout(() => checkUpdates(false), 4000);
 })();

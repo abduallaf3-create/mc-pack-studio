@@ -28,12 +28,12 @@ const CLIENTS = [
   { id: 'lunar', name: 'Lunar Client', color: '#5b8cff', type: 'instances', roots: ['{home}/.lunarclient/profiles'], subs: [''], rpSub: 'resourcepacks', modsSub: 'mods',
     extra: [{ name: 'الافتراضي (.minecraft)', rp: '{mc}/resourcepacks', mods: '' }],
     note: 'Lunar يحفظ الباكات داخل البروفايل حقك في .lunarclient/profiles. وما يحفظ تكسترات اللعبة بالجهاز، فالتطبيق يحمّلها من Mojang.' },
-  { id: 'badlion', name: 'Badlion Client', color: '#ff4d5e', type: 'single', rp: '{mc}/resourcepacks', mods: null, note: 'يستخدم مجلد ريسورس باك ماينكرافت الأساسي. لا يدعم مودات خارجية.' },
+  { id: 'badlion', name: 'Badlion Client', color: '#ff4d5e', type: 'single', rp: '{mc}/resourcepacks', mods: null, note: 'يستخدم مجلد الريسورس باك حق ماينكرافت العادي. ما يدعم مودات خارجية.' },
   { id: 'feather', name: 'Feather Client', color: '#3fd0c9', type: 'single', rp: '{mc}/resourcepacks', mods: '{appdata}/.feather/user-mods', note: 'المودات الخاصة في مجلد user-mods (تقدر تغيّر المسار).' },
   { id: 'labymod', name: 'LabyMod 4', color: '#4fa3ff', type: 'single', rp: '{mc}/resourcepacks', mods: '{mc}/labymod-neo/addons', note: 'الإضافات (Addons) في مجلد labymod-neo.' },
   { id: 'cheatbreaker', name: 'CheatBreaker', color: '#ff2d55', type: 'single', rp: '{mc}/resourcepacks', mods: null },
   { id: 'salwyrr', name: 'Salwyrr', color: '#ffb020', type: 'single', rp: '{mc}/resourcepacks', mods: null },
-  { id: 'vanilla', name: 'Minecraft Launcher', color: '#62c462', type: 'single', rp: '{mc}/resourcepacks', mods: '{mc}/mods', note: 'الماينكرافت الأصلي (Fabric / Forge يستخدمون نفس مجلد mods).' },
+  { id: 'vanilla', name: 'Minecraft Launcher', color: '#62c462', type: 'single', rp: '{mc}/resourcepacks', mods: '{mc}/mods', note: 'ماينكرافت العادي (Fabric و Forge يستخدمون نفس مجلد mods).' },
   { id: 'tlauncher', name: 'TLauncher', color: '#2ea8ff', type: 'single', rp: '{mc}/resourcepacks', mods: '{mc}/mods' },
   { id: 'curseforge', name: 'CurseForge', color: '#f16436', type: 'instances', roots: ['{home}/curseforge/minecraft/Instances'], subs: [''], rpSub: 'resourcepacks', modsSub: 'mods' },
   { id: 'modrinth', name: 'Modrinth App', color: '#1bd96a', type: 'instances', roots: ['{appdata}/ModrinthApp/profiles', '{appdata}/com.modrinth.theseus/profiles'], subs: [''], rpSub: 'resourcepacks', modsSub: 'mods' },
@@ -539,7 +539,7 @@ ipcMain.handle('pack:check', (_e, project) => {
       const sz = pngSize(buf);
       if (!sz) { issues.push({ level: 'err', file: rel, msg: 'الملف مو صورة PNG صحيحة', fix: 'delete' }); continue; }
       const [w, h] = sz;
-      if (w > 1024 || h > 4096) issues.push({ level: 'warn', file: rel, msg: `الصورة كبيرة جداً (${w}×${h}) — تثقّل اللعبة` });
+      if (w > 1024 || h > 4096) issues.push({ level: 'warn', file: rel, msg: `الصورة كبيرة مرة (${w}×${h}) — تثقّل اللعبة` });
       const unused = rel.startsWith('assets/minecraft/textures/') && base && !base.has(rel) && !/optifine|mcpatcher/.test(rel);
       if (!unused && rel.startsWith('assets/minecraft/textures/') && h > w && h % w === 0 && !set.has(rel + '.mcmeta') && !(base && base.has(rel + '.mcmeta')) && !/gui|font|colormap|environment|misc|entity/.test(rel))
         issues.push({ level: 'warn', file: rel, msg: 'صورة أنيميشن بدون ملف mcmeta (بتطلع ممطوطة)', fix: 'addmeta' });
@@ -676,12 +676,12 @@ ipcMain.handle('proj:export', async (_e, id) => {
   return r.filePath;
 });
 ipcMain.handle('proj:import', async () => {
-  const r = testPicks ? { canceled: !testPicks.length, filePaths: testPicks.splice(0, 1) } : await dialog.showOpenDialog(win, { title: 'افتح باك من صاحبك', filters: [{ name: 'MC Pack Studio', extensions: ['mcps', 'zip'] }], properties: ['openFile'] });
+  const r = testPicks ? { canceled: !testPicks.length, filePaths: testPicks.splice(0, 1) } : await dialog.showOpenDialog(win, { title: 'افتح باك من خويك', filters: [{ name: 'MC Pack Studio', extensions: ['mcps', 'zip'] }], properties: ['openFile'] });
   if (r.canceled) return null;
   const zip = new AdmZip(r.filePaths[0]);
   const pe = zip.getEntry('project.json'); if (!pe) throw new Error('هذا مو ملف باك من MC Pack Studio');
   const p = JSON.parse(pe.getData().toString('utf8'));
-  p.id = 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); p.name = (p.name || 'باك') + ' (من صاحبك)'; p.created = p.updated = Date.now();
+  p.id = 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); p.name = (p.name || 'باك') + ' (من خويك)'; p.created = p.updated = Date.now();
   fs.mkdirSync(filesDir(p.id), { recursive: true });
   for (const e of zip.getEntries()) {
     if (e.isDirectory) continue;

@@ -303,7 +303,7 @@ window.openPixelEditor = function (opts) {
       if (im.width === img.width && im.height === img.height) img = IMG.resize(im, img.width, img.height);
       else { const fr = IMG.resize(im, w, h); img.data.set(fr.data, oy() * w * 4); }
     }
-    fit(); toast('تم استيراد الصورة');
+    fit(); toast('انضافت الصورة ✓');
   }
 
   const acts = {
@@ -311,7 +311,7 @@ window.openPixelEditor = function (opts) {
     redo() { if (!redo.length) return; undo.push(IMG.clone(img)); img = redo.pop(); if (img.height % st.fhv) st.fhv = guessFh(img); st.frame = Math.min(st.frame, frames() - 1); $('.frames').innerHTML = ''; fit(); },
     flipH() { push(); const w = img.width, h = fh(), o = IMG.clone(img); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const s = ((y + oy()) * w + x) * 4, d = ((y + oy()) * w + (w - 1 - x)) * 4; for (let k = 0; k < 4; k++) img.data[d + k] = o.data[s + k]; } render(); },
     flipV() { push(); const w = img.width, h = fh(), o = IMG.clone(img); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const s = ((y + oy()) * w + x) * 4, d = ((h - 1 - y + oy()) * w + x) * 4; for (let k = 0; k < 4; k++) img.data[d + k] = o.data[s + k]; } render(); },
-    rot() { const w = img.width, h = fh(); if (w !== h) return toast('التدوير متاح للتكسترات المربعة فقط', 'err'); push(); const o = IMG.clone(img); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const s = ((y + oy()) * w + x) * 4, d = ((x + oy()) * w + (w - 1 - y)) * 4; for (let k = 0; k < 4; k++) img.data[d + k] = o.data[s + k]; } render(); },
+    rot() { const w = img.width, h = fh(); if (w !== h) return toast('التدوير يشتغل بس على التكسترات المربعة', 'err'); push(); const o = IMG.clone(img); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const s = ((y + oy()) * w + x) * 4, d = ((x + oy()) * w + (w - 1 - y)) * 4; for (let k = 0; k < 4; k++) img.data[d + k] = o.data[s + k]; } render(); },
     addfr() {
       push(); const w = img.width, h = fh(), n = frames(), at = st.frame + 1;
       const out = new ImageData(w, h * (n + 1)); const src = img.data, dst = out.data, fb = w * h * 4;
