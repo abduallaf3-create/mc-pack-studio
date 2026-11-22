@@ -400,7 +400,7 @@ async function tabTextures(b) {
     <div class="row" style="margin-bottom:16px"><div class="cats" style="margin:0;flex:1">${CATEGORIES.map((c) => `<button class="chip ${S.cat === c.id ? 'on' : ''}" data-cat="${c.id}">${icon(c.icon, 15)}${c.name}<span class="n">${counts[c.id] || 0}</span></button>`).join('')}</div>
       <button class="btn sm" data-a="merge">${icon('layers', 15)} دمج باكات</button><button class="btn sm" data-a="importpack">${icon('upload', 15)} استيراد باك جاهز</button></div>
     <div class="tex-grid" id="tg"></div>`;
-  $$('[data-cat]', b).forEach((c) => c.onclick = () => { S.cat = c.dataset.cat; tabTextures(b); if (S.cat === 'totem') totemPop(); });
+  $$('[data-cat]', b).forEach((c) => c.onclick = () => { S.cat = c.dataset.cat; tabTextures(b); });
   drawHotbar($('#hb', b));
   bindBaseActions(b);
   $('[data-a=merge]', b).onclick = () => openMerge();
@@ -456,7 +456,6 @@ function bindBaseActions(b) {
 // asks how to start, then opens the editor
 async function editTexture(t, after) {
   const p = S.project;
-  if (t.id === 'totem') totemPop();
   const cur = await api.tex.get(p, t.path);
   const base = await api.tex.get(p, t.path, true);
   const curImg = cur ? await IMG.fromB64(cur.data) : null;
@@ -508,7 +507,7 @@ async function openTexEditor(t, after, startImg, cur) {
   const p = S.project;
   if ((t.cat === 'skin' || /entity\/(player\/|steve|alex)/.test(t.path)) && startImg && startImg.width === 64 && (startImg.height === 64 || startImg.height === 32)) {
     const im = startImg.height === 32 ? upgradeLegacySkin(startImg) : startImg;
-    return openSkinPainter({ title: t.name, image: im, slim: /alex|slim/.test(t.path), onSave: async (img) => { await api.tex.put(p.id, t.path, IMG.toB64(img)); toast('انحفظ: ' + esc(t.name)); after && after(); } });
+    return openSkinPainter({ title: t.name, image: im, slim: /alex|slim/.test(t.path), onSave: async (img, slim) => { await api.tex.put(p.id, t.path, IMG.toB64(img)); toast('انحفظ: ' + esc(t.name)); after && after(); reveal3D(img, { skin: true, slim, title: t.name }); } });
   }
   const meta = await api.tex.getMeta(p, t.path);
   openPixelEditor({
@@ -520,6 +519,7 @@ async function openTexEditor(t, after, startImg, cur) {
     onSave: async (img, mt) => {
       await api.tex.put(p.id, t.path, IMG.toB64(img), mt);
       toast('انحفظ: ' + esc(t.name)); after && after();
+      if (/^textures\/(item|items|block|blocks)\//.test(t.path)) reveal3D(img.height > img.width ? IMG.resize(IMG.toCanvas(img), img.width, img.width) : img, { title: t.name });
     },
     onReset: cur && cur.source === 'custom' ? async () => { await api.tex.reset(p.id, t.path); toast('رجع للأصلي'); after && after(); } : null,
   });
@@ -1237,7 +1237,7 @@ async function tabArmor(b) {
       <span class="muted small" style="line-height:1.7">شوف الإليترا وأنت طاير وعدّل عليها — اللون أو ارسمها بيدك.</span>
       <div class="row"><input type="color" id="ecol" value="${(p.elytraTint && p.elytraTint.color) || '#8b5cf6'}"><label class="check small"><span class="switch"><input type="checkbox" id="etint" ${p.elytraTint && p.elytraTint.on ? 'checked' : ''}><span></span></span>لوّنها</label></div>
       <div class="slider-row" style="grid-template-columns:90px 1fr 46px"><span>فرد الجناح</span><input type="range" id="espread" min="0" max="100" value="100"><output class="ltr"></output></div>
-      <div class="row"><button class="btn primary" id="eapply">${icon('check', 16)} احفظ اللون</button><button class="btn" id="edraw">${icon('edit', 16)} ارسمها وأنت طاير</button><button class="btn ghost" id="ereset">${icon('reset', 16)} الأصلي</button></div>
+      <div class="row"><button class="btn primary" id="eapply">${icon('check', 16)} احفظ اللون</button><button class="btn" id="eimg">${icon('image', 16)} حط صورة عليها</button><button class="btn" id="edraw">${icon('edit', 16)} ارسمها وأنت طاير</button><button class="btn ghost" id="ereset">${icon('reset', 16)} الأصلي</button></div>
     </div>
     <div class="card"><h3>وأنت طاير ✈</h3><div class="v3d sky3d" style="height:420px"><canvas id="e3d"></canvas></div></div></div>`;
   bindBaseActions(b);
@@ -1308,11 +1308,16 @@ async function tabArmor(b) {
     p.elytraTint = { color: $('#ecol', b).value, on: $('#etint', b).checked }; await saveProject();
     await api.tex.put(p.id, eRel, IMG.toB64(eTex())); eCur = eTex(); $('#etint', b).checked = false; drawE(); celebrate(); toast('انحفظت الإليترا ✓');
   };
-  $('#edraw', b).onclick = () => {
+  $('#eimg', b).onclick = () => elytraFromImage(p, eOrig, async (img, edit) => {
+    if (edit) return drawElytra(img);
+    await api.tex.put(p.id, eRel, IMG.toB64(img)); eCur = img; $('#etint', b).checked = false; drawE(); celebrate(); toast('انحطت الصورة على الإليترا ✓');
+  });
+  $('#edraw', b).onclick = () => drawElytra(eTex());
+  function drawElytra(start) {
     if (!eOrig) return toast('ما لقيت تكستر الإليترا', 'err');
     let fv = null;
     openPixelEditor({
-      title: 'الإليترا — ارسم وأنت طاير', image: eTex(), original: eOrig, size: [64, 32], fileName: 'elytra', extraTitle: 'وأنت طاير ✈',
+      title: 'الإليترا — ارسم وأنت طاير', image: start, original: eOrig, size: [start ? start.width : 64, start ? start.height : 32], fileName: 'elytra', extraTitle: 'وأنت طاير ✈',
       renderExtra(box, cv) {
         const img = cv.getContext ? cv.getContext('2d').getImageData(0, 0, cv.width, cv.height) : cv;
         if (!fv || !box.querySelector('canvas')) { box.innerHTML = '<div class="v3d sky3d" style="height:260px"><canvas></canvas></div>'; fv = Lite3D.viewer(box.querySelector('canvas'), Lite3D.flyingQuads(skin, img, 1), { dist: 70, pitch: 0.55, yaw: Math.PI }); return; }
@@ -1321,7 +1326,7 @@ async function tabArmor(b) {
       onSave: async (img) => { await api.tex.put(p.id, eRel, IMG.toB64(img)); eCur = img; $('#etint', b).checked = false; drawE(); toast('انحفظت الإليترا ✓'); },
       onReset: async () => { await api.tex.reset(p.id, eRel); eCur = null; drawE(); },
     });
-  };
+  }
   $('#ereset', b).onclick = async () => { if (eRel) await api.tex.reset(p.id, eRel); eCur = null; $('#etint', b).checked = false; drawE(); toast('رجعت الأصلي'); };
   draw();
 }
@@ -1396,23 +1401,85 @@ function celebrate() {
     if (k < 1) requestAnimationFrame(f); else c.remove();
   })(t0);
 }
-// the in-game "totem of undying" pop, using the pack's own totem texture
-async function totemPop() {
-  if (!fxOn() || !S.project) return;
-  const rel = texPath(TEXTURES.find((t) => t.id === 'totem'), S.project.packFormat); if (!rel) return;
-  const im = await texImg(S.project, rel, false); if (!im) return;
-  const c = document.createElement('canvas'); c.className = 'fx-layer'; document.body.append(c);
-  const W = c.width = innerWidth, H = c.height = innerHeight, x = c.getContext('2d'), src = IMG.toCanvas(im);
-  const ps = Array.from({ length: 90 }, () => ({ a: Math.random() * Math.PI * 2, v: 2 + Math.random() * 7, s: 4 + Math.random() * 6, c: Math.random() < 0.5 ? '#facc15' : '#4ade80' }));
-  const t0 = performance.now();
-  (function f(t) {
-    const k = (t - t0) / 1100; x.clearRect(0, 0, W, H); x.imageSmoothingEnabled = false;
-    const e = k < 0.35 ? k / 0.35 : 1, size = Math.min(W, H) * (0.18 + 0.32 * Math.sin(e * Math.PI / 2)) * (k > 0.7 ? 1 - (k - 0.7) / 0.3 : 1);
-    x.save(); x.globalAlpha = k > 0.75 ? Math.max(0, 1 - (k - 0.75) / 0.25) : 1; x.translate(W / 2, H / 2 - k * 60); x.rotate(Math.sin(k * 9) * 0.25 * (1 - k)); x.drawImage(src, -size / 2, -size / 2, size, size); x.restore();
-    for (const p of ps) { const d = p.v * k * 90; x.globalAlpha = Math.max(0, 1 - k); x.fillStyle = p.c; x.fillRect(W / 2 + Math.cos(p.a) * d, H / 2 + Math.sin(p.a) * d + k * k * 120, p.s, p.s); }
-    x.globalAlpha = 1;
-    if (k < 1) requestAnimationFrame(f); else c.remove();
-  })(t0);
+// ------------------------------------------------------------- 3D reveal after saving
+function reveal3D(img, opts = {}) {
+  if (!img || !fxOn()) return;
+  const skin = img.width === 64 && (img.height === 64 || img.height === 32) && opts.skin;
+  if (!skin && (img.width !== img.height || img.width > 128)) return; // only items / skins
+  const ov = document.createElement('div'); ov.className = 'reveal3d';
+  ov.innerHTML = `<div class="rv-card"><canvas></canvas><div class="rv-t">${icon('check', 18)} ${opts.title ? esc(opts.title) + ' — ' : ''}انحفظ</div><div class="muted small">اسحب عشان تلفه · اضغط برا يسكّر</div></div>`;
+  document.body.append(ov);
+  const v = Lite3D.viewer(ov.querySelector('canvas'), skin ? Lite3D.skinQuads(img.height === 32 ? upgradeLegacySkin(img) : img, opts.slim, true) : Lite3D.itemQuads(img), { dist: skin ? 60 : 34, pitch: 0.2, yaw: -0.4 });
+  v.st.yaw = -2.6; // starts turned and spins in
+  let t = setTimeout(close, 4200);
+  function close() { clearTimeout(t); ov.classList.add('out'); setTimeout(() => { v.stop(); ov.remove(); }, 300); }
+  ov.onmousedown = (e) => { if (e.target === ov) close(); else { clearTimeout(t); t = setTimeout(close, 6000); } };
+}
+// ------------------------------------------------------------- picture → elytra
+// wing box on the 64x32 texture: uv (22,0), 10 wide, 20 tall, 2 deep
+async function elytraFromImage(p, eOrig, onDone) {
+  const f = await api.fs.pickFiles('اختر صورة للإليترا', ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp']); if (!f) return;
+  const ext = f[0].split('.').pop().toLowerCase();
+  const pic = await IMG.load(`data:image/${ext === 'jpg' ? 'jpeg' : ext};base64,` + await api.fs.readB64(f[0]));
+  const skin = (await realSteve()) || defaultSkin();
+  const o = { fit: 'cover', shape: true, k: pic.width >= 160 ? 4 : pic.width >= 80 ? 2 : 1, zoom: 100, x: 0, y: 0 };
+  let v = null, out = null;
+  const m = modal({
+    cls: 'lg', title: 'حط صورة على الإليترا', sub: 'التطبيق يقص الصورة ويركّبها على الجناحين بالمقاس الصح',
+    body: `<div class="two" style="grid-template-columns:300px 1fr;gap:16px">
+      <div class="stack">
+        <label class="f">طريقة التركيب<div class="seg" id="efit"><button data-f="cover" class="on">املأ الجناح</button><button data-f="contain">الصورة كاملة</button><button data-f="stretch">مطّها</button></div></label>
+        <div class="slider-row" style="grid-template-columns:80px 1fr 46px"><span>تكبير</span><input type="range" id="ez" min="50" max="300" value="100"><output class="ltr"></output></div>
+        <div class="slider-row" style="grid-template-columns:80px 1fr 46px"><span>يمين/يسار</span><input type="range" id="ex" min="-50" max="50" value="0"><output class="ltr"></output></div>
+        <div class="slider-row" style="grid-template-columns:80px 1fr 46px"><span>فوق/تحت</span><input type="range" id="ey" min="-50" max="50" value="0"><output class="ltr"></output></div>
+        <label class="check small"><span class="switch"><input type="checkbox" id="eshape" checked><span></span></span>خلّ شكل الجناح الأصلي (يقص الأطراف)</label>
+        <label class="f">الدقة<div class="seg" id="ek">${[[1, 'عادي'], [2, 'HD'], [4, 'HD+'], [8, 'خيالية']].map(([k, n]) => `<button data-k="${k}" class="${k === o.k ? 'on' : ''}">${n}</button>`).join('')}</div></label>
+        <canvas id="eflat" style="width:100%;image-rendering:pixelated;border-radius:8px;background:repeating-conic-gradient(#1a1f2b 0 25%,#151922 0 50%) 0 0/12px 12px"></canvas>
+      </div>
+      <div class="v3d sky3d" style="height:420px"><canvas id="ev"></canvas></div></div>`,
+    foot: `<button class="btn ghost" data-c>إلغاء</button><span class="spacer"></span><button class="btn" data-ed>${icon('edit', 16)} عدّل بيدك بعدها</button><button class="btn primary" data-s>${icon('check', 16)} حطها على الإليترا</button>`,
+    onClose: () => v && v.stop(),
+  });
+  const el = m.el;
+  function build() {
+    const k = o.k, W = 64 * k, H = 32 * k, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
+    x.imageSmoothingEnabled = k > 1;
+    if (eOrig) { x.save(); x.imageSmoothingEnabled = false; x.drawImage(IMG.toCanvas(eOrig), 0, 0, W, H); x.restore(); }
+    // draw the picture into a 10x20 face
+    const face = document.createElement('canvas'); face.width = 10 * k; face.height = 20 * k; const fx = face.getContext('2d'); fx.imageSmoothingEnabled = true; fx.imageSmoothingQuality = 'high';
+    const fw = face.width, fh = face.height, z = o.zoom / 100;
+    let dw, dh;
+    if (o.fit === 'stretch') { dw = fw; dh = fh; } else { const s = (o.fit === 'cover' ? Math.max : Math.min)(fw / pic.width, fh / pic.height); dw = pic.width * s; dh = pic.height * s; }
+    dw *= z; dh *= z;
+    fx.drawImage(pic, (fw - dw) / 2 + o.x / 100 * fw, (fh - dh) / 2 + o.y / 100 * fh, dw, dh);
+    const fd = fx.getImageData(0, 0, fw, fh);
+    // fill both big faces (back one mirrored so it lines up through the wing), then the edges
+    const put = (dx, mirror) => { for (let yy = 0; yy < fh; yy++) for (let xx = 0; xx < fw; xx++) { const si = (yy * fw + (mirror ? fw - 1 - xx : xx)) * 4; x.fillStyle = `rgba(${fd.data[si]},${fd.data[si + 1]},${fd.data[si + 2]},${fd.data[si + 3] / 255})`; x.clearRect(dx + xx, 2 * k + yy, 1, 1); x.fillRect(dx + xx, 2 * k + yy, 1, 1); } };
+    put(24 * k, false); put(36 * k, true);
+    const edgeCol = (sx) => { x.clearRect(sx, 2 * k, 2 * k, 20 * k); };
+    // sides take the picture's edge column, top/bottom its edge row
+    edgeCol(22 * k); edgeCol(34 * k);
+    x.drawImage(face, 0, 0, 1, fh, 22 * k, 2 * k, 2 * k, fh); x.drawImage(face, fw - 1, 0, 1, fh, 34 * k, 2 * k, 2 * k, fh);
+    x.clearRect(24 * k, 0, 20 * k, 2 * k); x.drawImage(face, 0, 0, fw, 1, 24 * k, 0, 10 * k, 2 * k); x.drawImage(face, 0, fh - 1, fw, 1, 34 * k, 0, 10 * k, 2 * k);
+    let im = x.getImageData(0, 0, W, H);
+    if (o.shape && eOrig) { // keep the vanilla wing outline
+      const mk = IMG.resize(IMG.toCanvas(eOrig), W, H);
+      for (let i = 3; i < im.data.length; i += 4) if (mk.data[i] < 10) im.data[i] = 0;
+    }
+    out = im;
+    const fl = $('#eflat', el); fl.width = W; fl.height = H; fl.getContext('2d').putImageData(im, 0, 0);
+    const q = Lite3D.flyingQuads(skin, k > 2 ? IMG.resize(IMG.toCanvas(im), 128, 64) : im, 1);
+    if (!v) v = Lite3D.viewer($('#ev', el), q, { dist: 70, pitch: 0.55, yaw: Math.PI }); else v.set(q);
+    ['ez', 'ex', 'ey'].forEach((id) => { $('#' + id, el).nextElementSibling.textContent = $('#' + id, el).value + (id === 'ez' ? '%' : ''); });
+  }
+  $$('#efit button', el).forEach((b) => b.onclick = () => { o.fit = b.dataset.f; $$('#efit button', el).forEach((y) => y.classList.toggle('on', y === b)); build(); });
+  $$('#ek button', el).forEach((b) => b.onclick = () => { o.k = +b.dataset.k; $$('#ek button', el).forEach((y) => y.classList.toggle('on', y === b)); build(); });
+  $('#ez', el).oninput = (e) => { o.zoom = +e.target.value; build(); }; $('#ex', el).oninput = (e) => { o.x = +e.target.value; build(); }; $('#ey', el).oninput = (e) => { o.y = +e.target.value; build(); };
+  $('#eshape', el).onchange = (e) => { o.shape = e.target.checked; build(); };
+  el.querySelector('[data-c]').onclick = () => m.close(true);
+  el.querySelector('[data-s]').onclick = async () => { m.close(true); await onDone(out, false); };
+  el.querySelector('[data-ed]').onclick = async () => { m.close(true); await onDone(out, true); };
+  build();
 }
 
 // ------------------------------------------------------------- particle studio (sweep, crit...)
@@ -1437,7 +1504,7 @@ const P_STYLES = [
   ['custom', 'لون من عندك', 'custom'],
   ['hide', 'شيلها (مخفية)', 'hide'],
 ];
-const P_SHAPES = [['orig', 'الشكل الأصلي'], ['arc', 'قوس'], ['ring', 'دائرة'], ['slash', 'ضربة'], ['star', 'نجمة'], ['heart', 'قلب'], ['spark', 'شرار'], ['own', 'صورة من جهازك']];
+const P_SHAPES = [['orig', 'الشكل الأصلي'], ['arc', 'قوس'], ['ring', 'دائرة'], ['slash', 'ضربة'], ['star', 'نجمة'], ['heart', 'قلب'], ['spark', 'شرار']];
 const hexRgb = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
 function gradMap(stops, t) { const n = stops.length - 1, i = Math.min(n - 1, Math.floor(t * n)), f = t * n - i, a = hexRgb(stops[i]), b = hexRgb(stops[i + 1]); return a.map((v, k) => v + (b[k] - v) * f); }
 function hslRgb(h, s, l) { const k = (n) => (n + h * 12) % 12, a = s * Math.min(l, 1 - l), f = (n) => l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1)); return [f(0) * 255, f(8) * 255, f(4) * 255]; }
@@ -1471,6 +1538,13 @@ function shapeFrame(shape, S, t) {
   else if (shape === 'spark') { x.strokeStyle = '#fff'; x.lineWidth = Math.max(1, S / 12); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, r0 = m * 0.15 + m * 0.5 * t, r1 = r0 + m * 0.35 * (1 - t * 0.5); x.beginPath(); x.moveTo(m + Math.cos(a) * r0, m + Math.sin(a) * r0); x.lineTo(m + Math.cos(a) * r1, m + Math.sin(a) * r1); x.stroke(); } }
   return x.getImageData(0, 0, S, S);
 }
+// one picture → a little animation: pops in bigger, then fades out
+function autoAnim(f, S, t) {
+  const c = document.createElement('canvas'); c.width = c.height = S; const x = c.getContext('2d'); x.imageSmoothingEnabled = false;
+  const sc = 0.55 + 0.45 * Math.min(1, t * 2.2), fade = t < 0.6 ? 1 : 1 - (t - 0.6) / 0.4, d = S * sc;
+  x.globalAlpha = Math.max(0.05, fade); x.drawImage(IMG.toCanvas(f), (S - d) / 2, (S - d) / 2, d, d);
+  return x.getImageData(0, 0, S, S);
+}
 async function decodeImageFrames(path) {
   const ext = path.split('.').pop().toLowerCase(), b64 = await api.fs.readB64(path);
   if (ext === 'gif' && window.ImageDecoder) {
@@ -1502,6 +1576,8 @@ async function tabParticles(b) {
       <div class="muted small" id="phint"></div>
       <h3 style="margin:6px 0 0">شكل الجزيء</h3>
       <div class="seg wrap" id="pshape">${P_SHAPES.map(([k, n]) => `<button data-s="${k}">${n}</button>`).join('')}</div>
+      <div class="row" style="gap:6px"><button class="btn sm" id="pdraw">${icon('pencil', 15)} ارسم شكلك</button><button class="btn sm" id="pframes">${icon('play', 15)} سوّ الأنيميشن بنفسك</button><button class="btn sm" id="pown">${icon('image', 15)} صورة أو GIF</button></div>
+      <div id="plibw"><div class="muted small" style="margin:2px 0 6px">أشكالك المحفوظة:</div><div class="shape-lib" id="plib"></div></div>
       <h3 style="margin:6px 0 0">اللون</h3>
       <div class="pstyles" id="pstyle">${P_STYLES.map(([k, n, st]) => `<button data-st="${k}" title="${n}"><i style="background:${Array.isArray(st) ? `linear-gradient(90deg,${st.join(',')})` : st === 'rainbow' ? 'linear-gradient(90deg,#ef4444,#f59e0b,#22c55e,#3b82f6,#a855f7)' : st === 'hide' ? 'repeating-linear-gradient(45deg,#333 0 4px,#222 4px 8px)' : st === 'custom' ? 'conic-gradient(red,yellow,lime,cyan,blue,magenta,red)' : '#888'}"></i>${n}</button>`).join('')}</div>
       <div class="row" id="pcolrow"><input type="color" id="pcol"><span class="muted small">اختر لونك</span></div>
@@ -1515,9 +1591,9 @@ async function tabParticles(b) {
     const c = cfg(), S0 = base[0] ? base[0].width : cur.size, n = cur.frames;
     let src;
     if (c.shape === 'orig') src = base.length ? base : Array.from({ length: n }, (_, i) => shapeFrame(cur.id === 'sweep' ? 'arc' : 'star', S0, n > 1 ? i / (n - 1) : 0.4));
-    else if (c.shape === 'own') src = own ? Array.from({ length: n }, (_, i) => { const f = own[Math.floor(i * own.length / n)]; let im = IMG.resize(IMG.toCanvas(f), S0, S0); if (own.length === 1 && n > 1) { const t = i / (n - 1), fade = t < 0.6 ? 1 : 1 - (t - 0.6) / 0.4; im = IMG.clone(im); for (let k = 3; k < im.data.length; k += 4) im.data[k] *= fade; } return im; }) : (base.length ? base : []);
+    else if (c.shape === 'own' || c.shape === 'custom') src = own ? Array.from({ length: n }, (_, i) => { const f = own[Math.floor(i * own.length / n)]; if (own.length === 1 && n > 1) return autoAnim(f, S0, i / (n - 1)); return IMG.resize(IMG.toCanvas(f), S0, S0); }) : (base.length ? base : []);
     else src = Array.from({ length: n }, (_, i) => shapeFrame(c.shape, S0, n > 1 ? i / (n - 1) : 0.4));
-    const style = c.shape === 'own' && c.style === 'orig' ? 'orig' : c.style;
+    const style = c.style;
     return src.map((f, i) => colorFrame(f, style, c.color, i, src.length));
   };
   function sync() {
@@ -1527,7 +1603,8 @@ async function tabParticles(b) {
     $$('#pshape button', b).forEach((x) => x.classList.toggle('on', x.dataset.s === c.shape));
     $$('#pstyle button', b).forEach((x) => x.classList.toggle('on', x.dataset.st === c.style));
     $('#pcolrow', b).style.display = c.style === 'custom' ? '' : 'none'; $('#pcol', b).value = c.color;
-    play();
+    $('#pdraw', b).classList.toggle('primary', c.shape === 'custom' && c.how === 'draw'); $('#pframes', b).classList.toggle('primary', c.shape === 'custom' && c.how === 'frames'); $('#pown', b).classList.toggle('primary', c.shape === 'custom' && c.how === 'own');
+    renderLib(); play();
   }
   function play() {
     cancelAnimationFrame(anim); const fr = frames(), cv = $('#pcv', b); if (!cv) return;
@@ -1554,18 +1631,61 @@ async function tabParticles(b) {
     cur = pt; own = null; base = [];
     for (let i = 0; i < pt.frames; i++) { const im = await texImg(p, pt.file(i)); if (im) base.push(im); }
     if (base.length && base.length < pt.frames) base = [];
+    const c = cfg(); if (c.custom && c.custom.length) own = await Promise.all(c.custom.map((x) => IMG.fromB64(x)));
     sync();
+  }
+  const S0 = () => (base[0] ? base[0].width : cur.size);
+  async function setCustom(frs, how, keepStyle) {
+    own = frs; const c = cfg(); c.shape = 'custom'; c.how = how; c.custom = frs.map((f) => IMG.toB64(f)); if (!keepStyle) c.style = 'orig';
+    await saveProject(); sync();
+  }
+  function renderLib() {
+    const lib = S.settings.pShapes || []; $('#plibw', b).style.display = lib.length ? '' : 'none';
+    $('#plib', b).innerHTML = lib.map((x, i) => `<button data-i="${i}" title="استخدم هذا الشكل"><canvas></canvas><i data-del="${i}">×</i></button>`).join('');
+    lib.forEach(async (x, i) => { const im = await IMG.fromB64(x); const cv = $(`#plib [data-i="${i}"] canvas`, b); if (!cv) return; cv.width = im.width; cv.height = im.height; cv.getContext('2d').putImageData(im, 0, 0); });
+    $$('#plib [data-i]', b).forEach((x) => x.onclick = async (e) => {
+      const i = +x.dataset.i;
+      if (e.target.dataset.del !== undefined) { if (!(await confirmBox('حذف الشكل', 'تحذف هذا الشكل من أشكالك؟', 'احذف', true))) return; S.settings.pShapes.splice(i, 1); await api.settings.set(S.settings); return renderLib(); }
+      await setCustom([IMG.resize(IMG.toCanvas(await IMG.fromB64(lib[i])), S0(), S0())], 'draw', true);
+    });
   }
   // chip icons
   for (const x of PARTICLES) { const im = await texImg(p, x.file(Math.floor(x.frames / 2))); const cv = $(`.pchip[data-id="${x.id}"] canvas`, b); if (im && cv) { const c = cv.getContext('2d'); c.imageSmoothingEnabled = false; c.fillStyle = '#0b0e14'; c.fillRect(0, 0, 32, 32); c.drawImage(IMG.toCanvas(im), 0, 0, 32, 32); } }
   $$('#plist .pchip', b).forEach((x) => x.onclick = () => load(PARTICLES.find((q) => q.id === x.dataset.id)));
-  $$('#pshape button', b).forEach((x) => x.onclick = async () => {
-    if (x.dataset.s === 'own') {
-      const f = await api.fs.pickFiles('اختر صورة أو GIF للجزيء', ['png', 'gif', 'jpg', 'jpeg', 'webp']); if (!f) return;
-      own = await decodeImageFrames(f[0]); toast(own.length > 1 ? `انقسمت لـ ${own.length} إطارات ✓` : 'انضافت الصورة ✓');
-    }
-    cfg().shape = x.dataset.s; sync();
-  });
+  $$('#pshape button', b).forEach((x) => x.onclick = () => { cfg().shape = x.dataset.s; sync(); });
+  $('#pown', b).onclick = async () => {
+    const f = await api.fs.pickFiles('اختر صورة أو GIF للجزيء', ['png', 'gif', 'jpg', 'jpeg', 'webp']); if (!f) return;
+    const frs = await decodeImageFrames(f[0]); toast(frs.length > 1 ? `انقسمت لـ ${frs.length} إطارات ✓` : 'انضافت الصورة ✓');
+    await setCustom(frs.map((im) => IMG.resize(IMG.toCanvas(im), S0(), S0())), 'own');
+  };
+  // draw one shape — the app animates it (grow & fade) and keeps it in your shapes
+  $('#pdraw', b).onclick = () => {
+    const n = S0(), c = cfg(), start = c.shape === 'custom' && own && own.length === 1 ? own[0] : IMG.blank(Math.max(n, 16), Math.max(n, 16));
+    openPixelEditor({
+      title: 'ارسم شكل الجزيء', subtitle: 'ارسم بالأبيض أو بأي لون — بعدين تقدر تلوّنه نار أو ثلج', image: start, size: [start.width, start.height], fileName: 'particle',
+      onSave: async (img) => {
+        S.settings.pShapes = [IMG.toB64(img), ...(S.settings.pShapes || [])].slice(0, 24); await api.settings.set(S.settings);
+        await setCustom([IMG.resize(IMG.toCanvas(img), n, n)], 'draw', true); toast('انحفظ شكلك ✓ — تلقاه بأشكالك المحفوظة');
+      },
+    });
+  };
+  // draw every frame yourself (with the app's frame tools: add, delete, play, onion)
+  $('#pframes', b).onclick = () => {
+    const n = S0(), fr = frames().map((f) => (f.width === n ? f : IMG.resize(IMG.toCanvas(f), n, n)));
+    const nf = Math.max(1, fr.length), strip = document.createElement('canvas'); strip.width = n; strip.height = n * nf;
+    fr.forEach((f, i) => strip.getContext('2d').putImageData(f, 0, i * n));
+    openPixelEditor({
+      title: 'سوّ أنيميشن الجزيء بنفسك', subtitle: cur.frames > 1 ? `ارسم كل إطار — ${cur.name} فيه ${cur.frames} إطارات باللعبة` : 'هذا الجزيء صورة وحدة باللعبة (بدون إطارات)',
+      image: strip.getContext('2d').getImageData(0, 0, n, n * nf), size: [n, n], fileName: cur.id, meta: nf > 1 ? JSON.stringify({ animation: { frametime: 1 } }) : '',
+      onSave: async (img) => {
+        const k = Math.max(1, Math.floor(img.height / img.width)), w = img.width, cv = IMG.toCanvas(img);
+        const list = Array.from({ length: k }, (_, i) => cv.getContext('2d').getImageData(0, i * w, w, w));
+        // the game always plays a fixed number of frames → spread what you drew over them
+        const outF = Array.from({ length: cur.frames }, (_, i) => list[Math.min(k - 1, Math.floor(i * k / cur.frames))]);
+        await setCustom(outF, 'frames', true); toast('انحفظ الأنيميشن ✓');
+      },
+    });
+  };
   $$('#pstyle button', b).forEach((x) => x.onclick = () => { cfg().style = x.dataset.st; sync(); });
   $('#pcol', b).oninput = () => { cfg().color = $('#pcol', b).value; play(); };
   $('#papply', b).onclick = async () => {

@@ -537,3 +537,18 @@ html.no-anim *, html.no-anim *::before { animation: none !important; transition:
 #wsh { padding: 14px 32px 0; flex: none; }
 #wsh:empty { display: none; }
 #wsh .tab-hint { margin: 0; }
+
+/* ---------- 3D reveal ---------- */
+.reveal3d { position: fixed; inset: 0; z-index: 9995; display: grid; place-items: center; background: rgba(5,7,12,.55); backdrop-filter: blur(3px); animation: fade .25s ease both; }
+.reveal3d .rv-card { width: 360px; padding: 18px; border-radius: 22px; background: radial-gradient(circle at 50% 35%, rgba(139,92,246,.35), rgba(20,25,37,.96) 65%); border: 1px solid var(--line); text-align: center; box-shadow: 0 30px 80px rgba(0,0,0,.55); animation: rvIn .55s cubic-bezier(.2,1.4,.4,1) both; }
+.reveal3d canvas { width: 320px; height: 300px; display: block; margin: 0 auto; }
+.reveal3d .rv-t { display: flex; gap: 8px; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; margin: 6px 0 4px; }
+.reveal3d .rv-t svg { color: #34d399; }
+.reveal3d.out { animation: fade .3s ease reverse both; }
+@keyframes rvIn { from { opacity: 0; transform: scale(.6) rotate(-8deg); } }
+.shape-lib { display: flex; gap: 6px; flex-wrap: wrap; }
+.shape-lib button { position: relative; width: 44px; height: 44px; padding: 4px; border-radius: 10px; border: 1px solid var(--line); background: #0b0e14; cursor: pointer; }
+.shape-lib button.on { border-color: var(--a1, #8b5cf6); }
+.shape-lib canvas { width: 100%; height: 100%; image-rendering: pixelated; }
+.shape-lib button i { position: absolute; top: -6px; inset-inline-end: -6px; width: 16px; height: 16px; border-radius: 9px; background: #ef4444; color: #fff; font: 700 11px/16px sans-serif; font-style: normal; display: none; }
+.shape-lib button:hover i { display: block; }
