@@ -1173,6 +1173,7 @@ async function tabHeld(b) {
 }
 
 // ------------------------------------------------------------- القياسات: every size/position in one place
+const MEAS_CATS_ = 0;
 const MEAS_CATS = [['all', 'الكل'], ['changed', 'المتغيّر'], ['main', 'الأساسية'], ['weapons', 'أسلحة'], ['tools', 'أدوات'], ['throw', 'رمي'], ['food', 'أكل'], ['armor', 'دروع وتوتم'], ['misc', 'باقي الأشياء'], ['blocks', 'بلوكات']];
 async function tabMeasure(b) {
   const p = S.project, h = p.held = Object.assign({ on: false }, HELD_DEF, p.held || {});
@@ -1225,19 +1226,33 @@ async function tabMeasure(b) {
   things.push({ id: 'g:g', kind: 'group', tool: false, cat: 'main', label: 'كل الأشياء العادية مع بعض', en: 'all items generated pearl apple بيرل تفاح أكل', rep: 'ender_pearl', sliders: ['lower', 'scale'] });
   if (shBase) { things.push({ id: 'sh:0', kind: 'shield', block: false, cat: 'main', label: 'الشيلد', en: 'shield low shield', sliders: ['lower', 'scale'] }); things.push({ id: 'sh:1', kind: 'shield', block: true, cat: 'main', label: 'الشيلد وقت البلوك', en: 'shield blocking', sliders: ['lower', 'scale'] }); }
   if (fireOrig) things.push({ id: 'fire', kind: 'fire', cat: 'main', label: 'الفاير على الشاشة', en: 'fire low fire نار فاير قصير', sliders: ['fire'] });
+  // one switch per category: every block / weapon / food… at once
+  const CAT_AR = { weapons: 'كل الأسلحة مع بعض', tools: 'كل الأدوات مع بعض', throw: 'كل أشياء الرمي مع بعض', food: 'كل الأكل مع بعض', armor: 'كل الدروع والتوتم مع بعض', misc: 'كل باقي الأشياء مع بعض', blocks: 'كل البلوكات مع بعض' };
+  h.catVals = h.catVals || {};
+  for (const c of Object.keys(CAT_AR)) {
+    const us = units.filter((u) => u.rep.tex && itemCat(u.rep) === c); if (!us.length) continue;
+    const rep = (us.find((u) => /diamond_sword|ender_pearl|golden_apple|stone$|totem/.test(u.rep.name)) || us[0]).rep.name;
+    things.push({ id: 'c:' + c, kind: 'cat', cat: c, catKey: c, units: us, members: us.flatMap((u) => u.members), label: CAT_AR[c], en: 'all ' + c + ' كل الكل', rep, sliders: ['lower', 'scale', 'x'], top: true });
+  }
   for (const u of units) if (u.rep.tex) things.push({ id: 'u:' + u.key, kind: 'item', unit: u, cat: itemCat(u.rep), label: u.fam ? FAM_AR[u.fam] || 'كل الـ ' + u.fam.replace(/_/g, ' ') : itemName(u.key), en: u.members.join(' ').replace(/_/g, ' ') + ' ' + u.members.map(itemName).join(' ') + ' ' + (FAM_SING[u.fam] || ''), rep: u.rep.name, sliders: ['lower', 'scale', 'x'] });
   // ---- values per thing
   const valsOf = (t) => {
     if (t.kind === 'group') return grpVals(t.tool);
     if (t.kind === 'item') return itemVals(t.rep) || [0, 1, 0];
+    if (t.kind === 'cat') return h.catVals[t.catKey] || [0, 1, 0];
     if (t.kind === 'shield') return sh.enabled ? [t.block ? sh.blockLower : sh.lower, sh.scale, 0] : [0, 1, 0];
     if (t.kind === 'fire') return [fireCfg().lower];
   };
-  const changed = (t) => { const v = valsOf(t); if (t.kind === 'fire') return v[0] > 0.001; return v[0] !== 0 || v[1] !== 1 || (v[2] || 0) !== 0 || (t.kind === 'item' && t.unit.members.some((n) => h.imported[n])) || (t.kind === 'shield' && sh.imported && sh.imported[t.block ? 'shield_blocking' : 'shield']); };
+  const changed = (t) => { const v = valsOf(t); if (t.kind === 'cat') return v[0] !== 0 || v[1] !== 1 || (v[2] || 0) !== 0; if (t.kind === 'fire') return v[0] > 0.001; return v[0] !== 0 || v[1] !== 1 || (v[2] || 0) !== 0 || (t.kind === 'item' && t.unit.members.some((n) => h.imported[n])) || (t.kind === 'shield' && sh.imported && sh.imported[t.block ? 'shield_blocking' : 'shield']); };
   let fireTimer = 0;
   async function setVals(t, v) {
     if (t.kind === 'group') { ensureOn(); if (t.tool) { h.hLower = v[0]; h.hScale = v[1]; h.hX = v[2] || 0; } else { h.gLower = v[0]; h.gScale = v[1]; } }
     else if (t.kind === 'item') { const neutral = v[0] === 0 && v[1] === 1 && !(v[2] || 0); if (neutral) t.unit.members.forEach((n) => delete h.items[n]); else { ensureOn(); const a = await anchorOf(t.rep); t.unit.members.forEach((n) => { h.items[n] = { lower: v[0], scale: v[1], x: v[2] || 0, ...(a ? { anchor: a } : {}) }; }); } }
+    else if (t.kind === 'cat') {
+      const neutral = v[0] === 0 && v[1] === 1 && !(v[2] || 0); h.catVals[t.catKey] = v.slice();
+      if (neutral) { t.members.forEach((n) => delete h.items[n]); delete h.catVals[t.catKey]; }
+      else { ensureOn(); const a = await anchorOf(t.rep); t.members.forEach((n) => { h.items[n] = { lower: v[0], scale: v[1], x: v[2] || 0, ...(a ? { anchor: a } : {}) }; }); }
+    }
     else if (t.kind === 'shield') { sh.enabled = true; if (t.block) sh.blockLower = v[0]; else sh.lower = v[0]; sh.scale = v[1]; if (sh.lower === 0 && sh.blockLower === 0 && sh.scale === 1) sh.enabled = false; }
     else if (t.kind === 'fire') { p.fire = Object.assign(fireCfg(), { lower: v[0] }); clearTimeout(fireTimer); fireTimer = setTimeout(() => applyFire(p, p.fire), 500); }
     clearTimeout(setVals.t); setVals.t = setTimeout(saveProject, 400);
@@ -1248,7 +1263,7 @@ async function tabMeasure(b) {
     const n = t.rep, q = await quadsOf(n); if (!q.length) return null;
     if (neutral) { const info = disp[n] || {}; return heldProject(q, heldApply(info.disp, null, 0, 1, 0), W, H); }
     if (t.kind === 'group') { const info = disp[n] || {}; return heldProject(q, heldApply(info.disp, t.tool ? h.hAnchor : h.gAnchor, ...grpVals(t.tool)), W, H); }
-    if (t.kind === 'item' && !itemVals(n)) await anchorOf(n);
+    if ((t.kind === 'item' || t.kind === 'cat') && !itemVals(n)) await anchorOf(n);
     return heldProject(q, effItem(n), W, H);
   }
   function fireFrame(lower) { const c = fireCfg(); const im = IMG.toCanvas(fireTransform(fireOrig, lower, c.opacity, c.useTint ? c.tint : null)); const w = im.width, fr = document.createElement('canvas'); fr.width = fr.height = w; fr.getContext('2d').drawImage(im, 0, 0, w, w, 0, 0, w, w); return fr; }
@@ -1270,8 +1285,8 @@ async function tabMeasure(b) {
   const io = new IntersectionObserver((ents) => ents.forEach(async (en) => { if (!en.isIntersecting) return; io.unobserve(en.target); const t = things.find((x) => x.id === en.target.dataset.id); thumbOf(t, $('canvas', en.target)); if (changed(t)) { const st = await statusOf(t); const bd = $('.mbadge', en.target); if (bd && st) { bd.className = 'mbadge ' + st.k; bd.textContent = st.s; } } }), { root: listEl, rootMargin: '120px' });
   function drawList() {
     const q = $('#mq', b).value.trim().toLowerCase();
-    const list = things.filter((t) => (q ? (t.label + ' ' + t.en).toLowerCase().includes(q) : cat === 'all' ? true : cat === 'changed' ? changed(t) : t.cat === cat));
-    listEl.innerHTML = list.map((t) => `<button class="mitem ${t === sel ? 'on' : ''}" data-id="${esc(t.id)}"><canvas></canvas><span class="ml"><b>${esc(t.label)}</b>${t.unit && t.unit.fam ? `<i>${t.unit.members.length} أنواع</i>` : ''}</span><span class="mbadge">${changed(t) ? 'متغيّر' : ''}</span></button>`).join('') || `<div class="muted small" style="padding:12px">${models.length || q ? 'ما لقيت شي' : 'حمّل ملفات اللعبة عشان تطلع كل الأدوات'}</div>`;
+    const list = things.filter((t) => (q ? (t.label + ' ' + t.en).toLowerCase().includes(q) : cat === 'all' ? true : cat === 'changed' ? changed(t) : cat === 'main' ? t.cat === 'main' || t.kind === 'cat' : t.cat === cat)).sort((a, b) => (b.top ? 1 : 0) - (a.top ? 1 : 0));
+    listEl.innerHTML = list.map((t) => `<button class="mitem ${t === sel ? 'on' : ''}" data-id="${esc(t.id)}"><canvas></canvas><span class="ml"><b>${esc(t.label)}</b>${t.unit && t.unit.fam ? `<i>${t.unit.members.length} أنواع</i>` : t.kind === 'cat' ? `<i>${t.members.length} شي</i>` : ''}</span><span class="mbadge">${changed(t) ? 'متغيّر' : ''}</span></button>`).join('') || `<div class="muted small" style="padding:12px">${models.length || q ? 'ما لقيت شي' : 'حمّل ملفات اللعبة عشان تطلع كل الأدوات'}</div>`;
     $$('.mitem', listEl).forEach((x) => io.observe(x));
   }
   listEl.onclick = (e) => { const el = e.target.closest('.mitem'); if (!el) return; sel = things.find((t) => t.id === el.dataset.id); $$('.mitem', listEl).forEach((x) => x.classList.toggle('on', x === el)); drawEditor(); };
@@ -1284,7 +1299,8 @@ async function tabMeasure(b) {
     const t = sel; if (!t) { ed.innerHTML = ''; return; }
     const v = valsOf(t);
     const presets = t.kind === 'fire' ? [['عادي', [0]], ['قصير', [0.45]], ['قصير مرة', [0.6]], ['مخفي', [0.9]]] : t.kind === 'shield' ? [['قصير', [1, 0.85]], ['قصير مرة', [2, 0.7]], ['الأصلي', [0, 1]]] : [['Low', [2.5, 0.85, 0]], ['صغير', [3, 0.65, 0.5]], ['الأصلي', [0, 1, 0]]];
-    ed.innerHTML = `<div class="row" style="margin-bottom:10px"><h3 style="margin:0;flex:1">${esc(t.label)}</h3>${t.unit && t.unit.fam ? `<span class="muted small" title="${esc(t.unit.members.join(', '))}">ينطبق على ${t.unit.members.length} أنواع</span>` : ''}</div>
+    ed.innerHTML = `<div class="row" style="margin-bottom:10px"><h3 style="margin:0;flex:1">${esc(t.label)}</h3>${t.unit && t.unit.fam ? `<span class="muted small" title="${esc(t.unit.members.join(', '))}">ينطبق على ${t.unit.members.length} أنواع</span>` : t.kind === 'cat' ? `<span class="muted small">ينطبق على ${t.members.length} شي</span>` : ''}</div>
+      ${t.kind === 'cat' ? `<div class="muted small" style="margin-bottom:8px;line-height:1.6">يغيّر كل اللي بهالقسم مرة وحدة. بعدها تقدر تعدّل أي واحد لحاله من القائمة.</div>` : ''}
       ${t.kind === 'group' ? `<div class="muted small" style="margin-bottom:8px;line-height:1.6">ينطبق على كل ${t.tool ? 'السيوف والأدوات' : 'الأشياء العادية'} اللي ما لها قياس خاص. الأداة اللي تعطيها قياس لحالها يغلب.</div>` : ''}
       <div class="fp-stage"><canvas id="mpcv"></canvas></div><div class="hstat" id="mstat"></div>
       <div class="stack" style="gap:2px;margin-top:10px">${t.sliders.map((k, i) => `<div class="slider-row" style="grid-template-columns:90px 1fr 46px"><span>${SL[k][0]}${t.kind === 'shield' && k === 'scale' ? ' <span class="dim small">(للاثنين)</span>' : ''}</span><input type="range" data-i="${i}" min="${SL[k][1]}" max="${SL[k][2]}" step="${SL[k][3]}" value="${v[i]}"><output class="ltr">${k === 'fire' ? Math.round(v[i] * 100) + '%' : v[i]}</output></div>`).join('')}</div>

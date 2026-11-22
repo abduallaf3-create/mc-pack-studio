@@ -617,3 +617,5 @@ html.no-anim *, html.no-anim *::before { animation: none !important; transition:
 .pname { cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
 .pname .pname-ed { opacity: 0; transition: opacity .15s; color: var(--muted); }
 .pname:hover .pname-ed { opacity: 1; }
+.mitem[data-id^="c:"] { border-style: dashed; }
+.mitem[data-id^="c:"] .ml b::before { content: '★ '; color: var(--a1, #8b5cf6); }
