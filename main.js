@@ -92,6 +92,7 @@ ipcMain.handle('settings:get', () => readJSON(SETTINGS_FILE, { accent: 'violet' 
 ipcMain.handle('settings:set', (_e, s) => { writeJSON(SETTINGS_FILE, s); return true; });
 
 // ---------------------------------------------------------------- projects
+const notify = (id) => { try { if (win) win.webContents.send('project:changed', String(id)); } catch {} };
 const projDir = (id) => path.join(PROJECTS_DIR, String(id).replace(/[^\w-]/g, ''));
 const filesDir = (id) => path.join(projDir(id), 'files');
 function safeRel(rel) {
@@ -109,6 +110,7 @@ ipcMain.handle('projects:save', (_e, p) => {
   p.updated = Date.now();
   fs.mkdirSync(filesDir(p.id), { recursive: true });
   writeJSON(path.join(projDir(p.id), 'project.json'), p);
+  setImmediate(() => notify(p.id));
   return p;
 });
 ipcMain.handle('projects:delete', async (_e, id) => {
@@ -233,6 +235,7 @@ ipcMain.handle('asset:baseText', (_e, project, rel) => {
   return b ? b.toString('utf8') : null;
 });
 ipcMain.handle('tex:put', (_e, id, rel, b64, meta) => {
+  setImmediate(() => notify(id));
   rel = safeRel(rel);
   const f = path.join(filesDir(id), 'assets/minecraft', rel);
   fs.mkdirSync(path.dirname(f), { recursive: true });
@@ -242,18 +245,21 @@ ipcMain.handle('tex:put', (_e, id, rel, b64, meta) => {
   return true;
 });
 ipcMain.handle('tex:reset', (_e, id, rel) => {
+  setImmediate(() => notify(id));
   rel = safeRel(rel);
   const f = path.join(filesDir(id), 'assets/minecraft', rel);
   fs.rmSync(f, { force: true }); fs.rmSync(f + '.mcmeta', { force: true });
   return true;
 });
 ipcMain.handle('file:putRaw', (_e, id, rel, text) => {
+  setImmediate(() => notify(id));
   const f = path.join(filesDir(id), safeRel(rel));
   fs.mkdirSync(path.dirname(f), { recursive: true });
   fs.writeFileSync(f, text);
   return true;
 });
-ipcMain.handle('file:remove', (_e, id, rel) => { fs.rmSync(path.join(filesDir(id), safeRel(rel)), { force: true }); return true; });
+ipcMain.handle('file:remove', (_e, id, rel) => {
+  setImmediate(() => notify(id)); fs.rmSync(path.join(filesDir(id), safeRel(rel)), { force: true }); return true; });
 ipcMain.handle('file:icon', (_e, id) => {
   const f = path.join(projDir(id), 'pack.png');
   return exists(f) ? fs.readFileSync(f).toString('base64') : null;
@@ -472,6 +478,7 @@ ipcMain.handle('snap:create', (_e, id, name) => {
   return sid;
 });
 ipcMain.handle('snap:restore', (_e, id, sid) => {
+  setImmediate(() => notify(id));
   const d = path.join(snapDir(id), String(sid).replace(/[^\w-]/g, '')); if (!exists(d)) throw new Error('missing');
   fs.rmSync(filesDir(id), { recursive: true, force: true });
   if (exists(path.join(d, 'files'))) fs.cpSync(path.join(d, 'files'), filesDir(id), { recursive: true }); else fs.mkdirSync(filesDir(id), { recursive: true });
@@ -509,6 +516,7 @@ ipcMain.handle('merge:read', (_e, zipPath, rel) => {
   return e ? e.getData().toString('base64') : null;
 });
 ipcMain.handle('merge:copy', (_e, id, zipPath, rels) => {
+  setImmediate(() => notify(id));
   const { z, prefix } = packEntries(zipPath); let n = 0;
   for (const rel of rels) {
     const e = z.getEntry(prefix + rel);
@@ -555,6 +563,7 @@ ipcMain.handle('pack:check', (_e, project) => {
   return { issues, files: files.length, size: total };
 });
 ipcMain.handle('pack:fix', (_e, project, items) => {
+  setImmediate(() => notify(project.id));
   const dir = filesDir(project.id); let n = 0;
   for (const it of items) {
     const f = path.join(dir, safeRel(it.file));
@@ -595,6 +604,25 @@ ipcMain.handle('held:build', (_e, project, cfg) => {
     const m = read(n); if (!m || !m.display) continue; // only models that define their own hand position
     if (mod(m, +lower || 0, +scale || 1, +xs || 0)) out[pre + n + '.json'] = JSON.stringify(m, null, 2);
   }
+  // per-item sizes (any item): copy the inherited hand position into the item's own model, then change it
+  const resolveDisplay = (m, depth = 0) => {
+    if (!m || depth > 6) return null;
+    if (m.display && Object.keys(m.display).some((k) => /^firstperson/.test(k))) return JSON.parse(JSON.stringify(m.display));
+    if (!m.parent) return null;
+    const pn = String(m.parent).replace(/^minecraft:/, '').replace(/^item\//, '');
+    if (/^builtin\//.test(pn) || pn.startsWith('block/')) {
+      if (pn.startsWith('block/')) { const be = z.getEntry('assets/minecraft/models/' + pn + '.json'); if (be) { try { return resolveDisplay(JSON.parse(be.getData().toString('utf8')), depth + 1); } catch {} } }
+      return null;
+    }
+    return resolveDisplay(read(pn), depth + 1);
+  };
+  for (const [n, c] of Object.entries(cfg.items || {})) {
+    const m = read(n); if (!m) continue;
+    const disp = resolveDisplay(m);
+    if (!disp) continue;
+    const mm = { ...m, display: { ...(m.display || {}), ...disp } };
+    if (mod(mm, +c.lower || 0, +c.scale || 1, +c.x || 0)) out[pre + n + '.json'] = JSON.stringify(mm, null, 2);
+  }
   return { extras: out, count: Object.keys(out).length };
 });
 ipcMain.handle('file:getRaw', (_e, id, rel) => { const f = path.join(filesDir(id), safeRel(rel)); return exists(f) ? fs.readFileSync(f, 'utf8') : null; });
@@ -621,6 +649,60 @@ ipcMain.handle('jar:packFormat', (_e, jarPath) => {
     if (pv && typeof pv.resource === 'number') return [pv.resource, 0];
     if (pv && pv.resource_major !== undefined) return [pv.resource_major, pv.resource_minor || 0];
   } catch {}
+  return null;
+});
+
+
+// list every item model (for the per-item size search)
+ipcMain.handle('models:list', (_e, project) => {
+  const z = openJar(project.baseJar); if (!z) return [];
+  const pre = 'assets/minecraft/models/item/';
+  return z.getEntries().map((e) => e.entryName).filter((n) => n.startsWith(pre) && n.endsWith('.json') && !n.slice(pre.length).includes('/'))
+    .map((n) => { let tex = null; try { const j = JSON.parse(z.getEntry(n).getData().toString('utf8')); const l = j.textures && (j.textures.layer0 || Object.values(j.textures)[0]); if (l) tex = 'textures/' + String(l).replace(/^minecraft:/, '') + '.png'; } catch {} return { name: n.slice(pre.length, -5), tex }; })
+    .filter((x) => !/^(template_|generated|handheld|air$)/.test(x.name)).sort((a, b) => a.name.localeCompare(b.name));
+});
+
+// share a whole pack project with friends (.mcps file)
+ipcMain.handle('proj:export', async (_e, id) => {
+  const p = readJSON(path.join(projDir(id), 'project.json'), null); if (!p) return null;
+  const r = await dialog.showSaveDialog(win, { defaultPath: safeName(p.name) + '.mcps', filters: [{ name: 'MC Pack Studio', extensions: ['mcps'] }] });
+  if (r.canceled) return null;
+  const zip = new AdmZip();
+  const clean = { ...p, rpPath: '', modsPath: '', baseJar: null, baseApprox: null, configPath: undefined, instance: undefined };
+  zip.addFile('project.json', Buffer.from(JSON.stringify(clean, null, 2)));
+  if (exists(path.join(projDir(id), 'pack.png'))) zip.addFile('pack.png', fs.readFileSync(path.join(projDir(id), 'pack.png')));
+  for (const rel of walk(filesDir(id))) zip.addFile('files/' + rel, fs.readFileSync(path.join(filesDir(id), rel)));
+  zip.writeZip(r.filePath);
+  return r.filePath;
+});
+ipcMain.handle('proj:import', async () => {
+  const r = testPicks ? { canceled: !testPicks.length, filePaths: testPicks.splice(0, 1) } : await dialog.showOpenDialog(win, { title: 'افتح باك من صاحبك', filters: [{ name: 'MC Pack Studio', extensions: ['mcps', 'zip'] }], properties: ['openFile'] });
+  if (r.canceled) return null;
+  const zip = new AdmZip(r.filePaths[0]);
+  const pe = zip.getEntry('project.json'); if (!pe) throw new Error('هذا مو ملف باك من MC Pack Studio');
+  const p = JSON.parse(pe.getData().toString('utf8'));
+  p.id = 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); p.name = (p.name || 'باك') + ' (من صاحبك)'; p.created = p.updated = Date.now();
+  fs.mkdirSync(filesDir(p.id), { recursive: true });
+  for (const e of zip.getEntries()) {
+    if (e.isDirectory) continue;
+    if (e.entryName === 'pack.png') fs.writeFileSync(path.join(projDir(p.id), 'pack.png'), e.getData());
+    else if (e.entryName.startsWith('files/')) { const f = path.join(filesDir(p.id), safeRel(e.entryName.slice(6))); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, e.getData()); }
+  }
+  writeJSON(path.join(projDir(p.id), 'project.json'), p);
+  return p;
+});
+
+// the game's bitmap font layout (which character sits in which cell of ascii.png)
+ipcMain.handle('font:layout', (_e, project) => {
+  const z = openJar(project.baseJar); if (!z) return null;
+  for (const f of ['assets/minecraft/font/include/default.json', 'assets/minecraft/font/default.json']) {
+    const e = z.getEntry(f); if (!e) continue;
+    try {
+      const j = JSON.parse(e.getData().toString('utf8'));
+      const prov = (j.providers || []).find((x) => x.type === 'bitmap' && /ascii\.png$/.test(x.file || ''));
+      if (prov) return { file: 'textures/' + String(prov.file).replace(/^minecraft:/, ''), chars: prov.chars, height: prov.height || 8, ascent: prov.ascent || 7 };
+    } catch {}
+  }
   return null;
 });
 

@@ -91,5 +91,15 @@
     raf = requestAnimationFrame(loop);
     return { st, set(q) { quads = q; }, stop() { cancelAnimationFrame(raf); } };
   }
-  window.Lite3D = { itemQuads, skinQuads, viewer };
+  // armor layers drawn over a character (64x32 armor texture, same box layout as skins)
+  function armorQuads(l1, l2, slim, parts) {
+    const q = [], aw = slim ? 3 : 4;
+    if (l1) { const k = l1.width / 64;
+      if (parts.helmet) boxQuads(l1, k, 0, 0, 8, 8, 8, 0, 12, 0, 1.0, q);
+      if (parts.chest) { boxQuads(l1, k, 16, 16, 8, 12, 4, 0, 2, 0, 1.01, q); boxQuads(l1, k, 40, 16, 4, 12, 4, -(4 + aw / 2), 2, 0, 1.0, q); boxQuads(l1, k, 40, 16, 4, 12, 4, 4 + aw / 2, 2, 0, 1.0, q); }
+      if (parts.boots) { boxQuads(l1, k, 0, 16, 4, 12, 4, -2, -10, 0, 1.0, q); boxQuads(l1, k, 0, 16, 4, 12, 4, 2, -10, 0, 1.0, q); } }
+    if (l2 && parts.legs) { const k = l2.width / 64; boxQuads(l2, k, 16, 16, 8, 12, 4, 0, 2, 0, 0.5, q); boxQuads(l2, k, 0, 16, 4, 12, 4, -2, -10, 0, 0.5, q); boxQuads(l2, k, 0, 16, 4, 12, 4, 2, -10, 0, 0.5, q); }
+    return q;
+  }
+  window.Lite3D = { itemQuads, skinQuads, armorQuads, boxQuads, viewer };
 })();

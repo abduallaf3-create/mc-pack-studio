@@ -150,7 +150,7 @@ async function renderHome(main) {
       <div><span class="chip-tag"><i></i>${detected.length ? `${detected.length} كلاينت جاهز على جهازك` : 'جاهز'}</span>
         <h1>صمّم <span class="grad-text">الباك</span> حقك<br>وخلّه على كيفك</h1>
         <p>سيوف، فاير قصير، شيلد قصير، توتم، كروس هير، سكنات، وكل تكستر باللعبة — وبضغطة زر ينزل في الكلاينت.</p>
-        <div class="row"><button class="btn primary lg" id="newp">${icon('plus', 20)} باك جديد</button>
+        <div class="row"><button class="btn primary lg" id="newp">${icon('plus', 20)} باك جديد</button><button class="btn lg" id="impp">${icon('upload', 18)} افتح باك من صاحبك</button>
           ${S.projects[0] ? `<button class="btn lg" id="cont">${icon('play', 18)} كمّل على "${esc(S.projects[0].name)}"</button>` : ''}</div></div>
     </div>
     <div class="stats">
@@ -170,6 +170,7 @@ async function renderHome(main) {
         <div class="pcard" data-go="${v}" style="padding:20px;display:flex;gap:16px;align-items:center"><div class="stat" style="padding:0;border:0;background:none"><div class="si" style="width:52px;height:52px">${icon(ic, 24)}</div></div><div><b style="font-size:15px">${t}</b><div class="muted small" style="margin-top:4px">${d}</div></div></div>`).join('')}
     </div></div>`;
   $('#newp').onclick = $('#newp2').onclick = () => openProjectForm();
+  $('#impp').onclick = importShared;
   if ($('#cont')) $('#cont').onclick = () => openProject(S.projects[0].id);
   if ($('#all')) $('#all').onclick = () => go('packs');
   $$('[data-go]', main).forEach((x) => x.onclick = () => go(x.dataset.go));
@@ -180,8 +181,9 @@ async function renderPacks(main) {
   S.projects = await api.projects.list();
   main.innerHTML = `<div class="view"><div class="row" style="margin-bottom:22px"><div style="flex:1"><h1>باكاتي</h1><p class="sub" style="margin:0">كل الباكات اللي سويتها</p></div>
     <div class="search" style="width:280px"><input class="inp" id="ps" placeholder="ابحث...">${icon('search', 18)}</div>
-    <button class="btn primary" id="newp">${icon('plus', 18)} باك جديد</button></div>
+    <button class="btn" id="impp">${icon('upload', 18)} افتح باك من صاحبك</button><button class="btn primary" id="newp">${icon('plus', 18)} باك جديد</button></div>
     <div class="grid card-grid" id="pg"></div></div>`;
+  $('#impp').onclick = importShared;
   const draw = () => {
     const q = $('#ps').value.toLowerCase();
     $('#pg').innerHTML = `<div class="pcard new" id="newp2"><div><div class="plus">${icon('plus', 26)}</div><b>باك جديد</b></div></div>` + S.projects.filter((p) => p.name.toLowerCase().includes(q)).map(packCard).join('');
@@ -224,6 +226,8 @@ function openProjectForm(edit) {
         <label class="f">مجلد المودات<div class="path-row"><input class="inp" id="f-mods" placeholder="—"><button class="btn icon" data-pick="f-mods">${icon('folder')}</button></div></label>
       </div>
       <div id="f-note"></div>
+      ${edit ? '' : `<div><div class="row" style="margin-bottom:10px"><b>ابدأ من قالب</b><span class="muted small">تقدر تغيّر كل شي بعدين</span></div>
+        <div class="tpl-grid">${TEMPLATES.map(([id, n, ic, d]) => `<div class="tpl ${id === 'blank' ? 'on' : ''}" data-tpl="${id}"><div class="ti">${icon(ic, 20)}</div><b>${n}</b><span>${d}</span></div>`).join('')}</div></div>`}
       <label class="check"><span class="switch"><input type="checkbox" id="f-act" ${p.activate ? 'checked' : ''}><span></span></span>
         <span>فعّل الباك تلقائياً في اللعبة بعد التثبيت <span class="dim small">(يعدّل options.txt — سكّر اللعبة قبل)</span></span></label>
     </div>`,
@@ -258,6 +262,8 @@ function openProjectForm(edit) {
   fillClient();
   $$('.client', el).forEach((c) => c.onclick = () => { $$('.client', el).forEach((x) => x.classList.remove('on')); c.classList.add('on'); p.clientId = c.dataset.c; fillClient(); });
   $$('[data-pick]', el).forEach((b) => b.onclick = async () => { const f = await api.fs.pickFolder('اختر المجلد'); if (f) $('#' + b.dataset.pick, el).value = f; });
+  let tpl = 'blank';
+  $$('.tpl', el).forEach((x) => x.onclick = () => { tpl = x.dataset.tpl; $$('.tpl', el).forEach((y) => y.classList.toggle('on', y === x)); });
   $('#f-cancel', el).onclick = () => m.close();
   $('#f-save', el).onclick = async () => {
     p.name = $('#f-name', el).value.trim() || 'My Pack';
@@ -276,6 +282,7 @@ function openProjectForm(edit) {
     m.close(true);
     if (edit) { S.project = saved; renderRail(); render(); toast('انحفظت الإعدادات'); } else await openProject(saved.id, saved);
     if (needDl || S.project.baseApprox) { if (await autoBase(S.project, true)) render(); }
+    if (!edit && tpl !== 'blank') { if (S.project.baseJar) { await applyTemplate(S.project, tpl); render(); } else toast('القالب يحتاج ملفات اللعبة — حمّلها وبعدين جرب', 'err'); }
   };
   setTimeout(() => $('#f-name', el).focus(), 50);
 }
@@ -290,7 +297,7 @@ async function openProject(id, p) {
 const saveProject = async () => { const saved = await api.projects.save(S.project); S.project.id = saved.id; S.project.updated = saved.updated; };
 
 // ------------------------------------------------------------- project workspace
-const TABS = [['textures', 'التكسترات', 'star'], ['all', 'كل الملفات', 'layers'], ['tweaks', 'تحسينات PvP', 'wand'], ['held', 'حجم الأدوات', 'sword'], ['cit', 'أسماء مخصصة', 'star'], ['sky', 'السما', 'sun'], ['sounds', 'الأصوات', 'sound'], ['fire', 'الفاير', 'fire'], ['shield', 'الشيلد', 'shield'], ['theme', 'سمة الألوان', 'palette'], ['mods', 'المودات', 'puzzle'], ['configs', 'إعدادات المودات', 'file'], ['psettings', 'إعدادات الباك', 'gear']];
+const TABS = [['textures', 'التكسترات', 'star'], ['all', 'كل الملفات', 'layers'], ['tweaks', 'تحسينات PvP', 'wand'], ['held', 'حجم الأدوات', 'sword'], ['armor', 'ألوان الدروع', 'shield'], ['font', 'الخط', 'edit'], ['cit', 'أسماء مخصصة', 'star'], ['sky', 'السما', 'sun'], ['sounds', 'الأصوات', 'sound'], ['fire', 'الفاير', 'fire'], ['shield', 'الشيلد', 'shield'], ['theme', 'سمة الألوان', 'palette'], ['mods', 'المودات', 'puzzle'], ['configs', 'إعدادات المودات', 'file'], ['psettings', 'إعدادات الباك', 'gear']];
 async function renderProject(main) {
   const p = S.project, c = clientOf(p.clientId);
   main.innerHTML = `<div class="ws-banner"><div class="bg" id="pbg"></div>
@@ -299,6 +306,7 @@ async function renderProject(main) {
         <div class="row" style="gap:6px"><span class="badge dark"><span class="dot" style="background:${c.color};box-shadow:0 0 8px ${c.color}"></span>${esc(c.name)}${p.instance ? ' · ' + esc(p.instance) : ''}</span>
         <span class="badge dark ltr">${esc(p.version)} · pack_format ${p.packFormat}</span>
         ${p.baseJar ? `<span class="badge ok">${icon('check', 12)} ملفات اللعبة محمّلة</span>` : `<span class="badge warn">بدون ملفات اللعبة</span>`}</div></div>
+      <label class="btn live ${p.live ? 'on' : ''}" id="live" title="كل ما تحفظ شي، الباك يتثبّت لحاله — باللعبة اضغط F3+T"><span class="dotlive"></span>تثبيت تلقائي</label>
       <button class="btn" id="chk">${icon('check', 17)} فحص</button>
       <button class="btn" id="exp">${icon('zip', 17)} تصدير ZIP</button>
       <button class="btn primary lg" id="inst">${icon('play', 18)} تثبيت في ${esc(c.name)}</button>
@@ -310,15 +318,27 @@ async function renderProject(main) {
   $$('.tab').forEach((t) => t.onclick = () => { S.tab = t.dataset.t; $$('.tab').forEach((x) => x.classList.toggle('on', x === t)); renderTab(); });
   $('#inst').onclick = () => installPack();
   $('#chk').onclick = () => openChecker();
+  $('#live').onclick = async () => { p.live = !p.live; $('#live').classList.toggle('on', p.live); await saveProject(); toast(p.live ? 'التثبيت التلقائي شغال — عدّل واحفظ، وباللعبة اضغط F3+T' : 'وقّفت التثبيت التلقائي'); if (p.live) installPack(true); };
   $('#exp').onclick = async () => { const r = await api.pack.export(S.project, await buildExtras()); if (r) toast('انحفظ الباك', 'ok', { label: 'افتح', fn: () => api.fs.reveal(r.path) }); };
   renderTab();
 }
 function renderTab() {
   const b = $('#wsb'); if (!b) return;
-  ({ textures: tabTextures, all: tabAll, tweaks: tabTweaks, held: tabHeld, cit: tabCIT, sky: tabSky, sounds: tabSounds, fire: tabFire, shield: tabShield, theme: tabTheme, mods: tabMods, configs: tabConfigs, psettings: tabPSettings })[S.tab](b);
+  ({ textures: tabTextures, all: tabAll, tweaks: tabTweaks, held: tabHeld, armor: tabArmor, font: tabFont, cit: tabCIT, sky: tabSky, sounds: tabSounds, fire: tabFire, shield: tabShield, theme: tabTheme, mods: tabMods, configs: tabConfigs, psettings: tabPSettings })[S.tab](b);
 }
 
-async function installPack() {
+let liveT = null, liveBusy = false;
+api.onProjectChanged((id) => {
+  if (!S.project || S.project.id !== id || !S.project.live) return;
+  clearTimeout(liveT); liveT = setTimeout(() => installPack(true), 1200);
+});
+async function installPack(silent) {
+  if (silent) {
+    if (liveBusy) { clearTimeout(liveT); liveT = setTimeout(() => installPack(true), 1200); return; }
+    liveBusy = true;
+    try { await api.pack.install(S.project, await buildExtras(), false); toast('انحدّث الباك ✓ — باللعبة اضغط F3+T'); } catch (e) { toast('ما قدرت أثبّت: ' + String(e.message || e).replace(/^Error invoking remote method '[^']+': (Error: )?/, ''), 'err'); }
+    liveBusy = false; return;
+  }
   try {
     const r = await api.pack.install(S.project, await buildExtras(), S.project.activate);
     toast(`تم التثبيت ✓ ${r.activated ? '— وتفعّل في اللعبة' : ''}<div class="dim small ltr" style="margin-top:3px">${esc(r.path)}</div>`, 'ok', { label: 'افتح المجلد', fn: () => api.fs.reveal(r.path) });
@@ -517,6 +537,69 @@ async function pickClientFiles() {
   }
   toast(`لقيت تكسترات: ${[...new Set(r.inExtra.map((x) => x.version))].join('، ')} ✓`);
   return r;
+}
+
+async function importShared() {
+  try { const p = await api.proj.import(); if (!p) return; toast(`انفتح "${esc(p.name)}" ✓`); openProject(p.id, p); }
+  catch (e) { toast(String(e.message || e).replace(/^Error invoking remote method '[^']+': (Error: )?/, ''), 'err'); }
+}
+
+// ------------------------------------------------------------- starter templates
+const TEMPLATES = [
+  ['blank', 'فاضي', 'file', 'تبدأ من تكسترات ماينكرافت الأصلية بدون أي تغيير'],
+  ['pvp', 'PvP نظيف', 'sword', 'فاير قصير، شيلد قصير، سيف صغير، كروس هير نقطة، زجاج شفاف'],
+  ['bedwars', 'Bedwars', 'cube', 'زجاج شفاف، فاير قصير، أدوات صغيرة، بدون قرعة'],
+  ['fps', 'رؤية صافية', 'monitor', 'بدون تظليل وبدون قرعة، فاير شفاف، زجاج شفاف'],
+  ['dark', 'داكن', 'palette', 'واجهة داكنة بلون بنفسجي غامق مع فاير بنفسجي'],
+];
+async function texImg(p, rel, baseOnly = true) { const r = await api.tex.get(p, rel, baseOnly) || (baseOnly ? await api.tex.get(p, rel) : null); return r ? IMG.fromB64(r.data) : null; }
+async function applyFire(p, c) {
+  for (const id of ['fire_0', 'fire_1']) {
+    const rel = texPath(TEXTURES.find((t) => t.id === id), p.packFormat); const im = await texImg(p, rel); if (!im) continue;
+    await api.tex.put(p.id, rel, IMG.toB64(fireTransform(im, c.lower, c.opacity, c.useTint ? c.tint : null)), (await api.tex.getMeta(p, rel)) || '{"animation":{}}');
+  }
+  p.fire = c;
+}
+async function applyQuickTweak(p, id) {
+  const rel = id === 'glass' ? texPath(TEXTURES.find((t) => t.id === 'glass'), p.packFormat) : id === 'pumpkin' ? 'textures/misc/pumpkinblur.png' : 'textures/misc/vignette.png';
+  const im = await texImg(p, rel);
+  if (id === 'glass') { if (!im) return; const w = im.width, h = im.height; for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) im.data[(y * w + x) * 4 + 3] = 0; await api.tex.put(p.id, rel, IMG.toB64(im)); }
+  else await api.tex.put(p.id, rel, IMG.toB64(IMG.blank(im ? im.width : 256, im ? im.height : 256)));
+}
+async function applyCross(p, o) {
+  const im = crossImg(o); p.cross = o;
+  if (p.packFormat >= 18) return api.tex.put(p.id, 'textures/gui/sprites/hud/crosshair.png', IMG.toB64(im));
+}
+async function applyTint(p, cats, color, strength = 0.7) {
+  for (const t of TEXTURES.filter((t) => cats.includes(t.cat) && texPath(t, p.packFormat))) {
+    const rel = texPath(t, p.packFormat); const im = await texImg(p, rel); if (!im) continue;
+    await api.tex.put(p.id, rel, IMG.toB64(IMG.tint(im, color, strength, true)), im.height > im.width ? await api.tex.getMeta(p, rel) : null);
+  }
+}
+async function applyTemplate(p, tpl) {
+  if (!tpl || tpl === 'blank' || !p.baseJar) return;
+  const done = toastLoading('أجهّز القالب...');
+  try {
+    if (tpl === 'pvp') {
+      await applyFire(p, { lower: 0.5, opacity: 1, useTint: false });
+      p.shield = { enabled: true, lower: 6, blockLower: 5, scale: 0.9 };
+      p.held = Object.assign({}, HELD_DEF, { on: true, hLower: 2.5, hScale: 0.85 });
+      await applyCross(p, { style: 'dot', size: 2, thick: 1, gap: 0, color: '#ffffff', outline: true, dot: true });
+      await applyQuickTweak(p, 'glass');
+    } else if (tpl === 'bedwars') {
+      await applyQuickTweak(p, 'glass'); await applyQuickTweak(p, 'pumpkin');
+      await applyFire(p, { lower: 0.45, opacity: 1, useTint: false });
+      p.held = Object.assign({}, HELD_DEF, { on: true, hLower: 3, hScale: 0.8, gOn: true, gLower: 2, gScale: 0.8 });
+    } else if (tpl === 'fps') {
+      await applyQuickTweak(p, 'vignette'); await applyQuickTweak(p, 'pumpkin'); await applyQuickTweak(p, 'glass');
+      await applyFire(p, { lower: 0.55, opacity: 0.5, useTint: false });
+    } else if (tpl === 'dark') {
+      await applyTint(p, ['gui'], '#3b2a5c', 0.75);
+      await applyFire(p, { lower: 0.4, opacity: 1, useTint: true, tint: '#7c3aed' });
+    }
+    await saveProject();
+    toast('جهز القالب ✓');
+  } finally { done(); }
 }
 // ------------------------------------------------------------- official game files
 async function ensureGameFiles(version, force) {
@@ -903,18 +986,26 @@ async function tabHeld(b) {
       <span class="muted small" style="line-height:1.7">يعدّل موديلات الأدوات بالباك وقت التثبيت. يحتاج ملفات اللعبة محمّلة. يشتغل على كل النسخ.</span>
     </div>
     <div class="card"><h3>معاينة تقريبية</h3><div class="stage" id="hst"><div class="xh"></div><canvas id="hcv" style="position:absolute;inset:0;width:100%;height:100%"></canvas></div>
-      <div class="row" style="margin-top:12px"><span class="seg" id="hpv"><button data-v="sword" class="on">سيف</button><button data-v="pearl">بيرل</button></span></div></div></div>`;
+      <div class="row" style="margin-top:12px"><span class="seg" id="hpv"><button data-v="sword" class="on">سيف</button><button data-v="pearl">بيرل</button></span><span class="muted small" id="hpvn"></span></div></div></div>
+    <div class="card" style="margin-top:20px"><div class="row" style="margin-bottom:12px"><h3 style="margin:0;flex:1">${icon('search', 18)} كل أداة لحالها</h3><span class="muted small">ابحث عن أي أداة واعطها حجمها ومكانها الخاص (يغلب على الإعدادات اللي فوق)</span></div>
+      <div class="search" style="position:relative"><input class="inp" id="hq" placeholder="ابحث بالإنجليزي: bow, totem, ender_pearl, diamond_axe, shield...">${icon('search', 18)}<div class="hres" id="hres"></div></div>
+      <div id="hitems" class="stack" style="gap:8px;margin-top:12px"></div></div>`;
   bindBaseActions(b);
   const load = async (id) => { const t = TEXTURES.find((x) => x.id === id); const r = await api.tex.get(p, texPath(t, p.packFormat)); return r ? IMG.toCanvas(await IMG.fromB64(r.data)) : null; };
   const imgs = { sword: await load('diamond_sword'), pearl: await load('ender_pearl') };
-  let pv = 'sword';
+  let pv = 'sword', pvItem = null;
+  h.items = h.items || {};
+  const models = p.baseJar ? await api.models.list(p) : [];
+  const texCache = {};
+  const thumb = async (m) => { if (!m || !m.tex) return null; if (texCache[m.tex] !== undefined) return texCache[m.tex]; const r = await api.tex.get(p, m.tex); texCache[m.tex] = r ? IMG.toCanvas(await IMG.fromB64(r.data)) : null; return texCache[m.tex]; };
   const cv = $('#hcv', b);
   function draw() {
     const r = cv.getBoundingClientRect(); cv.width = r.width; cv.height = r.height; const x = cv.getContext('2d'); x.imageSmoothingEnabled = false;
     const on = $('#hon', b).checked, isS = pv === 'sword', grp = isS ? 'h' : 'g', gOn = isS || $('#gon', b).checked;
-    const lower = on && gOn ? +$('#' + grp + 'l', b).value : 0, sc = on && gOn ? +$('#' + grp + 's', b).value : 1, xs = on && isS ? +$('#hx', b).value : 0;
+    let lower = on && gOn ? +$('#' + grp + 'l', b).value : 0, sc = on && gOn ? +$('#' + grp + 's', b).value : 1, xs = on && isS ? +$('#hx', b).value : 0;
+    if (pv === 'item' && pvItem && h.items[pvItem.name]) { const c = h.items[pvItem.name]; lower = on ? c.lower : 0; sc = on ? c.scale : 1; xs = on ? c.x : 0; }
     const S2 = r.height * 0.62 * sc, cx = r.width * 0.70 + xs * r.width * 0.02, cy = r.height * 0.62 + lower * r.height * 0.05;
-    const im = imgs[pv];
+    const im = pv === 'item' ? (pvItem && texCache[pvItem.tex]) : imgs[pv];
     x.save(); x.translate(cx, cy); x.rotate(isS ? -0.25 : -0.1); x.scale(-1, 1);
     if (im) x.drawImage(im, 0, 0, im.width, Math.min(im.width, im.height), -S2 / 2, -S2 / 2, S2, S2); else { x.fillStyle = '#5ad3ff'; x.fillRect(-S2 / 4, -S2 / 2, S2 / 2, S2); }
     x.restore();
@@ -927,7 +1018,41 @@ async function tabHeld(b) {
   };
   ['hon', 'hl', 'hs', 'hx', 'gon', 'gl', 'gs'].forEach((id) => $('#' + id, b).oninput = upd);
   $$('[data-hp]', b).forEach((x) => x.onclick = () => { const [l, s, xx] = x.dataset.hp.split(',').map(Number); $('#hl', b).value = l; $('#hs', b).value = s; $('#hx', b).value = xx; $('#gl', b).value = l * 0.8; $('#gs', b).value = s; upd(); });
-  $$('#hpv button', b).forEach((x) => x.onclick = () => { pv = x.dataset.v; $$('#hpv button', b).forEach((y) => y.classList.toggle('on', y === x)); draw(); });
+  $$('#hpv button', b).forEach((x) => x.onclick = () => { pv = x.dataset.v; $('#hpvn', b).textContent = ''; $$('#hpv button', b).forEach((y) => y.classList.toggle('on', y === x)); draw(); });
+  // ---- per-item list
+  const showItem = async (m) => { pvItem = m; pv = 'item'; await thumb(m); $$('#hpv button', b).forEach((y) => y.classList.remove('on')); $('#hpvn', b).textContent = m.name; draw(); };
+  const drawItems = async () => {
+    const box = $('#hitems', b); const names = Object.keys(h.items);
+    if (!names.length) { box.innerHTML = `<div class="muted small">${models.length ? 'ما أضفت أدوات للحين — ابحث فوق واضغط على الأداة' : 'تحتاج ملفات اللعبة محمّلة عشان تطلع قائمة الأدوات'}</div>`; return; }
+    box.innerHTML = names.map((n) => { const c = h.items[n]; return `<div class="hitem" data-n="${esc(n)}"><canvas class="hth"></canvas><b class="ltr" style="width:150px;overflow:hidden;text-overflow:ellipsis">${esc(n)}</b>
+      <div class="slider-row" style="grid-template-columns:40px 1fr 34px;margin:0;flex:1"><span>نزول</span><input type="range" data-k="lower" min="-4" max="8" step="0.25" value="${c.lower}"><output class="ltr">${c.lower}</output></div>
+      <div class="slider-row" style="grid-template-columns:40px 1fr 34px;margin:0;flex:1"><span>الحجم</span><input type="range" data-k="scale" min="0.2" max="1.6" step="0.05" value="${c.scale}"><output class="ltr">${c.scale}</output></div>
+      <div class="slider-row" style="grid-template-columns:40px 1fr 34px;margin:0;flex:1"><span>جنب</span><input type="range" data-k="x" min="-6" max="6" step="0.25" value="${c.x}"><output class="ltr">${c.x}</output></div>
+      <button class="btn sm ghost icon" data-v="1" title="معاينة">${icon('monitor', 15)}</button><button class="btn sm ghost icon danger" data-d="1" title="شيل">${icon('x', 15)}</button></div>`; }).join('');
+    for (const row of $$('.hitem', box)) {
+      const n = row.dataset.n, m = models.find((x) => x.name === n) || { name: n };
+      thumb(m).then((c) => { const cv = $('.hth', row); if (c) { cv.width = c.width; cv.height = Math.min(c.width, c.height); cv.getContext('2d').drawImage(c, 0, 0); } });
+      $$('input', row).forEach((inp) => inp.oninput = () => { h.items[n][inp.dataset.k] = +inp.value; inp.nextElementSibling.textContent = inp.value; if (pvItem && pvItem.name === n) draw(); clearTimeout(upd.t); upd.t = setTimeout(saveProject, 400); });
+      $('[data-v]', row).onclick = () => showItem(m);
+      $('[data-d]', row).onclick = async () => { delete h.items[n]; await saveProject(); drawItems(); };
+    }
+  };
+  const q = $('#hq', b), res = $('#hres', b);
+  q.oninput = async () => {
+    const t = q.value.trim().toLowerCase(); if (!t) { res.style.display = 'none'; return; }
+    const hits = models.filter((m) => m.name.includes(t)).slice(0, 40);
+    res.style.display = 'block';
+    res.innerHTML = hits.length ? hits.map((m) => `<div class="hr" data-n="${esc(m.name)}"><canvas></canvas><span class="ltr">${esc(m.name)}</span>${h.items[m.name] ? '<span class="badge acc">مضافة</span>' : ''}</div>`).join('') : `<div class="muted small" style="padding:10px">${models.length ? 'ما لقيت' : 'حمّل ملفات اللعبة أول'}</div>`;
+    for (const el of $$('.hr', res)) { const m = models.find((x) => x.name === el.dataset.n); thumb(m).then((c) => { const cv = $('canvas', el); if (c) { cv.width = c.width; cv.height = Math.min(c.width, c.height); cv.getContext('2d').drawImage(c, 0, 0); } }); }
+  };
+  res.onclick = async (e) => {
+    const el = e.target.closest('.hr'); if (!el) return; const n = el.dataset.n;
+    if (!h.items[n]) h.items[n] = { lower: 2, scale: 0.8, x: 0 };
+    if (!$('#hon', b).checked) { $('#hon', b).checked = true; upd(); }
+    q.value = ''; res.style.display = 'none'; await saveProject(); await drawItems(); showItem(models.find((x) => x.name === n));
+  };
+  document.addEventListener('click', (e) => { if (!e.target.closest('#hq') && !e.target.closest('#hres') && res.isConnected) res.style.display = 'none'; });
+  drawItems();
   requestAnimationFrame(upd);
 }
 
@@ -1048,6 +1173,128 @@ async function openChecker() {
     foot: fixable.length ? `<button class="btn primary" id="kfix">${icon('wand', 16)} صلّح الكل (${fixable.length})</button><span class="muted small">بحفظ نسخة احتياطية قبل</span>` : `<button class="btn primary" id="kok">تمام</button>` });
   if ($('#kok', m.el)) $('#kok', m.el).onclick = () => m.close(true);
   if ($('#kfix', m.el)) $('#kfix', m.el).onclick = async () => { await api.snap.create(p.id, 'تلقائي: قبل فحص الباك'); const n = await api.pack.fix(p, fixable); m.close(true); toast(`صلّحت ${n} مشكلة ✓`); renderTab(); };
+}
+
+// ------------------------------------------------------------- armor & elytra colors (3D)
+const ARMOR_MATS = [['diamond', 'دايموند'], ['netherite', 'نذرايت'], ['iron', 'حديد'], ['gold', 'ذهب'], ['chainmail', 'سلاسل'], ['leather', 'جلد']];
+const armorPaths = (mat, pf) => pf >= 42
+  ? [`textures/entity/equipment/humanoid/${mat}.png`, `textures/entity/equipment/humanoid_leggings/${mat}.png`]
+  : [`textures/models/armor/${mat}_layer_1.png`, `textures/models/armor/${mat}_layer_2.png`];
+async function tabArmor(b) {
+  const p = S.project, ap = p.armorTint || {};
+  let mat = 'diamond';
+  b.innerHTML = `${p.baseJar ? '' : noBaseNotice()}<div class="two" style="grid-template-columns:400px 1fr">
+    <div class="card stack">
+      <h3 style="margin:0">${icon('shield', 18)} لون الدرع</h3>
+      <div class="seg" id="amat" style="flex-wrap:wrap">${ARMOR_MATS.map(([k, n]) => `<button data-m="${k}" ${k === mat ? 'class="on"' : ''}>${n}</button>`).join('')}</div>
+      <div class="row"><input type="color" id="acol" value="#ef4444"><div class="row" style="gap:6px">${['#ef4444', '#f97316', '#facc15', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#ffffff', '#1f1f1f'].map((c) => `<button class="sw" data-c="${c}" style="width:24px;height:24px;background:${c}"></button>`).join('')}</div></div>
+      <div class="slider-row" style="grid-template-columns:70px 1fr 46px"><span>القوة</span><input type="range" id="astr" min="10" max="100" value="85"><output class="ltr"></output></div>
+      <div class="muted small">القطع اللي تبان بالمعاينة:</div>
+      <div class="row" id="aparts">${[['helmet', 'خوذة'], ['chest', 'صدرية'], ['legs', 'بنطلون'], ['boots', 'بوت']].map(([k, n]) => `<label class="check small"><span class="switch"><input type="checkbox" data-p="${k}" checked><span></span></span>${n}</label>`).join('')}</div>
+      <div class="row"><button class="btn primary" id="aapply">${icon('check', 16)} لوّن الدرع</button><button class="btn ghost" id="areset">${icon('reset', 16)} الأصلي</button></div>
+      <div style="border-top:1px solid var(--line);padding-top:14px" class="stack">
+        <h3 style="margin:0">${icon('wand', 18)} لون الإليترا</h3>
+        <div class="row"><input type="color" id="ecol" value="#8b5cf6"><canvas id="epv" style="width:128px;height:64px;image-rendering:pixelated;border-radius:8px;background:rgba(0,0,0,.3)"></canvas></div>
+        <div class="row"><button class="btn primary" id="eapply">${icon('check', 16)} لوّن الإليترا</button><button class="btn ghost" id="ereset">${icon('reset', 16)} الأصلي</button></div>
+      </div>
+    </div>
+    <div class="card"><h3>معاينة 3D</h3><div class="v3d" style="height:520px"><canvas id="a3d"></canvas></div></div></div>`;
+  bindBaseActions(b);
+  const skin = (await realSteve()) || defaultSkin();
+  let base1 = null, base2 = null, v = null;
+  const parts = () => Object.fromEntries($$('#aparts input', b).map((x) => [x.dataset.p, x.checked]));
+  const cur = () => ({ color: $('#acol', b).value, s: +$('#astr', b).value / 100 });
+  async function loadMat() {
+    const [r1, r2] = armorPaths(mat, p.packFormat);
+    base1 = await texImg(p, r1); base2 = await texImg(p, r2);
+    draw();
+  }
+  function draw() {
+    $('#astr', b).nextElementSibling.textContent = $('#astr', b).value + '%';
+    const c = cur(); const t1 = base1 && IMG.tint(base1, c.color, c.s, false), t2 = base2 && IMG.tint(base2, c.color, c.s, false);
+    const q = [...Lite3D.skinQuads(skin, false, true), ...Lite3D.armorQuads(t1, t2, false, parts())];
+    if (!v) v = Lite3D.viewer($('#a3d', b), q, { dist: 62, pitch: 0.15 }); else v.set(q);
+  }
+  $$('#amat button', b).forEach((x) => x.onclick = () => { mat = x.dataset.m; $$('#amat button', b).forEach((y) => y.classList.toggle('on', y === x)); loadMat(); });
+  $$('.sw[data-c]', b).forEach((x) => x.onclick = () => { $('#acol', b).value = x.dataset.c; draw(); });
+  $('#acol', b).oninput = draw; $('#astr', b).oninput = draw; $$('#aparts input', b).forEach((x) => x.onchange = draw);
+  $('#aapply', b).onclick = async () => {
+    if (!base1 && !base2) return toast('ما لقيت تكستر الدرع — حمّل ملفات اللعبة', 'err');
+    const c = cur(); const [r1, r2] = armorPaths(mat, p.packFormat);
+    if (base1) await api.tex.put(p.id, r1, IMG.toB64(IMG.tint(base1, c.color, c.s, false)));
+    if (base2) await api.tex.put(p.id, r2, IMG.toB64(IMG.tint(base2, c.color, c.s, false)));
+    toast(`تلوّن درع ${ARMOR_MATS.find((x) => x[0] === mat)[1]} ✓`);
+  };
+  $('#areset', b).onclick = async () => { const [r1, r2] = armorPaths(mat, p.packFormat); await api.tex.reset(p.id, r1); await api.tex.reset(p.id, r2); toast('رجع الأصلي'); };
+  // elytra
+  const eRel = texPath(TEXTURES.find((t) => t.id === 'elytra_wings'), p.packFormat);
+  const eBase = eRel ? await texImg(p, eRel) : null;
+  const drawE = () => { const cv = $('#epv', b); if (!eBase) return; const t = IMG.tint(eBase, $('#ecol', b).value, 0.85, false); cv.width = t.width; cv.height = t.height; cv.getContext('2d').putImageData(t, 0, 0); };
+  $('#ecol', b).oninput = drawE; drawE();
+  $('#eapply', b).onclick = async () => { if (!eBase) return toast('ما لقيت تكستر الإليترا', 'err'); await api.tex.put(p.id, eRel, IMG.toB64(IMG.tint(eBase, $('#ecol', b).value, 0.85, false))); toast('تلوّنت الإليترا ✓'); };
+  $('#ereset', b).onclick = async () => { if (eRel) await api.tex.reset(p.id, eRel); toast('رجعت الأصلي'); };
+  loadMat();
+}
+
+// ------------------------------------------------------------- font generator
+const FONT_LIST = ['Segoe UI', 'Arial', 'Tahoma', 'Verdana', 'Consolas', 'Comic Sans MS', 'Impact', 'Georgia', 'Trebuchet MS', 'Courier New', 'Bahnschrift', 'Lucida Console', 'Times New Roman', 'Calibri'];
+async function tabFont(b) {
+  const p = S.project, fs0 = p.font || { family: 'Segoe UI', bold: true, cell: 16, pixel: false, offset: 0, scale: 100 };
+  const layout = p.baseJar ? await api.font.layout(p) : null;
+  if (!layout) { b.innerHTML = noBaseNotice() + `<div class="empty"><div class="big">${icon('file', 30)}</div>نحتاج ملفات اللعبة عشان نعرف ترتيب الحروف</div>`; bindBaseActions(b); return; }
+  b.innerHTML = `<div class="two" style="grid-template-columns:380px 1fr"><div class="card stack">
+      <h3 style="margin:0">${icon('edit', 18)} خط اللعبة</h3>
+      <label class="f">الخط<select class="inp" id="ff">${FONT_LIST.map((f) => `<option ${f === fs0.family ? 'selected' : ''} style="font-family:'${f}'">${f}</option>`).join('')}<option value="__c">خط ثاني (اكتب اسمه)...</option></select></label>
+      <input class="inp" id="ffc" placeholder="اسم الخط مثل: Minecraftia" style="display:none">
+      <div class="row"><label class="check small"><span class="switch"><input type="checkbox" id="fb" ${fs0.bold ? 'checked' : ''}><span></span></span>عريض</label><label class="check small"><span class="switch"><input type="checkbox" id="fp" ${fs0.pixel ? 'checked' : ''}><span></span></span>بكسلي (بدون تنعيم)</label></div>
+      <div class="slider-row" style="grid-template-columns:70px 1fr 46px"><span>الدقة</span><select class="inp" id="fc" style="height:34px;grid-column:span 2">${[8, 16, 32].map((n) => `<option value="${n}" ${n === fs0.cell ? 'selected' : ''}>${n * 16}×${n * 16}${n === 8 ? ' (زي الأصلي)' : n === 32 ? ' (ناعم جداً)' : ''}</option>`).join('')}</select></div>
+      <div class="slider-row" style="grid-template-columns:70px 1fr 46px"><span>الحجم</span><input type="range" id="fsz" min="60" max="120" value="${fs0.scale}"><output class="ltr"></output></div>
+      <div class="slider-row" style="grid-template-columns:70px 1fr 46px"><span>فوق/تحت</span><input type="range" id="fo" min="-4" max="4" step="0.5" value="${fs0.offset}"><output class="ltr"></output></div>
+      <div class="row"><button class="btn primary" id="fapply">${icon('check', 16)} طبّق الخط</button><button class="btn ghost" id="freset">${icon('reset', 16)} الأصلي</button></div>
+      <span class="muted small" style="line-height:1.7">يغيّر خط الشات والقوائم والأرقام. الخطوط المتاحة هي اللي مثبّتة على جهازك.</span></div>
+    <div class="card"><h3>معاينة</h3><div class="font-prev"><canvas id="fpv"></canvas></div><canvas id="fsheet" style="width:256px;height:256px;image-rendering:pixelated;margin-top:12px;border-radius:10px;background:repeating-conic-gradient(#1a1f2b 0 25%,#151922 0 50%) 0 0/16px 16px"></canvas></div></div>`;
+  const opts = () => ({ family: $('#ff', b).value === '__c' ? ($('#ffc', b).value.trim() || 'Arial') : $('#ff', b).value, bold: $('#fb', b).checked, pixel: $('#fp', b).checked, cell: +$('#fc', b).value, scale: +$('#fsz', b).value, offset: +$('#fo', b).value });
+  function build(o) {
+    const rows = layout.chars, c = o.cell, W = 16 * c, H = rows.length * c;
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const x = cv.getContext('2d');
+    x.fillStyle = '#fff'; x.textBaseline = 'alphabetic'; x.font = `${o.bold ? 'bold ' : ''}${Math.round(c * 0.8 * o.scale / 100)}px "${o.family}"`;
+    rows.forEach((row, ry) => [...row].forEach((ch, cx) => {
+      if (ch === '\u0000' || ch === ' ') return;
+      // keep each glyph inside its own cell (descenders/overhang would bleed into neighbours)
+      x.save(); x.beginPath(); x.rect(cx * c, ry * c, c - Math.max(1, c / 8), c); x.clip();
+      x.fillText(ch, cx * c, ry * c + c * (layout.ascent / layout.height) + o.offset * c / 8); x.restore();
+    }));
+    const id = x.getImageData(0, 0, W, H);
+    if (o.pixel) for (let i = 3; i < id.data.length; i += 4) id.data[i] = id.data[i] > 110 ? 255 : 0;
+    return id;
+  }
+  function preview() {
+    $$('.slider-row output', b).forEach((o) => o.textContent = o.previousElementSibling.value);
+    const o = opts(), sheet = build(o); const sc = $('#fsheet', b); sc.width = sheet.width; sc.height = sheet.height; sc.getContext('2d').putImageData(sheet, 0, 0);
+    // render sample text using the sheet like the game does
+    const pv = $('#fpv', b); const r = pv.getBoundingClientRect(); pv.width = r.width; pv.height = 170; const x = pv.getContext('2d'); x.imageSmoothingEnabled = false;
+    x.fillStyle = '#3b6b2a'; x.fillRect(0, 0, pv.width, pv.height);
+    const map = {}; layout.chars.forEach((row, ry) => [...row].forEach((ch, cx) => map[ch] = [cx, ry]));
+    const c = o.cell, scale = 16 / c * 1.5, src = IMG.toCanvas(sheet);
+    const lines = [['<Abood> GG wp! 1v1?', '#ffffff'], ['Health: 20 ♥  Kills: 7', '#ffff55'], ['MC Pack Studio 123', '#55ffff']];
+    lines.forEach(([t, col], li) => {
+      let px = 16; const py = 20 + li * 46;
+      x.fillStyle = 'rgba(0,0,0,.35)'; x.fillRect(8, py - 6, pv.width - 16, 40);
+      for (const ch of t) {
+        if (ch === ' ') { px += c * 0.5 * scale; continue; }
+        const m = map[ch]; if (!m) { px += c * 0.6 * scale; continue; }
+        // measure glyph width like the game (rightmost opaque column)
+        let gw = 1; const d = sheet.data; for (let gx = c - 1; gx >= 0; gx--) { let any = false; for (let gy = 0; gy < c; gy++) if (d[((m[1] * c + gy) * sheet.width + m[0] * c + gx) * 4 + 3] > 20) { any = true; break; } if (any) { gw = gx + 1; break; } }
+        const tmp = document.createElement('canvas'); tmp.width = c; tmp.height = c; const tx = tmp.getContext('2d'); tx.drawImage(src, m[0] * c, m[1] * c, c, c, 0, 0, c, c); tx.globalCompositeOperation = 'source-in'; tx.fillStyle = col; tx.fillRect(0, 0, c, c);
+        x.drawImage(tmp, 0, 0, c, c, px, py, c * scale, c * scale); px += (gw + c / 8) * scale;
+      }
+    });
+  }
+  ['ff', 'ffc', 'fb', 'fp', 'fc', 'fsz', 'fo'].forEach((id) => $('#' + id, b).oninput = () => { if (id === 'ff') $('#ffc', b).style.display = $('#ff', b).value === '__c' ? '' : 'none'; preview(); });
+  $('#fc', b).onchange = preview; $('#ff', b).onchange = $('#ff', b).oninput;
+  document.fonts.ready.then(preview); preview();
+  $('#fapply', b).onclick = async () => { const o = opts(); p.font = o; await saveProject(); await api.tex.put(p.id, layout.file, IMG.toB64(build(o))); toast('تغيّر الخط ✓ — ثبّت الباك وشوفه باللعبة'); };
+  $('#freset', b).onclick = async () => { await api.tex.reset(p.id, layout.file); toast('رجع الخط الأصلي'); };
 }
 
 // ---------- fire tab
@@ -1425,6 +1672,7 @@ async function tabPSettings(b) {
       <div id="snl" class="stack" style="gap:6px;margin-top:10px"></div>
       <h3 style="margin-top:22px">ثبّت في أكثر من كلاينت</h3><div id="multi" class="stack" style="gap:6px"></div>
       <button class="btn" id="minst" style="margin-top:8px">${icon('download', 16)} ثبّت في المختار</button>
+      <h3 style="margin-top:22px">${icon('upload', 16)} شارك الباك</h3><p class="muted small" style="margin:0 0 8px">يطلع لك ملف <span class="ltr">.mcps</span> ترسله لصاحبك، يفتحه في التطبيق ويعدّل على نسخته.</p><button class="btn" id="sshare">${icon('upload', 16)} صدّر ملف للمشاركة</button>
       <h3 style="margin-top:22px">إجراءات</h3><div class="row"><button class="btn" id="sdup">${icon('copy', 16)} نسخ الملف</button><button class="btn danger" id="sdel">${icon('trash', 16)} حذف الملف</button></div></div></div>`;
   const setI = async () => { const x = await api.file.icon(p.id); if (x) { $('#sicon', b).src = 'data:image/png;base64,' + x; const h = $('#picon'); if (h) h.src = $('#sicon', b).src; } };
   setI();
@@ -1452,6 +1700,7 @@ async function tabPSettings(b) {
     for (const rp of sel) { try { await api.pack.install(p, ex, false, rp); n++; } catch {} }
     toast(`تثبّت في ${n} كلاينت ✓`);
   };
+  $('#sshare', b).onclick = async () => { const f = await api.proj.export(p.id); if (f) toast('انحفظ ملف المشاركة ✓', 'ok', { label: 'افتح', fn: () => api.fs.reveal(f) }); };
   $('#sdup', b).onclick = async () => { const np = await api.projects.duplicate(p.id); toast('انسخ الملف'); openProject(np.id, np); };
   $('#sdel', b).onclick = async () => { if (await confirmBox('حذف الملف', `تبي تحذف "${esc(p.name)}"؟ بيروح لسلة المحذوفات. (الباك المثبت في الكلاينت ما بينحذف)`, 'احذف', true)) { await api.projects.delete(p.id); S.project = null; go('home'); toast('انحذف'); } };
 }
@@ -1473,6 +1722,10 @@ function renderClients(main) {
 }
 
 // ------------------------------------------------------------- app settings
+async function setLang(l) {
+  S.settings.lang = l; await api.settings.set(S.settings);
+  if (l === 'en') { I18N.set('en'); render(); } else location.reload();
+}
 async function renderSettings(main) {
   const info = await api.app.info();
   main.innerHTML = `<div class="view" style="max-width:860px"><h1>الإعدادات</h1><p class="sub">شكل التطبيق ومعلوماته</p>
@@ -1480,6 +1733,8 @@ async function renderSettings(main) {
       <div class="theme-grid">${THEMES.map(([k, n, [a, b, c]]) => { const [x1, x2] = ACCENTS[S.settings.accent] || ACCENTS.violet; return `<div class="theme-card ${(S.settings.theme || 'midnight') === k ? 'on' : ''}" data-th="${k}"><div class="tp" style="background:${a}"><div class="s" style="background:${b}"></div><div class="m"><i style="background:linear-gradient(135deg,${x1},${x2})"></i><i style="background:${c}"></i></div></div><div class="tn">${n}${(S.settings.theme || 'midnight') === k ? icon('check', 16) : ''}</div></div>`; }).join('')}</div>
       <h3 style="margin:10px 0 0">${icon('star', 18)} اللون الأساسي</h3>
       <div class="accent-pick">${Object.entries(ACCENTS).map(([k, [a, b]]) => `<button data-acc="${k}" class="${S.settings.accent === k ? 'on' : ''}" style="background:linear-gradient(135deg,${a},${b})"></button>`).join('')}</div></div>
+    <div class="card" style="margin-top:16px"><h3 style="margin:0 0 10px">${icon('edit', 18)} اللغة / Language</h3>
+      <div class="lang-pick" data-noi18n><button data-lang="ar" class="${(S.settings.lang || 'ar') === 'ar' ? 'on' : ''}">العربية</button><button data-lang="en" class="${S.settings.lang === 'en' ? 'on' : ''}">English</button></div></div>
     <div class="card" style="margin-top:16px"><h3>معلومات</h3>
       <div class="kv"><span class="muted">الإصدار</span><span class="row"><span class="ltr">MC Pack Studio ${esc(info.version)}</span><button class="btn sm primary" id="oupd">${icon('reset', 14)} تحقق من التحديثات</button></span></div>
       <div class="kv"><span class="muted">تحقق تلقائي من التحديثات</span><label class="switch"><input type="checkbox" id="oauto" ${S.settings.autoUpdate !== false ? 'checked' : ''}><span></span></label></div>
@@ -1494,6 +1749,7 @@ async function renderSettings(main) {
   $('#obak', main).onclick = async () => api.fs.open(await api.mods.backups());
   $('#owiz', main).onclick = () => openWizard();
   $('#oupd', main).onclick = () => checkUpdates(true);
+  $$('[data-lang]', main).forEach((x) => x.onclick = () => setLang(x.dataset.lang));
   $('#oauto', main).onchange = async (e) => { S.settings.autoUpdate = e.target.checked; await api.settings.set(S.settings); };
   $('#ogame', main).onclick = async () => api.fs.open(await api.game.dir());
 }
@@ -1714,7 +1970,8 @@ async function openWizard() {
       body.innerHTML = `<h1 style="text-align:center">هلا والله في <span class="grad-text">MC Pack Studio</span> 👋</h1>
         <p class="sub" style="text-align:center;line-height:1.9;max-width:560px;margin:10px auto 24px">خلنا نجهّز كل شي بدقيقة: بنطلّع تكسترات ماينكرافت الأصلية من ملفات الكلاينت حقك، ونتأكد من الكلاينتات اللي عندك.</p>
         <div class="grid" style="grid-template-columns:repeat(3,1fr)">${[['download', 'ملفات اللعبة', 'تكسترات ماينكرافت الأصلية'], ['monitor', 'الكلاينتات', 'Lunar, Badlion, Feather...'], ['wand', 'جاهز تصمم', 'سيوف، فاير، توتم، سكنات']].map(([ic, t, d]) => `<div class="tweak" style="flex-direction:column;text-align:center"><div class="ti">${icon(ic, 22)}</div><div class="tx"><b>${t}</b><span>${d}</span></div></div>`).join('')}</div>`;
-      foot.innerHTML = `<button class="btn primary lg" data-n>يلا نبدأ ${icon('play', 16)}</button><span class="spacer"></span><button class="btn ghost" data-skip>تخطّي</button>`;
+      foot.innerHTML = `<button class="btn primary lg" data-n>يلا نبدأ ${icon('play', 16)}</button><span class="spacer"></span><div class="lang-pick" data-noi18n><button data-lang="ar" class="${(S.settings.lang || 'ar') === 'ar' ? 'on' : ''}">العربية</button><button data-lang="en" class="${S.settings.lang === 'en' ? 'on' : ''}">English</button></div><button class="btn ghost" data-skip>تخطّي</button>`;
+      $$('[data-lang]', foot).forEach((x) => x.onclick = async () => { S.settings.lang = x.dataset.lang; await api.settings.set(S.settings); if (x.dataset.lang === 'en') { I18N.set('en'); draw(); } else location.reload(); });
     } else if (step === 1) {
       body.innerHTML = `<h2>${icon('folder', 20)} وين ملفات الكلاينت حقك؟</h2><p class="sub" style="margin-bottom:14px">بطلّع تكسترات ماينكرافت الأصلية من ملفات الكلاينت نفسه (Lunar، Badlion، Feather، .minecraft...).</p>
         <div id="gf"><div class="row"><div class="dl-ring" style="width:26px;height:26px"><div class="dl-cube" style="width:20px;height:20px"></div></div><span class="muted">أدوّر بجهازك...</span></div></div>`;
@@ -1834,6 +2091,7 @@ async function syncPackFormat(p) {
 // ------------------------------------------------------------- boot
 (async function boot() {
   S.settings = await api.settings.get(); applyAccent();
+  if (S.settings.lang === 'en') I18N.set('en');
   S.clients = await api.clients.list();
   S.projects = await api.projects.list();
   await loadVersions();
