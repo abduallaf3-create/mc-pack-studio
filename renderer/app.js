@@ -341,7 +341,7 @@ Object.assign(FAM_AR, FAM_AR_MORE);
 const famLabel = (f) => FAM_AR[f] || 'كل الـ ' + String(f).replace(/_/g, ' ');
 const itemName = (n) => ITEM_AR[n] || n.replace(/_/g, ' ');
 const TAB_GROUPS = [
-  ['الشكل', [['textures', 'التكسترات', 'star'], ['all', 'كل تكسترات اللعبة', 'layers'], ['armor', 'الدروع والإليترا', 'shield'], ['particles', 'الجزيئات', 'wand'], ['fire', 'النار', 'fire'], ['sky', 'السما', 'sun'], ['font', 'الخط', 'edit']]],
+  ['الشكل', [['textures', 'التكسترات', 'star'], ['all', 'كل تكسترات اللعبة', 'layers'], ['armor', 'الدروع والإليترا', 'shield'], ['particles', 'الجزيئات', 'wand'], ['colors', 'ألوان اللعبة', 'palette'], ['fire', 'النار', 'fire'], ['sky', 'السما', 'sun'], ['font', 'الخط', 'edit']]],
   ['PvP', [['measure', 'القياسات', 'sword'], ['tweaks', 'تحسينات PvP', 'wand'], ['cit', 'أسماء مخصصة', 'star']]],
   ['الصوت', [['sounds', 'الأصوات', 'sound']]],
   ['متقدم', [['theme', 'سمة الألوان', 'palette'], ['mods', 'المودات', 'puzzle'], ['configs', 'إعدادات المودات', 'file'], ['psettings', 'إعدادات الباك', 'gear']]],
@@ -378,6 +378,7 @@ async function renderProject(main) {
 const TAB_HINTS = {
   textures: 'اضغط على أي شي تبي تغيّره (سيف، توتم، سكن...) — تقدر تعدّل على الأصلي أو ترسم من الصفر.',
   armor: 'لوّن كل درع بضغطة على اللون جنبه — ينحفظ لحاله. وتحت تقدر تحط نقشة (تدرّج، كامو، جالكسي) وجلو. والإليترا من الزر فوق.',
+  colors: 'غيّر لون لمعة الإنشانت والقلوب والأكل وشريط الـ XP — ضغطة على اللون وينحفظ لحاله.',
   particles: 'غيّر شكل ولون الجزيئات — مثلاً خل السويب نار أو ثلج، أو حط شكل من عندك (صورة أو GIF).',
   fire: 'نزّل النار عشان ما تغطي الشاشة، وغيّر لونها.',
   shield: 'قصّر الشيلد عشان تشوف أكثر وقت البلوك، أو غيّر شكله.',
@@ -398,7 +399,7 @@ function renderTab() {
   const b = $('#wsb'); if (!b) return;
   if (S.tab === 'held' || S.tab === 'shield') S.tab = 'measure';
   const h = $('#wsh'); if (h) h.innerHTML = TAB_HINTS[S.tab] ? tabHint(TAB_HINTS[S.tab]) : '';
-  ({ textures: tabTextures, all: tabAll, tweaks: tabTweaks, held: tabHeld, armor: tabArmor, measure: tabMeasure, particles: tabParticles, font: tabFont, cit: tabCIT, sky: tabSky, sounds: tabSounds, fire: tabFire, shield: tabShield, theme: tabTheme, mods: tabMods, configs: tabConfigs, psettings: tabPSettings })[S.tab](b);
+  ({ textures: tabTextures, all: tabAll, tweaks: tabTweaks, held: tabHeld, armor: tabArmor, colors: tabColors, measure: tabMeasure, particles: tabParticles, font: tabFont, cit: tabCIT, sky: tabSky, sounds: tabSounds, fire: tabFire, shield: tabShield, theme: tabTheme, mods: tabMods, configs: tabConfigs, psettings: tabPSettings })[S.tab](b);
 }
 
 let liveT = null, liveBusy = false;
@@ -1791,8 +1792,8 @@ async function tabArmor(b) {
     $$('[data-ec]', b).forEach((sw) => sw.classList.toggle('on', est().on && sw.dataset.ec === est().color)); $('#ecol', b).value = est().color; $('#eorig', b).classList.toggle('on', !est().on && !eCustom);
   }
   // saves by itself (a moment after the last change)
-  let saveT = 0;
-  const changed = (what) => { syncUI(); draw(); clearTimeout(saveT); saveT = setTimeout(() => save(what), 450); };
+  const saveT = {};
+  const changed = (what) => { syncUI(); draw(); if (what === 'all') Object.keys(saveT).forEach((k) => clearTimeout(saveT[k])); clearTimeout(saveT[what]); saveT[what] = setTimeout(() => save(what), 450); };
   async function save(what) {
     if (what === 'elytra') { if (eRel && !eCustom) await putStyled(p, eRel, eOrig, est()); }
     else for (const m of what === 'all' ? ARMOR_MATS.map((x) => x[0]) : [what]) {
@@ -2122,6 +2123,62 @@ async function elytraFromImage(p, eOrig, onDone) {
   el.querySelector('[data-s]').onclick = async () => { m.close(true); await onDone(out, false); };
   el.querySelector('[data-ed]').onclick = async () => { m.close(true); await onDone(out, true); };
   build();
+}
+
+// ------------------------------------------------------------- game colours: glint, hearts, food, XP
+const GAME_COLORS = [
+  { id: 'glint', name: 'لمعة الإنشانت', hint: 'اللمعة اللي على السيوف والدروع المإنشانت', files: ['textures/misc/enchanted_glint_item.png', 'textures/misc/enchanted_glint_armor.png'], def: '#a855f7' },
+  { id: 'hearts', name: 'القلوب', hint: 'قلوب الصحة تحت', files: ['full', 'half', 'full_blinking', 'half_blinking', 'hardcore_full', 'hardcore_half', 'hardcore_full_blinking', 'hardcore_half_blinking'].map((n) => `textures/gui/sprites/hud/heart/${n}.png`), def: '#ef4444' },
+  { id: 'food', name: 'الأكل (الجوع)', hint: 'الأفخاذ اللي جنب القلوب', files: ['food_full', 'food_half'].map((n) => `textures/gui/sprites/hud/${n}.png`), def: '#f59e0b' },
+  { id: 'xp', name: 'شريط الـ XP', hint: 'الشريط الأخضر فوق الهوت بار', files: ['textures/gui/sprites/hud/experience_bar_progress.png'], def: '#22c55e' },
+];
+async function tabColors(b) {
+  const p = S.project; p.gameColors = p.gameColors || {};
+  const base = {};
+  for (const g of GAME_COLORS) base[g.id] = await Promise.all(g.files.map((f) => texImg(p, f)));
+  b.innerHTML = `${p.baseJar ? '' : noBaseNotice()}<div class="two" style="grid-template-columns:minmax(360px,460px) 1fr">
+    <div class="card stack">${GAME_COLORS.map((g) => `<div class="gc-row" data-g="${g.id}"><div><b>${g.name}</b><div class="muted small">${g.hint}</div></div>
+      <div class="sw-row">${SWATCHES.map((c) => `<button class="sw" data-c="${c}" style="background:${c}"></button>`).join('')}<button class="sw" data-c="rainbow" title="قوس قزح" style="background:linear-gradient(135deg,#ef4444,#facc15,#22c55e,#3b82f6,#a855f7)"></button><input type="color" data-col><button class="sw orig" data-orig title="الأصلي">${icon('reset', 12)}</button></div></div>`).join('')}
+      <div class="hstat ok" id="gsaved" style="visibility:hidden">${icon('check', 15)}<span>انحفظ</span></div></div>
+    <div class="card"><h3>كيف بتطلع باللعبة</h3><div class="gc-stage"><canvas id="gcv"></canvas></div></div></div>`;
+  bindBaseActions(b);
+  const styled = {};
+  const make = (g) => { const c = p.gameColors[g.id]; return base[g.id].map((im) => (!im || !c ? im : c === 'rainbow' ? styleTex(im, { on: true, pattern: 'rainbow', s: 1 }) : g.id === 'glint' ? styleTex(im, { on: true, color: c, s: 1 }) : styleTex(im, { on: true, color: c, s: 0.95 }))); };
+  GAME_COLORS.forEach((g) => (styled[g.id] = make(g)));
+  const sync = () => $$('.gc-row', b).forEach((r) => { const c = p.gameColors[r.dataset.g]; r.querySelectorAll('[data-c]').forEach((sw) => sw.classList.toggle('on', sw.dataset.c === c)); r.querySelector('[data-orig]').classList.toggle('on', !c); if (c && c !== 'rainbow') r.querySelector('[data-col]').value = c; });
+  const timers = {};
+  const set = (g, c) => {
+    if (c) p.gameColors[g.id] = c; else delete p.gameColors[g.id];
+    styled[g.id] = make(g); sync(); clearTimeout(timers[g.id]);
+    timers[g.id] = setTimeout(async () => { for (let i = 0; i < g.files.length; i++) { if (!base[g.id][i]) continue; if (p.gameColors[g.id]) await api.tex.put(p.id, g.files[i], IMG.toB64(styled[g.id][i]), await api.tex.getMeta(p, g.files[i])); else await api.tex.reset(p.id, g.files[i]); } await saveProject(); const sv = $('#gsaved', b); if (sv) { sv.style.visibility = 'visible'; setTimeout(() => (sv.style.visibility = 'hidden'), 1400); } }, 350);
+  };
+  $$('.gc-row', b).forEach((r) => { const g = GAME_COLORS.find((x) => x.id === r.dataset.g); r.querySelectorAll('[data-c]').forEach((sw) => sw.onclick = () => set(g, sw.dataset.c)); r.querySelector('[data-col]').oninput = (e) => set(g, e.target.value); r.querySelector('[data-orig]').onclick = () => set(g, null); });
+  sync();
+  // live preview: an enchanted sword with the moving glint, hearts, food and the XP bar
+  const cv = $('#gcv', b); const sword = await texImg(p, 'textures/item/diamond_sword.png');
+  const loop = () => {
+    if (!cv.isConnected) return; const r = cv.getBoundingClientRect(); cv.width = r.width * devicePixelRatio; cv.height = cv.width * 0.62;
+    const x = cv.getContext('2d'), W = cv.width, H = cv.height; x.imageSmoothingEnabled = false;
+    const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#1d2433'); g.addColorStop(1, '#0d1118'); x.fillStyle = g; x.fillRect(0, 0, W, H);
+    const S = H * 0.42, sx = W / 2 - S / 2, sy = H * 0.06;
+    if (sword) {
+      const sc = IMG.toCanvas(sword); x.drawImage(sc, sx, sy, S, S);
+      const gl = styled.glint[0]; if (gl) { // glint scrolls over the item only (like the game)
+        const tmp = document.createElement('canvas'); tmp.width = tmp.height = 64; const tx = tmp.getContext('2d'); tx.imageSmoothingEnabled = false;
+        const off = (performance.now() / 40) % 64; const gc = IMG.toCanvas(gl); tx.globalAlpha = 0.9; for (let i = -1; i < 2; i++) tx.drawImage(gc, i * 64 + off, i * 64 * 0 + off * 0.5 - 32, 64, 64);
+        tx.globalCompositeOperation = 'destination-in'; tx.globalAlpha = 1; tx.drawImage(sc, 0, 0, 64, 64);
+        x.globalCompositeOperation = 'lighter'; x.drawImage(tmp, sx, sy, S, S); x.globalCompositeOperation = 'source-over';
+      }
+    }
+    const u = W / 200, hy = H * 0.66;
+    const [hf, hh] = styled.hearts, [ff, fh] = styled.food;
+    for (let i = 0; i < 10; i++) { const im = i < 8 ? hf : hh; if (im) x.drawImage(IMG.toCanvas(im), W / 2 - 91 * u + i * 8 * u, hy, 9 * u, 9 * u); const fm = i < 7 ? ff : fh; if (fm) x.drawImage(IMG.toCanvas(fm), W / 2 + 91 * u - 9 * u - i * 8 * u, hy, 9 * u, 9 * u); }
+    const xp = styled.xp[0]; x.fillStyle = 'rgba(0,0,0,.6)'; x.fillRect(W / 2 - 91 * u, hy + 12 * u, 182 * u, 5 * u);
+    if (xp) { const pc = 0.35 + 0.3 * Math.sin(performance.now() / 1200); x.drawImage(IMG.toCanvas(xp), 0, 0, xp.width * pc, xp.height, W / 2 - 91 * u, hy + 12 * u, 182 * u * pc, 5 * u); }
+    x.fillStyle = 'rgba(0,0,0,.45)'; x.fillRect(W / 2 - 91 * u, hy + 20 * u, 182 * u, 22 * u);
+    requestAnimationFrame(loop);
+  };
+  loop();
 }
 
 // ------------------------------------------------------------- particle studio (sweep, crit...)
@@ -3011,7 +3068,7 @@ async function renderSettings(main) {
       <button class="btn" id="otour">${icon('play', 16)} شغّل الشرح من جديد</button></div></div>
     <div class="card" style="margin-top:16px"><h3>معلومات</h3>
       <div class="kv"><span class="muted">الإصدار</span><span class="row"><span class="ltr">MC Pack Studio ${esc(info.version)}</span><button class="btn sm primary" id="oupd">${icon('reset', 14)} تحقق من التحديثات</button></span></div>
-      <div class="kv"><span class="muted">تحقق تلقائي من التحديثات</span><label class="switch"><input type="checkbox" id="oauto" ${S.settings.autoUpdate !== false ? 'checked' : ''}><span></span></label></div>
+      <div class="kv"><span class="muted">التحديثات</span><span class="small">${icon('check', 13)} تنزل لحالها أول ما تفتح التطبيق</span></div>
       <div class="kv"><span class="muted">مجلد ماينكرافت</span><span class="ltr small">${esc(info.mcDir)}</span></div>
       <div class="kv"><span class="muted">مكان حفظ ملفاتك</span><span class="row"><span class="ltr small">${esc(info.dataDir)}</span><button class="btn sm ghost icon" id="odata">${icon('folder', 15)}</button><button class="btn sm" id="mdata">${icon('edit', 14)} غيّر</button>${info.dataDefault ? '' : `<button class="btn sm ghost" id="rdata">${icon('reset', 14)} الافتراضي</button>`}</span></div>
       <div class="kv"><span class="muted">ملفات اللعبة المحمّلة</span><span class="row"><button class="btn sm" id="owiz">${icon('download', 15)} معالج الإعداد</button><button class="btn sm ghost icon" id="ogame">${icon('folder', 15)}</button></span></div>
@@ -3032,7 +3089,7 @@ async function renderSettings(main) {
   $$('[data-lang]', main).forEach((x) => x.onclick = () => setLang(x.dataset.lang));
   $('#oanim', main).onchange = async (e) => { S.settings.anim = e.target.checked; document.documentElement.classList.toggle('no-anim', !e.target.checked); await api.settings.set(S.settings); };
   $('#otour', main).onclick = () => { go('home'); setTimeout(() => startTour('app'), 300); };
-  $('#oauto', main).onchange = async (e) => { S.settings.autoUpdate = e.target.checked; await api.settings.set(S.settings); };
+
   $('#ogame', main).onclick = async () => api.fs.open(await api.game.dir());
 }
 
@@ -3333,6 +3390,22 @@ async function autoFetchGame() {
 }
 
 // ------------------------------------------------------------- updates
+// on every start: if there's a newer version it downloads and installs straight away (no asking)
+async function forceUpdate() {
+  let r; try { r = await api.update.check(); } catch { return; }
+  if (!r || !r.available || !r.url) return;
+  const ov = document.createElement('div'); ov.className = 'upd-force';
+  ov.innerHTML = `<div class="upd-card"><div class="upd-ico">${icon('download', 30)}</div><h2>فيه تحديث جديد ${esc(r.version)}</h2><p class="muted">قاعد أحدّث التطبيق… بيقفل ويرجع يفتح لحاله</p><div class="bar"><i id="ufi"></i></div><span class="muted small ltr" id="ufs">0%</span><div class="row" id="ufbtn" style="display:none;justify-content:center;margin-top:14px"><button class="btn primary" id="ufretry">${icon('reset', 15)} جرّب مرة ثانية</button><button class="btn ghost" id="ufskip">كمّل بدون تحديث</button></div></div>`;
+  document.body.append(ov);
+  const go = async () => {
+    $('#ufbtn', ov).style.display = 'none'; $('#ufs', ov).textContent = '0%';
+    api.onUpdateProgress((d) => { if (d.total) { const pc = Math.round(d.got / d.total * 100); $('#ufi', ov).style.width = pc + '%'; $('#ufs', ov).textContent = `${pc}% · ${(d.got / 1048576).toFixed(1)} / ${(d.total / 1048576).toFixed(1)} MB`; } });
+    try { await api.update.install(r.url, r.version); $('#ufs', ov).textContent = 'يتثبّت… التطبيق بيرجع يفتح لحاله'; }
+    catch { $('#ufs', ov).textContent = 'ما قدرت أحمّل التحديث — تأكد من النت'; $('#ufbtn', ov).style.display = 'flex'; }
+  };
+  $('#ufretry', ov).onclick = go; $('#ufskip', ov).onclick = () => ov.remove();
+  go();
+}
 async function checkUpdates(manual) {
   let r;
   try { r = await api.update.check(); } catch (e) { if (manual) toast('ما قدرت أتحقق من التحديثات — تأكد من النت', 'err'); return; }
@@ -3382,5 +3455,5 @@ async function syncPackFormat(p) {
   if (S.settings.setupVersion !== 2) openWizard();
   else if (!(S.settings.tours || {}).app) setTimeout(() => startTour('app'), 700);
   autoFetchGame();
-  if (S.settings.autoUpdate !== false) setTimeout(() => checkUpdates(false), 4000);
+  forceUpdate();
 })();

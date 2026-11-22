@@ -639,3 +639,10 @@ html.no-anim *, html.no-anim *::before { animation: none !important; transition:
 .sw-row input[type=color], #ecol, #acol2 { width: 26px; height: 24px; border: 0; padding: 0; background: none; cursor: pointer; }
 .presets-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 12px; padding: 10px 12px; border-radius: 12px; background: linear-gradient(90deg, rgba(139,92,246,.12), rgba(139,92,246,.03)); border: 1px solid rgba(139,92,246,.22); }
 #atarget button { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.upd-force { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; background: rgba(5,7,12,.82); backdrop-filter: blur(6px); }
+.upd-card { width: 420px; padding: 28px; border-radius: 22px; background: var(--card, #141925); border: 1px solid var(--line); text-align: center; box-shadow: 0 30px 80px rgba(0,0,0,.6); }
+.upd-card h2 { margin: 12px 0 6px; } .upd-card .bar { margin: 18px 0 8px; }
+.upd-ico { width: 64px; height: 64px; margin: 0 auto; border-radius: 18px; display: grid; place-items: center; background: linear-gradient(135deg, var(--a1, #8b5cf6), var(--a2, #6d28d9)); color: #fff; }
+.gc-row { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); }
+.gc-stage { border-radius: 14px; overflow: hidden; border: 1px solid var(--line); }
+.gc-stage canvas { width: 100%; display: block; }
