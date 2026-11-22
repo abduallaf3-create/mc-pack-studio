@@ -610,6 +610,7 @@ ipcMain.handle('held:build', (_e, project, cfg) => {
     return false;
   };
   const mod = (m, lower, scale, xs, center) => {
+    if (!lower && (scale === 1 || !scale) && !xs) return false; // nothing to change
     let ch = false;
     for (const k of Object.keys(m.display || {})) {
       if (!/^firstperson/.test(k)) continue;
