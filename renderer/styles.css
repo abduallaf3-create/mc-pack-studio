@@ -552,3 +552,15 @@ html.no-anim *, html.no-anim *::before { animation: none !important; transition:
 .shape-lib canvas { width: 100%; height: 100%; image-rendering: pixelated; }
 .shape-lib button i { position: absolute; top: -6px; inset-inline-end: -6px; width: 16px; height: 16px; border-radius: 9px; background: #ef4444; color: #fff; font: 700 11px/16px sans-serif; font-style: normal; display: none; }
 .shape-lib button:hover i { display: block; }
+
+/* item picker grid */
+.igrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; max-height: 420px; overflow: auto; padding: 2px; }
+.icell { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 6px 8px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255,255,255,.02); color: inherit; font: inherit; font-size: 11.5px; cursor: pointer; }
+.icell canvas { width: 36px; height: 36px; image-rendering: pixelated; }
+.icell span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.icell:hover { border-color: var(--a1, #8b5cf6); transform: translateY(-2px); }
+.icell.on { border-color: var(--a1, #8b5cf6); background: rgba(139,92,246,.14); }
+.icell i { position: absolute; top: 5px; inset-inline-start: 5px; width: 18px; height: 18px; border-radius: 9px; background: var(--a1, #8b5cf6); display: grid; place-items: center; color: #fff; }
+.mgrp > summary { list-style: none; cursor: pointer; }
+.mgrp > summary::-webkit-details-marker { display: none; }
+.ftype { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 8px; background: rgba(255,255,255,.06); font: 700 10px/1 monospace; text-transform: uppercase; color: var(--muted); }

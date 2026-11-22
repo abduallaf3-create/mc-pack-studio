@@ -297,6 +297,19 @@ async function openProject(id, p) {
 const saveProject = async () => { const saved = await api.projects.save(S.project); S.project.id = saved.id; S.project.updated = saved.updated; };
 
 // ------------------------------------------------------------- project workspace
+const ITEM_CATS = [['weapons', 'أسلحة'], ['tools', 'أدوات'], ['throw', 'رمي'], ['food', 'أكل'], ['armor', 'دروع وتوتم'], ['misc', 'باقي الأشياء'], ['blocks', 'بلوكات'], ['all', 'الكل']];
+function itemCat(m) {
+  const n = m.name;
+  if (!m.tex) return 'blocks';
+  if (/sword|_axe$|^bow$|crossbow|trident|^mace$|^shield$/.test(n)) return 'weapons';
+  if (/pickaxe|shovel|_hoe$|fishing_rod|shears|flint_and_steel|brush|spyglass|compass|clock|lead$|bucket/.test(n)) return 'tools';
+  if (/ender_pearl|snowball|^egg$|potion|experience_bottle|fire_charge|wind_charge|ender_eye|firework_rocket|arrow$/.test(n)) return 'throw';
+  if (/apple|bread|beef|porkchop|chicken|mutton|rabbit|cod|salmon|potato|carrot|melon_slice|cookie|pie$|stew|soup|berries|beetroot|honey_bottle|dried_kelp|chorus_fruit|tropical_fish|pufferfish/.test(n)) return 'food';
+  if (/helmet|chestplate|leggings|boots|elytra|totem|horse_armor/.test(n)) return 'armor';
+  return 'misc';
+}
+const ITEM_AR = { diamond_sword: 'سيف دايموند', netherite_sword: 'سيف نذرايت', iron_sword: 'سيف حديد', golden_sword: 'سيف ذهب', stone_sword: 'سيف حجر', wooden_sword: 'سيف خشب', diamond_axe: 'فاس دايموند', netherite_axe: 'فاس نذرايت', iron_axe: 'فاس حديد', bow: 'القوس', crossbow: 'الكروس بو', trident: 'الترايدنت', mace: 'الميس', shield: 'الشيلد', ender_pearl: 'إندر بيرل', snowball: 'كرة ثلج', egg: 'البيضة', totem_of_undying: 'التوتم', golden_apple: 'تفاحة ذهبية', enchanted_golden_apple: 'تفاحة ذهبية مإنشانت', fishing_rod: 'السنارة', flint_and_steel: 'ولّاعة', water_bucket: 'سطل ماء', lava_bucket: 'سطل لافا', cooked_beef: 'ستيك', elytra: 'الإليترا', diamond_pickaxe: 'معول دايموند', netherite_pickaxe: 'معول نذرايت', experience_bottle: 'قارورة XP', fire_charge: 'كرة نار', wind_charge: 'شحنة الريح', ender_eye: 'عين الإندر', arrow: 'السهم', compass: 'البوصلة', clock: 'الساعة', spyglass: 'المنظار', shears: 'المقص' };
+const itemName = (n) => ITEM_AR[n] || n.replace(/_/g, ' ');
 const TAB_GROUPS = [
   ['الشكل', [['textures', 'التكسترات', 'star'], ['armor', 'الدروع والإليترا', 'shield'], ['particles', 'الجزيئات', 'wand'], ['fire', 'الفاير', 'fire'], ['shield', 'الشيلد', 'shield'], ['sky', 'السما', 'sun'], ['font', 'الخط', 'edit']]],
   ['PvP', [['tweaks', 'تحسينات PvP', 'wand'], ['held', 'حجم الأدوات', 'sword'], ['cit', 'أسماء مخصصة', 'star']]],
@@ -338,7 +351,7 @@ const TAB_HINTS = {
   sky: 'حط صورك بالسما — صورة لكل جهة أو صورة بانوراما وحدة.',
   font: 'غيّر خط الشات والقوائم لأي خط على جهازك.',
   tweaks: 'تحسينات PvP بضغطة زر: زجاج شفاف، بدون قرعة، كروس هير، وغيرها.',
-  held: 'كبّر أو صغّر الأدوات اللي بيدك. وتحت تقدر تبحث عن أي أداة وتعطيها حجمها الخاص.',
+  held: 'كبّر أو صغّر الأدوات اللي بيدك. وتحت تختار أي أداة من القائمة وتعطيها حجمها الخاص.',
   cit: 'خل السيف يتغيّر شكله لما تسميه بالسندان — مثلاً سمّه "Fire" ويطلع بشكل ثاني.',
   sounds: 'غيّر أي صوت باللعبة — صوت الضربة، الـ XP، وغيرها. تقدر تحط أي صوت من جهازك.',
   all: 'كل ملفات الباك. هذا للمحترفين — لو أنت جديد استخدم الأقسام الثانية.',
@@ -1014,9 +1027,10 @@ async function tabHeld(b) {
     </div>
     <div class="card"><h3>معاينة تقريبية</h3><div class="stage" id="hst"><div class="xh"></div><canvas id="hcv" style="position:absolute;inset:0;width:100%;height:100%"></canvas></div>
       <div class="row" style="margin-top:12px"><span class="seg" id="hpv"><button data-v="sword" class="on">سيف</button><button data-v="pearl">بيرل</button></span><span class="muted small" id="hpvn"></span></div></div></div>
-    <div class="card" style="margin-top:20px"><div class="row" style="margin-bottom:12px"><h3 style="margin:0;flex:1">${icon('search', 18)} كل أداة لحالها</h3><span class="muted small">ابحث عن أي أداة واعطها حجمها ومكانها الخاص (يغلب على الإعدادات اللي فوق)</span></div>
-      <div class="search" style="position:relative"><input class="inp" id="hq" placeholder="ابحث بالإنجليزي: bow, totem, ender_pearl, diamond_axe, shield...">${icon('search', 18)}<div class="hres" id="hres"></div></div>
-      <div id="hitems" class="stack" style="gap:8px;margin-top:12px"></div></div>`;
+    <div class="card" style="margin-top:20px"><div class="row" style="margin-bottom:12px"><h3 style="margin:0;flex:1">${icon('sword', 18)} كل أداة لحالها</h3><span class="muted small">اختر أي أداة من القائمة واعطها حجمها ومكانها الخاص (يغلب على الإعدادات اللي فوق)</span></div>
+      <div id="hitems" class="stack" style="gap:8px;margin-bottom:14px"></div>
+      <div class="row" style="gap:6px;margin-bottom:10px" id="hcats">${ITEM_CATS.map(([k, n]) => `<button class="chip ${k === 'weapons' ? 'on' : ''}" data-c="${k}">${n}</button>`).join('')}</div>
+      <div class="igrid" id="hgrid"></div></div>`;
   bindBaseActions(b);
   const load = async (id) => { const t = TEXTURES.find((x) => x.id === id); const r = await api.tex.get(p, texPath(t, p.packFormat)); return r ? IMG.toCanvas(await IMG.fromB64(r.data)) : null; };
   const imgs = { sword: await load('diamond_sword'), pearl: await load('ender_pearl') };
@@ -1050,8 +1064,8 @@ async function tabHeld(b) {
   const showItem = async (m) => { pvItem = m; pv = 'item'; await thumb(m); $$('#hpv button', b).forEach((y) => y.classList.remove('on')); $('#hpvn', b).textContent = m.name; draw(); };
   const drawItems = async () => {
     const box = $('#hitems', b); const names = Object.keys(h.items);
-    if (!names.length) { box.innerHTML = `<div class="muted small">${models.length ? 'ما أضفت أدوات للحين — ابحث فوق واضغط على الأداة' : 'تحتاج ملفات اللعبة محمّلة عشان تطلع قائمة الأدوات'}</div>`; return; }
-    box.innerHTML = names.map((n) => { const c = h.items[n]; return `<div class="hitem" data-n="${esc(n)}"><canvas class="hth"></canvas><b class="ltr" style="width:150px;overflow:hidden;text-overflow:ellipsis">${esc(n)}</b>
+    if (!names.length) { box.innerHTML = `<div class="muted small">${models.length ? 'ما اخترت أدوات للحين — اضغط على أي أداة من القائمة تحت' : 'تحتاج ملفات اللعبة محمّلة عشان تطلع قائمة الأدوات'}</div>`; return; }
+    box.innerHTML = names.map((n) => { const c = h.items[n]; return `<div class="hitem" data-n="${esc(n)}"><canvas class="hth"></canvas><b style="width:150px;overflow:hidden;text-overflow:ellipsis" title="${esc(n)}">${esc(itemName(n))}</b>
       <div class="slider-row" style="grid-template-columns:40px 1fr 34px;margin:0;flex:1"><span>نزول</span><input type="range" data-k="lower" min="-4" max="8" step="0.25" value="${c.lower}"><output class="ltr">${c.lower}</output></div>
       <div class="slider-row" style="grid-template-columns:40px 1fr 34px;margin:0;flex:1"><span>الحجم</span><input type="range" data-k="scale" min="0.2" max="1.6" step="0.05" value="${c.scale}"><output class="ltr">${c.scale}</output></div>
       <div class="slider-row" style="grid-template-columns:40px 1fr 34px;margin:0;flex:1"><span>جنب</span><input type="range" data-k="x" min="-6" max="6" step="0.25" value="${c.x}"><output class="ltr">${c.x}</output></div>
@@ -1064,21 +1078,23 @@ async function tabHeld(b) {
       $('[data-d]', row).onclick = async () => { delete h.items[n]; await saveProject(); drawItems(); };
     }
   };
-  const q = $('#hq', b), res = $('#hres', b);
-  q.oninput = async () => {
-    const t = q.value.trim().toLowerCase(); if (!t) { res.style.display = 'none'; return; }
-    const hits = models.filter((m) => m.name.includes(t)).slice(0, 40);
-    res.style.display = 'block';
-    res.innerHTML = hits.length ? hits.map((m) => `<div class="hr" data-n="${esc(m.name)}"><canvas></canvas><span class="ltr">${esc(m.name)}</span>${h.items[m.name] ? '<span class="badge acc">مضافة</span>' : ''}</div>`).join('') : `<div class="muted small" style="padding:10px">${models.length ? 'ما لقيت' : 'حمّل ملفات اللعبة أول'}</div>`;
-    for (const el of $$('.hr', res)) { const m = models.find((x) => x.name === el.dataset.n); thumb(m).then((c) => { const cv = $('canvas', el); if (c) { cv.width = c.width; cv.height = Math.min(c.width, c.height); cv.getContext('2d').drawImage(c, 0, 0); } }); }
+  // ---- browsable list of every item (no typing needed)
+  let cat = 'weapons';
+  const gridEl = $('#hgrid', b);
+  const io = new IntersectionObserver((ents) => ents.forEach((en) => { if (!en.isIntersecting) return; io.unobserve(en.target); const m = models.find((x) => x.name === en.target.dataset.n); thumb(m).then((c) => { const cv = $('canvas', en.target); if (c && cv) { cv.width = c.width; cv.height = Math.min(c.width, c.height); cv.getContext('2d').drawImage(c, 0, 0); } }); }), { rootMargin: '150px' });
+  function drawGrid() {
+    if (!models.length) { gridEl.innerHTML = `<div class="muted small">تحتاج ملفات اللعبة محمّلة عشان تطلع قائمة الأدوات</div>`; return; }
+    const list = models.filter((m) => itemCat(m) === cat || (cat === 'all' && m.tex));
+    gridEl.innerHTML = list.map((m) => `<button class="icell ${h.items[m.name] ? 'on' : ''}" data-n="${esc(m.name)}" title="${esc(m.name)}"><canvas></canvas><span>${esc(itemName(m.name))}</span>${h.items[m.name] ? `<i>${icon('check', 12)}</i>` : ''}</button>`).join('') || `<div class="muted small">ما فيه شي بهالقسم</div>`;
+    $$('.icell', gridEl).forEach((x) => io.observe(x));
+  }
+  $$('#hcats .chip', b).forEach((x) => x.onclick = () => { cat = x.dataset.c; $$('#hcats .chip', b).forEach((y) => y.classList.toggle('on', y === x)); drawGrid(); });
+  gridEl.onclick = async (e) => {
+    const el = e.target.closest('.icell'); if (!el) return; const n = el.dataset.n;
+    if (h.items[n]) { delete h.items[n]; } else { h.items[n] = { lower: 2, scale: 0.8, x: 0 }; if (!$('#hon', b).checked) { $('#hon', b).checked = true; upd(); } }
+    await saveProject(); await drawItems(); drawGrid(); if (h.items[n]) { showItem(models.find((x) => x.name === n)); $('#hitems', b).scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
   };
-  res.onclick = async (e) => {
-    const el = e.target.closest('.hr'); if (!el) return; const n = el.dataset.n;
-    if (!h.items[n]) h.items[n] = { lower: 2, scale: 0.8, x: 0 };
-    if (!$('#hon', b).checked) { $('#hon', b).checked = true; upd(); }
-    q.value = ''; res.style.display = 'none'; await saveProject(); await drawItems(); showItem(models.find((x) => x.name === n));
-  };
-  document.addEventListener('click', (e) => { if (!e.target.closest('#hq') && !e.target.closest('#hres') && res.isConnected) res.style.display = 'none'; });
+  drawGrid();
   drawItems();
   requestAnimationFrame(upd);
 }
@@ -1146,13 +1162,26 @@ async function tabCIT(b) {
 }
 
 // ------------------------------------------------------------- merge packs
+const MERGE_GROUPS = [['g_item', 'الآيتمز (كل الأدوات)', 'sword'], ['g_block', 'البلوكات', 'layers'], ['g_entity', 'الموبات والكيانات', 'user'], ['g_gui', 'الواجهة', 'monitor'], ['g_particle', 'الجزيئات', 'wand'], ['g_env', 'السما والطقس', 'sun'], ['g_misc', 'باقي التكسترات', 'image'], ['g_font', 'الخطوط', 'edit'], ['g_sound', 'الأصوات', 'sound'], ['g_model', 'الموديلات', 'file'], ['g_optifine', 'OptiFine (سما، CIT...)', 'star'], ['g_other', 'ملفات أخرى', 'file']];
+function mergeGroup(rel) {
+  if (/\/optifine\/|\/mcpatcher\//.test(rel)) return 'g_optifine';
+  if (/\.ogg$|\/sounds\.json$/.test(rel)) return 'g_sound';
+  if (/\/(models|items|blockstates)\//.test(rel)) return 'g_model';
+  if (/\/font\//.test(rel)) return 'g_font';
+  const m = rel.match(/\/textures\/([^/]+)\//); if (!m) return 'g_other';
+  return { item: 'g_item', items: 'g_item', block: 'g_block', blocks: 'g_block', entity: 'g_entity', gui: 'g_gui', particle: 'g_particle', environment: 'g_env' }[m[1]] || 'g_misc';
+}
 async function openMerge() {
   const p = S.project, packs = await api.merge.open();
   if (!packs || !packs.length) return;
   const ok = packs.filter((x) => !x.error);
   if (!ok.length) return toast('ما قدرت أقرأ الباكات', 'err');
   const pf = p.packFormat;
-  const items = TEXTURES.filter((t) => texPath(t, pf)).map((t) => ({ t, rel: 'assets/minecraft/' + texPath(t, pf), in: ok.map((k, i) => k.files.includes('assets/minecraft/' + texPath(t, pf)) ? i : -1).filter((i) => i >= 0) })).filter((x) => x.in.length);
+  // every file that any of the packs changes (not just the textures the app knows by name)
+  const known = {}; TEXTURES.forEach((t) => { const r = texPath(t, pf); if (r) known['assets/minecraft/' + r] = t; });
+  const sets = ok.map((k) => new Set(k.files));
+  const allRels = [...new Set(ok.flatMap((k) => k.files))].filter((r) => !r.endsWith('.mcmeta') || !sets.some((st) => st.has(r.slice(0, -7)))).sort();
+  const items = allRels.map((rel) => { const t = known[rel]; return { rel, t, cat: t ? t.cat : mergeGroup(rel), name: t ? t.name : rel.split('/').pop().replace(/\.(png|json|ogg|properties|mcmeta|txt)$/, '').replace(/_/g, ' '), png: rel.endsWith('.png'), in: ok.map((k, i) => (sets[i].has(rel) ? i : -1)).filter((i) => i >= 0) }; });
   const choice = {}; // rel -> pack index | -1 (keep)
   const m = modal({ cls: 'xl', title: `${icon('layers', 18)} دمج الباكات`, sub: `${ok.length} باك — اختر من كل باك اللي يعجبك`,
     body: `<div style="padding:18px;overflow:auto;height:100%"><div class="row" style="margin-bottom:14px"><span class="muted small">باك أساسي (ياخذ منه كل شي، وبعدها اختياراتك فوقه):</span>
@@ -1161,11 +1190,13 @@ async function openMerge() {
       <div id="mlist"></div></div>`,
     foot: `<button class="btn primary" id="mgo">${icon('check', 16)} ادمج في الباك</button><span class="muted small" id="mcount"></span>` });
   const list = $('#mlist', m.el);
-  const cats = CATEGORIES.filter((c) => items.some((x) => x.t.cat === c.id));
-  list.innerHTML = cats.map((c) => `<h3 style="margin:18px 0 10px">${icon(c.icon, 16)} ${c.name}</h3>` + items.filter((x) => x.t.cat === c.id).map((x) => `
-    <div class="mrow" data-rel="${esc(x.rel)}"><b class="small" style="width:150px">${esc(x.t.name)}</b>
+  const groups = [...CATEGORIES.map((c) => [c.id, c.name, c.icon]), ...MERGE_GROUPS].filter(([id]) => items.some((x) => x.cat === id));
+  list.innerHTML = `<div class="muted small" style="margin-bottom:6px">${items.length} ملف متغيّر بالباكات</div>` + groups.map(([id, name, ic]) => { const its = items.filter((x) => x.cat === id); return `<details class="mgrp" ${its.length <= 60 ? 'open' : ''}><summary><h3 style="display:inline-flex;gap:8px;align-items:center;margin:14px 0 10px">${icon(ic, 16)} ${name} <span class="badge">${its.length}</span></h3>
+      <span class="row" style="gap:6px;display:inline-flex;margin-inline-start:12px">${ok.map((k, i) => `<button class="btn sm ghost" data-gall="${i}" data-g="${id}">كله من ${esc(k.name.slice(0, 12))}</button>`).join('')}</span></summary>` + its.map((x) => `
+    <div class="mrow" data-rel="${esc(x.rel)}" title="${esc(x.rel)}"><b class="small" style="width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.name)}</b>
       <div class="mopt on" data-i="-1"><span class="small muted">بدون تغيير</span></div>
-      ${ok.map((k, i) => x.in.includes(i) ? `<div class="mopt" data-i="${i}"><canvas></canvas><span class="small">${esc(k.name.slice(0, 16))}</span></div>` : `<div class="mopt off"><span class="dim small">—</span></div>`).join('')}</div>`).join('')).join('');
+      ${ok.map((k, i) => x.in.includes(i) ? `<div class="mopt" data-i="${i}">${x.png ? '<canvas></canvas>' : `<span class="ftype">${esc(x.rel.split('.').pop())}</span>`}<span class="small">${esc(k.name.slice(0, 16))}</span></div>` : `<div class="mopt off"><span class="dim small">—</span></div>`).join('')}</div>`).join('') + '</details>'; }).join('');
+  list.addEventListener('click', (e) => { const g = e.target.closest('[data-gall]'); if (!g) return; e.preventDefault(); const i = +g.dataset.gall; $$('.mrow', g.closest('.mgrp')).forEach((row) => { const o = $(`.mopt[data-i="${i}"]`, row); if (o) { $$('.mopt', row).forEach((x) => x.classList.toggle('on', x === o)); choice[row.dataset.rel] = i; } }); count(); });
   const count = () => { const n = Object.values(choice).filter((v) => v >= 0).length; $('#mcount', m.el).textContent = n ? `${n} تكستر مختار` : ''; };
   list.onclick = (e) => {
     const o = e.target.closest('.mopt:not(.off)'); if (!o) return; const row = o.closest('.mrow');
@@ -1175,7 +1206,7 @@ async function openMerge() {
   // lazy thumbnails
   const io = new IntersectionObserver((ents) => ents.forEach(async (en) => {
     if (!en.isIntersecting) return; io.unobserve(en.target); const row = en.target;
-    for (const o of $$('.mopt[data-i]', row)) { const i = +o.dataset.i; if (i < 0) continue; const b64 = await api.merge.read(ok[i].path, row.dataset.rel); if (!b64) continue; const im = await IMG.fromB64(b64); const c = $('canvas', o); c.width = im.width; c.height = Math.min(im.width, im.height); c.getContext('2d').putImageData(im, 0, 0); }
+    for (const o of $$('.mopt[data-i]', row)) { const i = +o.dataset.i; if (i < 0 || !$('canvas', o)) continue; const b64 = await api.merge.read(ok[i].path, row.dataset.rel); if (!b64) continue; const im = await IMG.fromB64(b64); const c = $('canvas', o); c.width = im.width; c.height = Math.min(im.width, im.height); c.getContext('2d').putImageData(im, 0, 0); }
   }), { root: list.parentElement, rootMargin: '200px' });
   $$('.mrow', list).forEach((r) => io.observe(r));
   $('#mgo', m.el).onclick = async () => {
@@ -1183,7 +1214,7 @@ async function openMerge() {
     await api.snap.create(p.id, 'تلقائي: قبل دمج الباكات');
     const base = +$('#mbase', m.el).value; let n = 0;
     if (base >= 0) n += await api.merge.copy(p.id, ok[base].path, ok[base].files);
-    for (const [rel, i] of Object.entries(choice)) if (i >= 0) n += await api.merge.copy(p.id, ok[i].path, [rel, rel + '.mcmeta']);
+    for (const [rel, i] of Object.entries(choice)) if (i >= 0) n += await api.merge.copy(p.id, ok[i].path, rel.endsWith('.png') ? [rel, rel + '.mcmeta'] : [rel]);
     m.close(true); toast(`اندمج ✓ (${n} ملف) — حفظت نسخة احتياطية قبل الدمج`); renderTab();
   };
 }
