@@ -564,3 +564,5 @@ html.no-anim *, html.no-anim *::before { animation: none !important; transition:
 .mgrp > summary { list-style: none; cursor: pointer; }
 .mgrp > summary::-webkit-details-marker { display: none; }
 .ftype { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 8px; background: rgba(255,255,255,.06); font: 700 10px/1 monospace; text-transform: uppercase; color: var(--muted); }
+.use-stage { height: 440px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); }
+.use-stage canvas { width: 100%; height: 100%; display: block; }

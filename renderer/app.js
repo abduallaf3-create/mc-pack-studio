@@ -529,10 +529,11 @@ async function openTexEditor(t, after, startImg, cur) {
     fileName: t.path.split('/').pop().replace('.png', ''),
     image: startImg, original: await (async () => { const r = await api.tex.get(p, t.path, true); return r ? IMG.fromB64(r.data) : null; })(),
     meta,
+    usePreview: /^textures\/(item|items)\//.test(t.path) || /entity\/shield/.test(t.path) ? (img) => openUsePreview(t.path, img) : null,
     onSave: async (img, mt) => {
       await api.tex.put(p.id, t.path, IMG.toB64(img), mt);
       toast('انحفظ: ' + esc(t.name)); after && after();
-      if (/^textures\/(item|items|block|blocks)\//.test(t.path)) reveal3D(img.height > img.width ? IMG.resize(IMG.toCanvas(img), img.width, img.width) : img, { title: t.name });
+      if (/^textures\/(item|items|block|blocks)\//.test(t.path)) reveal3D(img.height > img.width ? IMG.resize(IMG.toCanvas(img), img.width, img.width) : img, { title: t.name, use: /^textures\/(item|items)\//.test(t.path) ? () => openUsePreview(t.path, img) : null });
     },
     onReset: cur && cur.source === 'custom' ? async () => { await api.tex.reset(p.id, t.path); toast('رجع للأصلي'); after && after(); } : null,
   });
@@ -1432,14 +1433,139 @@ function celebrate() {
     if (k < 1) requestAnimationFrame(f); else c.remove();
   })(t0);
 }
+// ------------------------------------------------------------- "try it in use": first-person animation preview
+const USE_ANIMS = [['swing', 'ضربة'], ['bow', 'سحب القوس'], ['crossbow', 'الكروس بو'], ['throw', 'رمي'], ['eat', 'أكل / شرب'], ['totem', 'التوتم ينكسر'], ['shield', 'بلوك بالشيلد'], ['rod', 'رمي السنارة'], ['trident', 'رمي الترايدنت']];
+function useAnimFor(name) {
+  if (/^bow/.test(name)) return 'bow';
+  if (/^crossbow/.test(name)) return 'crossbow';
+  if (/totem/.test(name)) return 'totem';
+  if (/shield/.test(name)) return 'shield';
+  if (/fishing_rod/.test(name)) return 'rod';
+  if (/trident/.test(name)) return 'trident';
+  if (/ender_pearl|snowball|^egg$|splash_potion|lingering_potion|experience_bottle|wind_charge|fire_charge|ender_eye/.test(name)) return 'throw';
+  if (/apple|bread|beef|porkchop|chicken|mutton|rabbit|cod|salmon|potato|carrot|melon_slice|cookie|pie$|stew|soup|berries|beetroot|honey_bottle|kelp|chorus|^potion$|milk_bucket|fish/.test(name)) return 'eat';
+  return 'swing';
+}
+async function openUsePreview(rel, img) {
+  const p = S.project; if (!p) return;
+  const name = rel.split('/').pop().replace('.png', '');
+  const T = async (r) => { if (r === rel) return img; const im = await texImg(p, r, false); return im; };
+  const item = (n) => [`textures/item/${n}.png`, `textures/items/${n}.png`];
+  const first = async (list) => { for (const r of list) { const im = await T(r); if (im) return im; } return null; };
+  const C = (im) => (im ? IMG.toCanvas(im) : null);
+  const tex = {
+    main: C(img), arrow: C(await first(item('arrow'))),
+    pull: [C(await first(item('bow_pulling_0'))), C(await first(item('bow_pulling_1'))), C(await first(item('bow_pulling_2')))],
+    cpull: [C(await first(item('crossbow_pulling_0'))), C(await first(item('crossbow_pulling_1'))), C(await first(item('crossbow_pulling_2')))], carrow: C(await first(item('crossbow_arrow'))),
+    rodCast: C(await first(item('fishing_rod_cast'))), crit: C(await T('textures/particle/critical_hit.png')),
+    sweep: (await Promise.all([0, 1, 2, 3, 4, 5, 6, 7].map((i) => T(`textures/particle/sweep_${i}.png`)))).map(C),
+  };
+  // a frame of an animated texture → only the first square
+  const sq = (c) => { if (!c || c.height <= c.width) return c; const o = document.createElement('canvas'); o.width = o.height = c.width; o.getContext('2d').drawImage(c, 0, 0); return o; };
+  Object.keys(tex).forEach((k) => { tex[k] = Array.isArray(tex[k]) ? tex[k].map(sq) : sq(tex[k]); });
+  if (/shield/.test(rel) && tex.main && tex.main.width >= 64) { const k = tex.main.width / 64, o = document.createElement('canvas'); o.width = 12 * k; o.height = 22 * k; o.getContext('2d').drawImage(tex.main, k, k, 12 * k, 22 * k, 0, 0, 12 * k, 22 * k); tex.main = o; }
+  let anim = useAnimFor(name), raf = 0, t0 = performance.now(), parts = [];
+  const m = modal({ cls: 'lg', title: `${icon('play', 18)} جرّبه وأنت تستخدمه`, sub: 'كيف بيطلع باللعبة لما تستخدمه (منظور أول شخص)',
+    body: `<div class="use-stage"><canvas id="ucv"></canvas></div>
+      <div class="row" style="margin-top:12px;gap:6px">${USE_ANIMS.map(([k, n]) => `<button class="chip ${k === anim ? 'on' : ''}" data-a="${k}">${n}</button>`).join('')}<span class="spacer"></span><button class="btn sm" id="urep">${icon('reset', 15)} من جديد</button></div>`,
+    onClose: () => cancelAnimationFrame(raf) });
+  $$('[data-a]', m.el).forEach((b) => b.onclick = () => { anim = b.dataset.a; $$('[data-a]', m.el).forEach((y) => y.classList.toggle('on', y === b)); t0 = performance.now(); parts = []; });
+  $('#urep', m.el).onclick = () => { t0 = performance.now(); parts = []; };
+  const cv = $('#ucv', m.el), x = cv.getContext('2d');
+  const burst = (px, py, n, colors, sz = 6, sp = 4) => { for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, v = Math.random() * sp; parts.push({ x: px, y: py, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 2, s: sz * (0.5 + Math.random()), c: colors[(Math.random() * colors.length) | 0], life: 1 }); } };
+  const imgColors = (c) => { if (!c) return ['#fff']; const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data, out = []; for (let i = 0; i < d.length; i += 16) if (d[i + 3] > 200) out.push(`rgb(${d[i]},${d[i + 1]},${d[i + 2]})`); return out.length ? out : ['#fff']; };
+  const crumbs = imgColors(tex.main);
+  let lastPhase = -1;
+  const ease = (k) => 1 - Math.pow(1 - Math.min(1, Math.max(0, k)), 3);
+  function draw(now) {
+    if (!cv.isConnected) return;
+    const W = cv.width = cv.clientWidth * devicePixelRatio, H = cv.height = cv.clientHeight * devicePixelRatio, u = H / 100;
+    x.imageSmoothingEnabled = false;
+    // world
+    const g = x.createLinearGradient(0, 0, 0, H * 0.62); g.addColorStop(0, '#78a7ff'); g.addColorStop(1, '#c4dcff'); x.fillStyle = g; x.fillRect(0, 0, W, H);
+    x.fillStyle = '#5d9b3a'; x.fillRect(0, H * 0.62, W, H); x.fillStyle = '#4b8a2e'; for (let i = 0; i < 40; i++) x.fillRect((i * 97) % W, H * 0.62 + ((i * 53) % 40) * u * 0.9, 3 * u, 1.2 * u);
+    const tx = W / 2, ty = H * 0.5;
+    const dur = { swing: 1400, bow: 2600, crossbow: 2800, throw: 1800, eat: 2600, totem: 2400, shield: 2200, rod: 2600, trident: 2600 }[anim];
+    const tt = (now - t0) % (dur + 700), k = tt / dur, phase = Math.floor((now - t0) / (dur + 700));
+    if (phase !== lastPhase) { lastPhase = phase; parts = []; }
+    // target dummy (a zombie-ish mob)
+    let hit = 0;
+    const mob = (flash) => { const s = u * 1.1; x.save(); x.translate(tx, ty + 12 * s); x.fillStyle = flash ? '#d24a4a' : '#3f7d4a'; x.fillRect(-4 * s, -24 * s, 8 * s, 8 * s); x.fillStyle = flash ? '#c43c3c' : '#2f6fa8'; x.fillRect(-4 * s, -16 * s, 8 * s, 12 * s); x.fillStyle = flash ? '#a83232' : '#3b3b8f'; x.fillRect(-4 * s, -4 * s, 8 * s, 12 * s); x.fillStyle = flash ? '#d24a4a' : '#3f7d4a'; x.fillRect(-8 * s, -16 * s, 4 * s, 12 * s); x.fillRect(4 * s, -16 * s, 4 * s, 12 * s); x.restore(); };
+    // hand transform
+    let hx = W * 0.72, hy = H * 0.78, rot = -0.35, sc = 1, show = tex.main, alpha = 1;
+    const S0 = H * 0.42;
+    if (anim === 'swing') {
+      const a = Math.sin(Math.min(1, k * 2.2) * Math.PI); hx -= a * W * 0.12; hy -= a * H * 0.1; rot = -0.35 - a * 1.1;
+      hit = k > 0.2 && k < 0.45;
+      if (k > 0.22 && k < 0.24 && !parts.length) { burst(tx, ty, 14, ['#fff', '#dfe7ff'], 7, 6); }
+    } else if (anim === 'bow' || anim === 'crossbow') {
+      const P = anim === 'bow' ? tex.pull : tex.cpull, pk = Math.min(1, k / 0.6);
+      if (k < 0.6) { const i = Math.min(2, Math.floor(pk * 3)); show = P[i] || tex.main; hx = W * (0.72 - 0.16 * ease(pk)); hy = H * (0.78 - 0.08 * ease(pk)); rot = -0.35 + 0.45 * ease(pk); if (pk > 0.9) { hx += Math.sin(now / 25) * u * 0.4; } }
+      else if (anim === 'crossbow' && k < 0.75) { show = tex.carrow || P[2] || tex.main; hx = W * 0.56; hy = H * 0.7; rot = 0.1; }
+      else { show = anim === 'crossbow' && k < 0.76 ? tex.carrow : tex.main; const r = ease((k - (anim === 'crossbow' ? 0.75 : 0.6)) * 5); hx = W * (0.56 + 0.16 * r); hy = H * (0.7 + 0.08 * r); rot = 0.1 - 0.45 * r;
+        const fk = Math.min(1, (k - (anim === 'crossbow' ? 0.75 : 0.6)) / 0.22);
+        if (fk < 1 && tex.arrow) { const ax = W * 0.56 + (tx - W * 0.56) * fk, ay = H * 0.62 + (ty - H * 0.62) * fk, as = S0 * 0.6 * (1 - fk * 0.85); x.save(); x.translate(ax, ay); x.rotate(-Math.PI / 4 - 0.3); x.drawImage(tex.arrow, -as / 2, -as / 2, as, as); x.restore(); }
+        hit = fk >= 1 && k < (anim === 'crossbow' ? 0.75 : 0.6) + 0.45; if (fk >= 1 && !parts.length) burst(tx, ty, 12, ['#fff', '#ffd27a'], 6, 5);
+      }
+    } else if (anim === 'throw') {
+      const a = Math.sin(Math.min(1, k * 3) * Math.PI); hx -= a * W * 0.05; hy -= a * H * 0.08; rot = -0.35 - a * 0.6;
+      if (k > 0.25) { const fk = Math.min(1, (k - 0.25) / 0.45); show = k > 0.3 ? null : show;
+        if (fk < 1) { const ix = W * 0.62 + (tx - W * 0.62) * fk, iy = H * 0.6 + (ty - H * 0.6) * fk - Math.sin(fk * Math.PI) * H * 0.15, is = S0 * 0.4 * (1 - fk * 0.8); x.save(); x.translate(ix, iy); x.rotate(fk * 8); x.drawImage(tex.main, -is / 2, -is / 2, is, is); x.restore(); }
+        else if (!parts.length) burst(tx, ty, 26, /pearl|ender_eye/.test(name) ? ['#c084fc', '#7e22ce', '#e9d5ff'] : crumbs, 6, 5);
+        if (k > 0.75) show = tex.main;
+      }
+    } else if (anim === 'eat') {
+      const ek = Math.min(1, k / 0.15), done = k > 0.85;
+      hx = W * (0.72 - 0.22 * ease(ek)); hy = H * (0.78 - 0.06 * ease(ek)) + (k > 0.15 && !done ? Math.abs(Math.sin(now / 70)) * u * 2.5 : 0); rot = -0.35 + 0.35 * ease(ek);
+      if (k > 0.15 && !done && Math.random() < 0.5) burst(W * 0.5, H * 0.72, 1, crumbs, 5, 3);
+      if (done) { sc = 1 - ease((k - 0.85) / 0.15); }
+    } else if (anim === 'totem') {
+      if (k < 0.15) { hx = W * 0.72; } else {
+        show = null; const pk = (k - 0.15) / 0.85, e = pk < 0.3 ? pk / 0.3 : 1, size = H * (0.25 + 0.55 * Math.sin(e * Math.PI / 2)) * (pk > 0.7 ? 1 - (pk - 0.7) / 0.3 : 1);
+        if (pk < 0.05 && !parts.length) { burst(W / 2, H / 2, 90, ['#facc15', '#4ade80', '#fde047', '#22c55e'], 8, 12); }
+        x.save(); x.globalAlpha = pk > 0.75 ? Math.max(0, 1 - (pk - 0.75) / 0.25) : 1; x.translate(W / 2, H / 2 - pk * H * 0.12); x.rotate(Math.sin(pk * 9) * 0.25 * (1 - pk)); x.drawImage(tex.main, -size / 2, -size / 2, size, size); x.restore();
+      }
+    } else if (anim === 'shield') {
+      const r = k < 0.2 ? ease(k / 0.2) : k > 0.8 ? 1 - ease((k - 0.8) / 0.2) : 1; hx = W * (0.75 - 0.22 * r); hy = H * (0.85 - 0.12 * r); rot = -0.2 + 0.2 * r; sc = 1 + 0.25 * r;
+      if (k > 0.45 && k < 0.47 && !parts.length) burst(hx - S0 * 0.3, hy - S0 * 0.3, 10, ['#fff', '#ddd'], 6, 5);
+    } else if (anim === 'rod') {
+      const a = k < 0.25 ? Math.sin(k / 0.25 * Math.PI) : 0; rot = -0.35 - a * 0.9; hy -= a * H * 0.08;
+      if (k > 0.25) { show = tex.rodCast || tex.main; const fk = Math.min(1, (k - 0.25) / 0.35), bx = W * 0.62 + (tx - W * 0.62) * fk, by = H * 0.45 + (ty + H * 0.1 - H * 0.45) * fk - Math.sin(fk * Math.PI) * H * 0.2;
+        x.strokeStyle = 'rgba(30,30,30,.85)'; x.lineWidth = Math.max(1, u * 0.3); x.beginPath(); x.moveTo(W * 0.62, H * 0.5); x.quadraticCurveTo((W * 0.62 + bx) / 2, Math.max(by, H * 0.5) + H * 0.05, bx, by); x.stroke();
+        const bob = fk >= 1 ? Math.sin(now / 200) * u : 0; x.fillStyle = '#e33'; x.fillRect(bx - u, by - u + bob, 2 * u, u); x.fillStyle = '#fff'; x.fillRect(bx - u, by + bob, 2 * u, u);
+        if (fk >= 1 && k > 0.7 && k < 0.72 && parts.length < 5) burst(bx, by, 8, ['#8ecbff', '#cfe8ff'], 4, 3);
+      }
+    } else if (anim === 'trident') {
+      if (k < 0.45) { const r = ease(k / 0.45); hy = H * (0.78 + 0.05 * r); rot = -0.35 + 2.6 * r; hx = W * (0.72 - 0.05 * r); }
+      else { show = null; const fk = Math.min(1, (k - 0.45) / 0.25); if (fk < 1) { const ix = W * 0.68 + (tx - W * 0.68) * fk, iy = H * 0.7 + (ty - H * 0.7) * fk, is = S0 * (1 - fk * 0.85); x.save(); x.translate(ix, iy); x.rotate(-Math.PI * 0.75); x.drawImage(tex.main, -is / 2, -is / 2, is, is); x.restore(); } else { hit = k < 0.95; if (!parts.length) burst(tx, ty, 16, ['#7dd3fc', '#e0f2fe'], 6, 5); } if (k > 0.9) show = tex.main; }
+    }
+    if (anim !== 'totem' || k < 0.15) mob(hit);
+    else mob(false);
+    // sweep + crit for melee
+    if (anim === 'swing' && k > 0.22 && k < 0.22 + 0.34) { const i = Math.min(7, Math.floor((k - 0.22) / 0.34 * 8)), sw = tex.sweep[i]; if (sw) { const s = H * 0.45; x.drawImage(sw, tx - s / 2, ty - s / 2, s, s); } }
+    // particles
+    for (const q of parts) { q.x += q.vx; q.y += q.vy; q.vy += 0.15; q.life -= 0.018; if (q.life <= 0) continue; x.globalAlpha = Math.max(0, q.life); if (anim === 'swing' && tex.crit) x.drawImage(tex.crit, q.x, q.y, q.s * u * 0.25, q.s * u * 0.25); else { x.fillStyle = q.c; x.fillRect(q.x, q.y, q.s * u * 0.18, q.s * u * 0.18); } }
+    x.globalAlpha = 1;
+    // held item
+    if (show && sc > 0.01) { x.save(); x.globalAlpha = alpha; x.translate(hx, hy); x.rotate(rot); x.scale(-sc, sc); x.drawImage(show, -S0 / 2, -S0 / 2, S0, S0); x.restore(); }
+    // crosshair + hotbar
+    x.fillStyle = 'rgba(255,255,255,.85)'; x.fillRect(W / 2 - u * 1.4, H / 2 - u * 0.2, u * 2.8, u * 0.4); x.fillRect(W / 2 - u * 0.2, H / 2 - u * 1.4, u * 0.4, u * 2.8);
+    const sl = u * 7, hbx = W / 2 - sl * 4.5, hby = H - sl - u; x.fillStyle = 'rgba(0,0,0,.45)'; x.fillRect(hbx, hby, sl * 9, sl);
+    x.strokeStyle = 'rgba(255,255,255,.9)'; x.lineWidth = u * 0.5; x.strokeRect(hbx, hby, sl, sl); if (tex.main) x.drawImage(tex.main, hbx + sl * 0.15, hby + sl * 0.15, sl * 0.7, sl * 0.7);
+    raf = requestAnimationFrame(draw);
+  }
+  raf = requestAnimationFrame(draw);
+}
+
 // ------------------------------------------------------------- 3D reveal after saving
 function reveal3D(img, opts = {}) {
   if (!img || !fxOn()) return;
   const skin = img.width === 64 && (img.height === 64 || img.height === 32) && opts.skin;
   if (!skin && (img.width !== img.height || img.width > 128)) return; // only items / skins
   const ov = document.createElement('div'); ov.className = 'reveal3d';
-  ov.innerHTML = `<div class="rv-card"><canvas></canvas><div class="rv-t">${icon('check', 18)} ${opts.title ? esc(opts.title) + ' — ' : ''}انحفظ</div><div class="muted small">اسحب عشان تلفه · اضغط برا يسكّر</div></div>`;
+  ov.innerHTML = `<div class="rv-card"><canvas></canvas><div class="rv-t">${icon('check', 18)} ${opts.title ? esc(opts.title) + ' — ' : ''}انحفظ</div><div class="muted small">اسحب عشان تلفه · اضغط برا يسكّر</div>${opts.use ? `<button class="btn primary sm" data-use style="margin-top:12px">${icon('play', 15)} جرّبه وأنت تستخدمه</button>` : ''}</div>`;
   document.body.append(ov);
+  if (opts.use) ov.querySelector('[data-use]').onclick = () => { close(); opts.use(); };
   const v = Lite3D.viewer(ov.querySelector('canvas'), skin ? Lite3D.skinQuads(img.height === 32 ? upgradeLegacySkin(img) : img, opts.slim, true) : Lite3D.itemQuads(img), { dist: skin ? 60 : 34, pitch: 0.2, yaw: -0.4 });
   v.st.yaw = -2.6; // starts turned and spins in
   let t = setTimeout(close, 4200);

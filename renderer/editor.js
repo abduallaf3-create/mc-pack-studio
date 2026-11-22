@@ -134,6 +134,7 @@ window.openPixelEditor = function (opts) {
             <button class="btn sm" data-act="importhd">${icon('image', 16)} استيراد HD (بدقة الصورة)</button>
             <button class="btn sm ghost" data-act="exportpng">${icon('download', 16)} حفظ كـ PNG</button>
             <button class="btn sm" data-act="view3d">${icon('cube', 16)} معاينة 3D</button>
+            ${opts.usePreview ? `<button class="btn sm primary" data-act="usepv">${icon('play', 16)} جرّبه وأنت تستخدمه</button>` : ''}
           </div></div>
       </div></div>`,
     foot: `<button class="btn primary" data-act="save">${icon('check', 16)} حفظ التكستر</button>
@@ -327,6 +328,7 @@ window.openPixelEditor = function (opts) {
       st.play = !st.play; const b = m.el.querySelector('[data-act=playfr]'); b.innerHTML = st.play ? `${icon('pause', 14)} وقّف` : `${icon('play', 14)} شغّل`;
       clearInterval(st.timer); if (st.play) st.timer = setInterval(() => { if (!document.body.contains(m.el)) return clearInterval(st.timer); st.pf++; render(); }, st.ft * 50);
     },
+    usepv() { opts.usePreview && opts.usePreview(IMG.clone(img)); },
     view3d() { if (window.open3D) open3D(img, { slim: opts.slim, skin: img.width === 64 && (img.height === 64 || img.height === 32) && opts.skin !== false, title: opts.title }); },
     clear() { push(); const w = img.width; img.data.fill(0, oy() * w * 4, (oy() + fh()) * w * 4); render(); },
     zin() { st.zoom = Math.min(64, st.zoom + 1); render(); }, zout() { st.zoom = Math.max(1, st.zoom - 1); render(); },
