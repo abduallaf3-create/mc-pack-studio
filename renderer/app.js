@@ -308,7 +308,7 @@ function itemCat(m) {
   if (/helmet|chestplate|leggings|boots|elytra|totem|horse_armor/.test(n)) return 'armor';
   return 'misc';
 }
-const ITEM_AR = { diamond_sword: 'سيف دايموند', netherite_sword: 'سيف نذرايت', iron_sword: 'سيف حديد', golden_sword: 'سيف ذهب', stone_sword: 'سيف حجر', wooden_sword: 'سيف خشب', diamond_axe: 'فاس دايموند', netherite_axe: 'فاس نذرايت', iron_axe: 'فاس حديد', bow: 'القوس', crossbow: 'الكروس بو', trident: 'الترايدنت', mace: 'الميس', shield: 'الشيلد', ender_pearl: 'إندر بيرل', snowball: 'كرة ثلج', egg: 'البيضة', totem_of_undying: 'التوتم', golden_apple: 'تفاحة ذهبية', enchanted_golden_apple: 'تفاحة ذهبية مإنشانت', fishing_rod: 'السنارة', flint_and_steel: 'ولّاعة', water_bucket: 'سطل ماء', lava_bucket: 'سطل لافا', cooked_beef: 'ستيك', elytra: 'الإليترا', diamond_pickaxe: 'معول دايموند', netherite_pickaxe: 'معول نذرايت', experience_bottle: 'قارورة XP', fire_charge: 'كرة نار', wind_charge: 'شحنة الريح', ender_eye: 'عين الإندر', arrow: 'السهم', compass: 'البوصلة', clock: 'الساعة', spyglass: 'المنظار', shears: 'المقص' };
+const ITEM_AR = { shield: 'الشيلد', diamond_sword: 'سيف دايموند', netherite_sword: 'سيف نذرايت', iron_sword: 'سيف حديد', golden_sword: 'سيف ذهب', stone_sword: 'سيف حجر', wooden_sword: 'سيف خشب', diamond_axe: 'فاس دايموند', netherite_axe: 'فاس نذرايت', iron_axe: 'فاس حديد', bow: 'القوس', crossbow: 'الكروس بو', trident: 'الترايدنت', mace: 'الميس', shield: 'الشيلد', ender_pearl: 'إندر بيرل', snowball: 'كرة ثلج', egg: 'البيضة', totem_of_undying: 'التوتم', golden_apple: 'تفاحة ذهبية', enchanted_golden_apple: 'تفاحة ذهبية مإنشانت', fishing_rod: 'السنارة', flint_and_steel: 'ولّاعة', water_bucket: 'سطل ماء', lava_bucket: 'سطل لافا', cooked_beef: 'ستيك', elytra: 'الإليترا', diamond_pickaxe: 'معول دايموند', netherite_pickaxe: 'معول نذرايت', experience_bottle: 'قارورة XP', fire_charge: 'كرة نار', wind_charge: 'شحنة الريح', ender_eye: 'عين الإندر', arrow: 'السهم', compass: 'البوصلة', clock: 'الساعة', spyglass: 'المنظار', shears: 'المقص' };
 const FAM_AR = { sword: 'كل السيوف', axe: 'كل الفؤوس', pickaxe: 'كل المعاول', shovel: 'كل المجارف', hoe: 'كل المحاريث', helmet: 'كل الخوذ', chestplate: 'كل الصدريات', leggings: 'كل البناطيل', boots: 'كل البوتات', potion: 'كل الجرعات', arrow: 'كل الأسهم', horse_armor: 'كل دروع الخيل', ingot: 'كل السبايك', nugget: 'كل القطع', apple: 'كل التفاح', carrot: 'كل الجزر' };
 const itemName = (n) => ITEM_AR[n] || n.replace(/_/g, ' ');
 const TAB_GROUPS = [
@@ -597,13 +597,6 @@ const TEMPLATES = [
   ['dark', 'داكن', 'palette', 'واجهة داكنة بلون بنفسجي غامق مع فاير بنفسجي'],
 ];
 async function texImg(p, rel, baseOnly = true) { const r = await api.tex.get(p, rel, baseOnly) || (baseOnly ? await api.tex.get(p, rel) : null); return r ? IMG.fromB64(r.data) : null; }
-async function applyFire(p, c) {
-  for (const id of ['fire_0', 'fire_1']) {
-    const rel = texPath(TEXTURES.find((t) => t.id === id), p.packFormat); const im = await texImg(p, rel); if (!im) continue;
-    await api.tex.put(p.id, rel, IMG.toB64(fireTransform(im, c.lower, c.opacity, c.useTint ? c.tint : null)), (await api.tex.getMeta(p, rel)) || '{"animation":{}}');
-  }
-  p.fire = c;
-}
 async function applyQuickTweak(p, id) {
   const rel = id === 'glass' ? texPath(TEXTURES.find((t) => t.id === 'glass'), p.packFormat) : id === 'pumpkin' ? 'textures/misc/pumpkinblur.png' : 'textures/misc/vignette.png';
   const im = await texImg(p, rel);
@@ -1029,8 +1022,9 @@ async function tabHeld(b) {
       </div>
       <span class="muted small" style="line-height:1.7">يعدّل موديلات الأدوات بالباك وقت التثبيت. يحتاج ملفات اللعبة محمّلة. يشتغل على كل النسخ.</span>
     </div>
-    <div class="card"><h3>معاينة تقريبية</h3><div class="stage" id="hst"><div class="xh"></div><canvas id="hcv" style="position:absolute;inset:0;width:100%;height:100%"></canvas></div>
-      <div class="row" style="margin-top:12px"><span class="seg" id="hpv"><button data-v="sword" class="on">سيف</button><button data-v="pearl">بيرل</button></span><span class="muted small" id="hpvn"></span></div></div></div>
+    <div class="card"><h3>كيف بيطلع باللعبة <span class="muted small">(نفس حسابات ماينكرافت بالضبط)</span></h3><div class="fp-stage"><canvas id="hcv"></canvas></div>
+      <div class="hstat" id="hstat"></div>
+      <div class="row" style="margin-top:10px"><span class="seg" id="hpv"><button data-v="sword" class="on">سيف</button><button data-v="pearl">بيرل</button><button data-v="shield">شيلد</button></span><span class="muted small" id="hpvn"></span></div></div></div>
     <div class="card" style="margin-top:20px"><div class="row" style="margin-bottom:12px"><h3 style="margin:0;flex:1">${icon('sword', 18)} كل أداة لحالها</h3><span class="muted small">اختر أي أداة من القائمة واعطها حجمها ومكانها الخاص (يغلب على الإعدادات اللي فوق)</span></div>
       <div id="hitems" class="stack" style="gap:8px;margin-bottom:14px"></div>
       <div class="row" style="gap:6px;margin-bottom:10px" id="hcats">${ITEM_CATS.map(([k, n]) => `<button class="chip ${k === 'weapons' ? 'on' : ''}" data-c="${k}">${n}</button>`).join('')}</div>
@@ -1042,18 +1036,63 @@ async function tabHeld(b) {
   h.items = h.items || {};
   const models = p.baseJar ? await api.models.list(p) : [];
   const texCache = {};
-  const thumb = async (m) => { if (!m || !m.tex) return null; if (texCache[m.tex] !== undefined) return texCache[m.tex]; const r = await api.tex.get(p, m.tex); texCache[m.tex] = r ? IMG.toCanvas(await IMG.fromB64(r.data)) : null; return texCache[m.tex]; };
+  const thumb = async (m) => { if (!m || !m.tex) return null; if (texCache[m.tex] !== undefined) return texCache[m.tex];
+    if (m.tex === 'shield') { const st = TEXTURES.find((t) => t.id === 'shield_tex'), rr = st && await api.tex.get(p, texPath(st, p.packFormat)); if (!rr) return (texCache.shield = null); const im = IMG.toCanvas(await IMG.fromB64(rr.data)), k = im.width / 64, c = document.createElement('canvas'); c.width = 12 * k; c.height = 22 * k; c.getContext('2d').drawImage(im, k, k, 12 * k, 22 * k, 0, 0, 12 * k, 22 * k); return (texCache.shield = c); }
+    const r = await api.tex.get(p, m.tex); texCache[m.tex] = r ? IMG.toCanvas(await IMG.fromB64(r.data)) : null; return texCache[m.tex]; };
   const cv = $('#hcv', b);
-  function draw() {
-    const r = cv.getBoundingClientRect(); cv.width = r.width; cv.height = r.height; const x = cv.getContext('2d'); x.imageSmoothingEnabled = false;
-    const on = $('#hon', b).checked, isS = pv === 'sword', grp = isS ? 'h' : 'g', gOn = isS || $('#gon', b).checked;
-    let lower = on && gOn ? +$('#' + grp + 'l', b).value : 0, sc = on && gOn ? +$('#' + grp + 's', b).value : 1, xs = on && isS ? +$('#hx', b).value : 0;
-    if (pv === 'item' && pvItem && h.items[pvItem.name]) { const c = h.items[pvItem.name]; lower = on ? c.lower : 0; sc = on ? c.scale : 1; xs = on ? c.x : 0; }
-    const S2 = r.height * 0.62 * sc, cx = r.width * 0.70 + xs * r.width * 0.02, cy = r.height * 0.62 + lower * r.height * 0.05;
-    const im = pv === 'item' ? (pvItem && texCache[pvItem.tex]) : imgs[pv];
-    x.save(); x.translate(cx, cy); x.rotate(isS ? -0.25 : -0.1); x.scale(-1, 1);
-    if (im) x.drawImage(im, 0, 0, im.width, Math.min(im.width, im.height), -S2 / 2, -S2 / 2, S2, S2); else { x.fillStyle = '#5ad3ff'; x.fillRect(-S2 / 4, -S2 / 2, S2 / 2, S2); }
-    x.restore();
+  const PV = { sword: 'diamond_sword', pearl: 'ender_pearl', shield: 'shield' };
+  const disp = p.baseJar ? await api.held.displays(p, [...new Set([...models.map((m) => m.name), 'shield', 'diamond_sword', 'ender_pearl'])]) : {};
+  const shieldT = TEXTURES.find((t) => t.id === 'shield_tex'), shieldRel = shieldT && texPath(shieldT, p.packFormat);
+  const qCache = {};
+  const isToolN = (n) => /(_sword|_axe|_pickaxe|_shovel|_hoe|_spear)$/.test(n) || /^(stick|blaze_rod|breeze_rod|bone|fishing_rod|carrot_on_a_stick|warped_fungus_on_a_stick|mace|trident)$/.test(n);
+  async function quadsOf(n) {
+    if (qCache[n]) return qCache[n];
+    let im = null;
+    if (/^shield/.test(n) && shieldRel) { const r = await api.tex.get(p, shieldRel); im = r ? await IMG.fromB64(r.data) : null; }
+    else { const m = models.find((x) => x.name === n); if (m && m.tex) { const r = await api.tex.get(p, m.tex); im = r ? await IMG.fromB64(r.data) : null; } }
+    return (qCache[n] = heldQuads(im, disp[n] && disp[n].special, n));
+  }
+  // the size/place this item really gets (per-item beats the group sliders; shields aren't in the groups)
+  function setFor(n) {
+    if (!$('#hon', b).checked) return [0, 1, 0];
+    if (h.items[n]) return [h.items[n].lower, h.items[n].scale, h.items[n].x];
+    const info = disp[n] || {};
+    if (info.special || /^shield/.test(n)) return [0, 1, 0];
+    if (isToolN(n)) return [+$('#hl', b).value, +$('#hs', b).value, +$('#hx', b).value];
+    return $('#gon', b).checked ? [+$('#gl', b).value, +$('#gs', b).value, 0] : [0, 1, 0];
+  }
+  const anchors = {};
+  async function anchorOf(n) { if (anchors[n] !== undefined) return anchors[n]; const q = await quadsOf(n), info = disp[n] || {}; return (anchors[n] = (q.length && heldAnchor(q, heldApply(info.disp, null, 0, 1, 0))) || info.center || null); }
+  // per-item: shrink around the visible part (same anchor goes into the pack); group sliders change shared models, no anchor
+  const groupAnchor = (n) => (isToolN(n) ? h.hAnchor : h.gAnchor) || null;
+  const effFor = (n) => { const info = disp[n] || {}; const [l, sc, x] = setFor(n); return heldApply(info.disp, h.items[n] ? (h.items[n].anchor || anchors[n] || info.center) : (info.special || /^shield/.test(n) ? info.center : groupAnchor(n)), l, sc, x); };
+  // the shared sliders also shrink around what you see (taken from the diamond sword / ender pearl)
+  if (p.baseJar) { h.hAnchor = await anchorOf('diamond_sword'); h.gAnchor = await anchorOf('ender_pearl'); }
+  const baseOf = (n, q) => { const info = disp[n] || {}; return heldProject(q, heldApply(info.disp, info.center, 0, 1, 0), 1600, 900); };
+  async function statusFor(n) { await ensureAnchor(n); const q = await quadsOf(n); if (!q.length) return null; return heldStatus(heldProject(q, effFor(n), 1600, 900), baseOf(n, q)); }
+  async function ensureAnchor(n) { if (!h.items[n]) return; const u = unitOf[n], a = await anchorOf(u ? u.rep.name : n); (u ? u.members : [n]).forEach((m) => { if (h.items[m] && !h.items[m].anchor && a) h.items[m].anchor = a; }); }
+  async function draw() {
+    const n = pv === 'item' ? pvItem && pvItem.name : PV[pv]; if (!n) return;
+    await ensureAnchor(n);
+    const r = cv.getBoundingClientRect(); cv.width = Math.max(320, r.width * devicePixelRatio); cv.height = cv.width * 9 / 16;
+    const q = await quadsOf(n); const res = heldProject(q, effFor(n), cv.width, cv.height); heldDraw(cv, res);
+    const st = q.length ? heldStatus(heldProject(q, effFor(n), 1600, 900), baseOf(n, q)) : null, box = $('#hstat', b);
+    box.className = 'hstat ' + (st ? st.k : '');
+    box.innerHTML = st ? `${icon(st.k === 'ok' ? 'check' : 'sun', 15)}<span>${st.t}</span>${st.k !== 'ok' ? `<button class="btn sm" id="hfix">${icon('wand', 14)} صلّحها لي</button>` : ''}` : `<span class="muted small">${p.baseJar ? 'ما لقيت تكستر هذي الأداة' : 'حمّل ملفات اللعبة عشان تشوف المعاينة'}</span>`;
+    const fx = $('#hfix', b); if (fx) fx.onclick = () => fixItem(n);
+  }
+  // nudge the values back until the item is clearly visible again
+  async function fixItem(n) {
+    const per = !!h.items[n], info = disp[n] || {}, tool = isToolN(n);
+    let [l, sc, x] = setFor(n); const q = await quadsOf(n), base = baseOf(n, q);
+    await ensureAnchor(n); const anc = per ? (h.items[n].anchor || info.center) : info.center;
+    for (let i = 0; i < 40; i++) { const st = heldStatus(heldProject(q, heldApply(info.disp, anc, l, sc, x), 1600, 900), base); if (st && st.k === 'ok') break; l = l > 0 ? Math.max(0, l - 0.5) : Math.min(0, l + 0.5); sc = sc < 1 ? Math.min(1, sc + 0.05) : Math.max(1, sc - 0.05); x = x > 0 ? Math.max(0, x - 0.25) : Math.min(0, x + 0.25); }
+    l = Math.round(l * 4) / 4; sc = Math.round(sc * 20) / 20; x = Math.round(x * 4) / 4;
+    if (false) {}
+    else if (per) { const u = unitOf[n]; (u ? u.members : [n]).forEach((m) => { h.items[m] = { lower: l, scale: sc, x, anchor: h.items[m] && h.items[m].anchor }; }); drawItems(); }
+    else if (tool) { $('#hl', b).value = l; $('#hs', b).value = sc; $('#hx', b).value = x; }
+    else { $('#gl', b).value = l; $('#gs', b).value = sc; }
+    upd(); toast('ضبطتها عشان تبان زين ✓');
   }
   const upd = () => {
     Object.assign(h, { on: $('#hon', b).checked, hLower: +$('#hl', b).value, hScale: +$('#hs', b).value, hX: +$('#hx', b).value, gOn: $('#gon', b).checked, gLower: +$('#gl', b).value, gScale: +$('#gs', b).value, hOn: true });
@@ -1064,10 +1103,12 @@ async function tabHeld(b) {
   ['hon', 'hl', 'hs', 'hx', 'gon', 'gl', 'gs'].forEach((id) => $('#' + id, b).oninput = upd);
   $$('[data-hp]', b).forEach((x) => x.onclick = () => { const [l, s, xx] = x.dataset.hp.split(',').map(Number); $('#hl', b).value = l; $('#hs', b).value = s; $('#hx', b).value = xx; $('#gl', b).value = l * 0.8; $('#gs', b).value = s; upd(); });
   $$('#hpv button', b).forEach((x) => x.onclick = () => { pv = x.dataset.v; $('#hpvn', b).textContent = ''; $$('#hpv button', b).forEach((y) => y.classList.toggle('on', y === x)); draw(); });
+  new ResizeObserver(() => draw()).observe(cv);
   // ---- per-item list — the same kind of item (all swords, all axes…) is handled together
   const MAT_RE = /^(wooden|stone|iron|golden|gold|diamond|netherite|copper|leather|chainmail|turtle)_(.+)$/;
   const famKey = (n) => { if (/^(splash_|lingering_)?potion$/.test(n)) return 'potion'; if (/^(spectral_|tipped_)?arrow$/.test(n)) return 'arrow'; const m = n.match(MAT_RE); return m ? m[2] : null; };
   const famCount = {}; models.forEach((m) => { const f = famKey(m.name); if (f) famCount[f] = (famCount[f] || 0) + 1; });
+  if (!models.find((m) => m.name === 'shield') && p.baseJar) { const info = await api.held.displays(p, ['shield']); if (info.shield) models.push({ name: 'shield', tex: 'shield' }); }
   const units = []; const unitOf = {};
   for (const m of models) {
     const f = famKey(m.name), key = f && famCount[f] >= 2 ? 'fam:' + f : m.name;
@@ -1084,7 +1125,7 @@ async function tabHeld(b) {
   const drawItems = async () => {
     const box = $('#hitems', b); const sel = units.filter(unitOn);
     if (!sel.length) { box.innerHTML = `<div class="muted small">${models.length ? 'ما اخترت أدوات للحين — اضغط على أي أداة من القائمة تحت' : 'تحتاج ملفات اللعبة محمّلة عشان تطلع قائمة الأدوات'}</div>`; return; }
-    box.innerHTML = sel.map((u) => { const c = h.items[u.members.find((n) => h.items[n])]; return `<div class="hitem" data-k="${esc(u.key)}"><canvas class="hth"></canvas><div style="width:150px;overflow:hidden"><b style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(unitLabel(u))}</b>${u.fam ? `<span class="dim small">${u.members.length} أنواع</span>` : ''}</div>
+    box.innerHTML = sel.map((u) => { const c = h.items[u.members.find((n) => h.items[n])]; return `<div class="hitem" data-k="${esc(u.key)}"><canvas class="hth"></canvas><div style="width:150px;overflow:hidden"><b style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(unitLabel(u))}</b>${u.fam ? `<span class="dim small">${u.members.length} أنواع</span>` : ''}<span class="hbadge"></span></div>
       <div class="slider-row" style="grid-template-columns:40px 1fr 34px;margin:0;flex:1"><span>نزول</span><input type="range" data-p="lower" min="-4" max="8" step="0.25" value="${c.lower}"><output class="ltr">${c.lower}</output></div>
       <div class="slider-row" style="grid-template-columns:40px 1fr 34px;margin:0;flex:1"><span>الحجم</span><input type="range" data-p="scale" min="0.2" max="1.6" step="0.05" value="${c.scale}"><output class="ltr">${c.scale}</output></div>
       <div class="slider-row" style="grid-template-columns:40px 1fr 34px;margin:0;flex:1"><span>جنب</span><input type="range" data-p="x" min="-6" max="6" step="0.25" value="${c.x}"><output class="ltr">${c.x}</output></div>
@@ -1092,9 +1133,11 @@ async function tabHeld(b) {
     for (const row of $$('.hitem', box)) {
       const u = units.find((x) => x.key === row.dataset.k), m = u.rep;
       thumb(m).then((c) => { const cv = $('.hth', row); if (c) { cv.width = c.width; cv.height = Math.min(c.width, c.height); cv.getContext('2d').drawImage(c, 0, 0); } });
-      $$('input', row).forEach((inp) => inp.oninput = () => { u.members.forEach((n) => { h.items[n] = h.items[n] || { lower: 2, scale: 0.8, x: 0 }; h.items[n][inp.dataset.p] = +inp.value; }); inp.nextElementSibling.textContent = inp.value; if (pvItem && u.members.includes(pvItem.name)) draw(); clearTimeout(upd.t); upd.t = setTimeout(saveProject, 400); });
+      $$('input', row).forEach((inp) => inp.oninput = () => { u.members.forEach((n) => { h.items[n] = h.items[n] || { lower: 2, scale: 0.8, x: 0 }; h.items[n][inp.dataset.p] = +inp.value; }); inp.nextElementSibling.textContent = inp.value; if (pvItem && u.members.includes(pvItem.name)) draw(); row.badge && row.badge(); clearTimeout(upd.t); upd.t = setTimeout(saveProject, 400); });
       $('[data-v]', row).onclick = () => showItem(m);
       $('[data-d]', row).onclick = async () => { u.members.forEach((n) => delete h.items[n]); await saveProject(); drawItems(); drawGrid(); };
+      const badge = async () => { const st = await statusFor(m.name); const el = $('.hbadge', row); if (el) { el.className = 'hbadge ' + (st ? st.k : ''); el.textContent = st ? (st.k === 'ok' ? '✓ واضح' : st.k === 'off' ? '⚠ ما بيبان' : st.k === 'tiny' ? '⚠ صغير مرة' : '⚠ نصه برا') : ''; el.title = st ? st.t : ''; } };
+      row.badge = badge; badge();
     }
   };
   // ---- browsable list of every item (no typing needed)
@@ -1111,12 +1154,89 @@ async function tabHeld(b) {
   gridEl.onclick = async (e) => {
     const el = e.target.closest('.icell'); if (!el) return; const u = units.find((x) => x.key === el.dataset.k);
     if (unitOn(u)) u.members.forEach((n) => delete h.items[n]);
-    else { u.members.forEach((n) => { h.items[n] = { lower: 2, scale: 0.8, x: 0 }; }); if (!$('#hon', b).checked) { $('#hon', b).checked = true; upd(); } }
+    else { const a = await anchorOf(u.rep.name); u.members.forEach((n) => { h.items[n] = { lower: 0, scale: 0.8, x: 0, ...(a ? { anchor: a } : {}) }; }); if (!$('#hon', b).checked) { $('#hon', b).checked = true; upd(); } }
     await saveProject(); await drawItems(); drawGrid(); if (unitOn(u)) { showItem(u.rep); $('#hitems', b).scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
   };
   drawGrid();
   drawItems();
   requestAnimationFrame(upd);
+}
+
+// ------------------------------------------------------------- exact first-person maths (same as Minecraft)
+function heldRot(v, r, left) {
+  const [rx, ry, rz] = r.map((a, i) => (left && i > 0 ? -a : a) * Math.PI / 180);
+  let [x, y, z] = v;
+  [x, y] = [x * Math.cos(rz) - y * Math.sin(rz), x * Math.sin(rz) + y * Math.cos(rz)];
+  [x, z] = [x * Math.cos(ry) + z * Math.sin(ry), -x * Math.sin(ry) + z * Math.cos(ry)];
+  [y, z] = [y * Math.cos(rx) - z * Math.sin(rx), y * Math.sin(rx) + z * Math.cos(rx)];
+  return [x, y, z];
+}
+// same change the pack gets on install (keep in step with held:build in main.js)
+function heldApply(disp, center, lower, scale, xs) {
+  const d = disp || { rotation: [0, -90, 25], translation: [1.13, 3.2, 1.13], scale: [0.68, 0.68, 0.68] };
+  const r = d.rotation || [0, 0, 0], t = [...(d.translation || [0, 0, 0])], S0 = d.scale || [1, 1, 1], S1 = S0.map((v) => v * scale);
+  if (center) { const dv = heldRot([0, 1, 2].map((i) => (S0[i] - S1[i]) * center[i]), r); for (let i = 0; i < 3; i++) t[i] += dv[i] * 16; }
+  t[1] -= lower; t[0] += xs;
+  return { r, t: t.map((v) => Math.max(-80, Math.min(80, v)) / 16), s: S1.map((v) => Math.max(-4, Math.min(4, v))) };
+}
+// item-space quads (blocks). Normal items are centred; the shield is drawn flipped around the -0.5 corner
+function heldQuads(img, special, name) {
+  if (!img) return [];
+  if (special && /shield/.test(name) && img.width >= 64) {
+    const k = img.width / 64, q = [];
+    Lite3D.boxQuads(img, k, 0, 0, 12, 22, 1, 0, 0, 1.5, 0, q);
+    Lite3D.boxQuads(img, k, 26, 0, 2, 6, 6, 0, 0, -2, 0, q);
+    return q.map((o) => ({ p: o.p.map(([x, y, z]) => [x / 16 - 0.5, y / 16 - 0.5, z / 16 - 0.5]), c: o.c, n: o.n }));
+  }
+  const q = Lite3D.itemQuads(img);
+  return q.map((o) => ({ p: o.p.map(([x, y, z]) => [x / 16, y / 16, z / 16]), c: o.c, n: o.n }));
+}
+// project into the player's view: hand at (0.56,-0.52,-0.72), hand FOV is always 70°
+function heldProject(quads, eff, W, H) {
+  const f = 1 / Math.tan(35 * Math.PI / 180), asp = W / H, out = [];
+  let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9, behind = false;
+  for (const o of quads) {
+    const pts = o.p.map((p) => { const v = heldRot([p[0] * eff.s[0], p[1] * eff.s[1], p[2] * eff.s[2]], eff.r); return [v[0] + eff.t[0] + 0.56, v[1] + eff.t[1] - 0.52, v[2] + eff.t[2] - 0.72]; });
+    let zs = 0; const sp = pts.map(([x, y, z]) => { if (z > -0.05) behind = true; const zz = Math.min(z, -0.05); zs += z; return [W / 2 + (f / asp) * (x / -zz) * W / 2, H / 2 - f * (y / -zz) * H / 2]; });
+    for (const [x, y] of sp) { if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y; }
+    const n = heldRot(o.n, eff.r); out.push({ sp, z: zs / 4, c: o.c, l: 0.62 + 0.38 * Math.max(0, n[2] * 0.6 + n[1] * 0.5 + 0.3) });
+  }
+  out.sort((a, b) => a.z - b.z);
+  // count real pixels: draw small on a canvas 3× the screen and see how much lands inside it
+  const RW = 96, RH = Math.round(96 / asp), c = heldProject.cv || (heldProject.cv = document.createElement('canvas'));
+  c.width = RW * 3; c.height = RH * 3; const x = c.getContext('2d', { willReadFrequently: true }); x.clearRect(0, 0, c.width, c.height); x.fillStyle = '#000';
+  const kx = RW / W, ky = RH / H;
+  for (const o of out) { if (o.c[3] < 10) continue; x.beginPath(); o.sp.forEach(([a, b], i) => { const X = RW + a * kx, Y = RH + b * ky; i ? x.lineTo(X, Y) : x.moveTo(X, Y); }); x.closePath(); x.fill(); }
+  const d = x.getImageData(0, 0, c.width, c.height).data; let tot = 0, inn = 0, top = 1e9, bot = -1;
+  for (let yy = 0; yy < c.height; yy++) for (let xx = 0; xx < c.width; xx++) if (d[(yy * c.width + xx) * 4 + 3] > 40) { tot++; if (xx >= RW && xx < RW * 2 && yy >= RH && yy < RH * 2) { inn++; if (yy < top) top = yy; if (yy > bot) bot = yy; } }
+  return { polys: out, box: [minX, minY, maxX, maxY], visible: tot ? inn / tot : 0, area: inn / (RW * RH), height: bot >= 0 ? (bot - top + 1) / RH : 0, behind };
+}
+// the part of the item you actually see in vanilla — shrinking keeps that spot in place
+function heldAnchor(quads, eff, W = 1600, H = 900) {
+  const f = 1 / Math.tan(35 * Math.PI / 180), asp = W / H; let sx = 0, sy = 0, sz = 0, n = 0;
+  for (const o of quads) for (const p of o.p) {
+    const v = heldRot([p[0] * eff.s[0], p[1] * eff.s[1], p[2] * eff.s[2]], eff.r); const x = v[0] + eff.t[0] + 0.56, y = v[1] + eff.t[1] - 0.52, z = v[2] + eff.t[2] - 0.72;
+    if (z > -0.05) continue; const X = 0.5 + 0.5 * (f / asp) * x / -z, Y = 0.5 - 0.5 * f * y / -z;
+    if (X >= 0 && X <= 1 && Y >= 0 && Y <= 1) { sx += p[0]; sy += p[1]; sz += p[2]; n++; }
+  }
+  return n ? [sx / n, sy / n, sz / n].map((v) => +v.toFixed(4)) : null;
+}
+// judged against how the same item looks in vanilla (some items are half off-screen even there)
+function heldStatus(st, base) {
+  if (!st || !isFinite(st.visible)) return null;
+  const ba = base && base.area > 0 ? base.area : 0.05, bv = base && base.visible > 0 ? base.visible : 0.6;
+  if (st.area < Math.min(0.004, ba * 0.12) || st.visible < bv * 0.25) return { k: 'off', t: 'طالع برا الشاشة — باللعبة ما بيبان' };
+  if (st.area < ba * 0.28) return { k: 'tiny', t: 'صغير مرة — باللعبة بيصير كأنه مخفي' };
+  if (st.visible < bv * 0.6) return { k: 'cut', t: 'أغلبه طالع برا الشاشة' };
+  return { k: 'ok', t: 'واضح باللعبة ✓' };
+}
+function heldDraw(cv, res) {
+  const W = cv.width, H = cv.height, x = cv.getContext('2d');
+  const g = x.createLinearGradient(0, 0, 0, H * 0.55); g.addColorStop(0, '#78a7ff'); g.addColorStop(1, '#c4dcff'); x.fillStyle = g; x.fillRect(0, 0, W, H);
+  x.fillStyle = '#5d9b3a'; x.fillRect(0, H * 0.55, W, H);
+  for (const p of res.polys) { x.beginPath(); p.sp.forEach(([a, b], i) => (i ? x.lineTo(a, b) : x.moveTo(a, b))); x.closePath(); x.fillStyle = `rgba(${p.c[0] * p.l | 0},${p.c[1] * p.l | 0},${p.c[2] * p.l | 0},${p.c[3] / 255})`; x.fill(); x.strokeStyle = x.fillStyle; x.lineWidth = 0.6; x.stroke(); }
+  const u = H / 100; x.fillStyle = 'rgba(255,255,255,.9)'; x.fillRect(W / 2 - u * 1.6, H / 2 - u * 0.25, u * 3.2, u * 0.5); x.fillRect(W / 2 - u * 0.25, H / 2 - u * 1.6, u * 0.5, u * 3.2);
+  const sl = u * 8, hx = W / 2 - sl * 4.5; x.fillStyle = 'rgba(0,0,0,.4)'; x.fillRect(hx, H - sl - u, sl * 9, sl); x.strokeStyle = 'rgba(255,255,255,.85)'; x.lineWidth = u * 0.5; x.strokeRect(hx, H - sl - u, sl, sl);
 }
 
 // ------------------------------------------------------------- CIT (custom textures by item name)
@@ -1950,63 +2070,135 @@ function fireTransform(img, lower, opacity, tint) {
   }
   return out;
 }
+// ---------- fire: the screen overlay and the fire on the ground are separate
+// Minecraft draws the burning-screen effect with fire_1 only, and ground fire alternates fire_0 / fire_1.
+// So: fire_1 = screen look; ground fire gets its own copy (fire_1_ground) + fire_0, each with its own size.
+const FIRE_GROUND_MODELS = ['fire_floor1', 'fire_side1', 'fire_side_alt1', 'fire_up1', 'fire_up_alt1'];
+const FIRE_GROUND_TEX = 'textures/block/fire_1_ground.png';
+function fireGround(img, size, opacity, tint) {
+  const w = img.width, n = img.height > img.width && img.height % w === 0 ? img.height / w : 1, h = n > 1 ? w : img.height;
+  const src = tint ? IMG.tint(img, tint, 1, false) : img, out = new ImageData(w, img.height), nh = Math.max(0, Math.round(h * size));
+  if (!nh || opacity <= 0) return out;
+  for (let f = 0; f < n; f++) for (let y = 0; y < nh; y++) { const sy = Math.min(h - 1, Math.floor(y * h / nh)), dy = h - nh + y; for (let x = 0; x < w; x++) {
+    const si = ((f * h + sy) * w + x) * 4, di = ((f * h + dy) * w + x) * 4;
+    out.data[di] = src.data[si]; out.data[di + 1] = src.data[si + 1]; out.data[di + 2] = src.data[si + 2]; out.data[di + 3] = src.data[si + 3] * opacity; } }
+  return out;
+}
+async function applyFire(p, c) {
+  c = Object.assign({ lower: 0, opacity: 1, useTint: false, tint: null, gSize: 1, gOpacity: 1, gTint: true }, c);
+  const r0 = texPath(TEXTURES.find((t) => t.id === 'fire_0'), p.packFormat), r1 = texPath(TEXTURES.find((t) => t.id === 'fire_1'), p.packFormat);
+  const i0 = await texImg(p, r0), i1 = await texImg(p, r1); if (!i1) return false;
+  const m0 = (await api.tex.getMeta(p, r0)) || '{"animation":{}}', m1 = (await api.tex.getMeta(p, r1)) || '{"animation":{}}';
+  const tint = c.useTint ? c.tint : null, gt = c.useTint && c.gTint ? c.tint : null;
+  await api.tex.put(p.id, r1, IMG.toB64(fireTransform(i1, c.lower, c.opacity, tint)), m1);
+  if (i0) await api.tex.put(p.id, r0, IMG.toB64(fireGround(i0, c.gSize, c.gOpacity, gt)), m0);
+  await api.tex.put(p.id, FIRE_GROUND_TEX, IMG.toB64(fireGround(i1, c.gSize, c.gOpacity, gt)), m1);
+  for (const n of FIRE_GROUND_MODELS) {
+    const txt = await api.jar.text(p, `assets/minecraft/models/block/${n}.json`); if (!txt) continue;
+    try { const j = JSON.parse(txt); j.textures = Object.assign({}, j.textures, { fire: 'minecraft:block/fire_1_ground' }); await api.file.putRaw(p.id, `assets/minecraft/models/block/${n}.json`, JSON.stringify(j, null, 2)); } catch {}
+  }
+  p.fire = c; return true;
+}
+async function resetFire(p) {
+  for (const id of ['fire_0', 'fire_1']) await api.tex.reset(p.id, texPath(TEXTURES.find((t) => t.id === id), p.packFormat));
+  await api.tex.reset(p.id, FIRE_GROUND_TEX);
+  for (const n of FIRE_GROUND_MODELS) await api.file.remove(p.id, `assets/minecraft/models/block/${n}.json`);
+  p.fire = null;
+}
+// the burning-screen overlay, placed exactly like Minecraft (two quads at z=-0.5, shifted ±0.24 / -0.3, turned 10°, hand FOV 70°)
+function fireScreenRects(W, H) {
+  const f = 1 / Math.tan(35 * Math.PI / 180), asp = W / H, out = [];
+  for (let i = 0; i < 2; i++) {
+    const sgn = -(i * 2 - 1), ry = (i * 2 - 1) * 10 * Math.PI / 180, pts = [];
+    for (const [x, y] of [[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5]]) {
+      const X = x * Math.cos(ry) + -0.5 * Math.sin(ry) + sgn * 0.24, Z = -x * Math.sin(ry) + -0.5 * Math.cos(ry), Y = y - 0.3;
+      pts.push([W / 2 + (f / asp) * (X / -Z) * W / 2, H / 2 - f * (Y / -Z) * H / 2]);
+    }
+    out.push(pts);
+  }
+  return out;
+}
+function fireCoverage(frame, W = 160, H = 90) {
+  const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d', { willReadFrequently: true });
+  for (const r of fireScreenRects(W, H)) { const xs = r.map((p) => p[0]), ys = r.map((p) => p[1]); x.drawImage(frame, Math.min(...xs), Math.min(...ys), Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)); }
+  const d = x.getImageData(0, 0, W, H).data; let n = 0, top = H; for (let i = 3; i < d.length; i += 4) if (d[i] > 60) { n++; top = Math.min(top, Math.floor((i >> 2) / W)); }
+  return { cover: n / (W * H), top: top / H };
+}
 async function tabFire(b) {
   const p = S.project;
   const t0 = TEXTURES.find((t) => t.id === 'fire_0'), t1 = TEXTURES.find((t) => t.id === 'fire_1');
   const p0 = texPath(t0, p.packFormat), p1 = texPath(t1, p.packFormat);
-  const fs = p.fire || { lower: 0.45, opacity: 1, tint: null, useTint: false };
+  const fs = Object.assign({ lower: 0.45, opacity: 1, tint: null, useTint: false, gSize: 1, gOpacity: 1, gTint: true }, p.fire || {});
   b.innerHTML = `${noBaseNotice()}<div class="two">
     <div class="card stack">
-      <h3 style="margin:0">${icon('fire', 18)} شكل الفاير</h3>
+      <h3 style="margin:0">${icon('fire', 18)} الفاير على الشاشة <span class="muted small">(لما تحترق)</span></h3>
       <div class="seg" id="fmode"><button data-m="normal">عادي</button><button data-m="low">فاير قصير (Low Fire)</button><button data-m="none">بدون فاير</button></div>
       <div><div class="slider-row" style="grid-template-columns:90px 1fr 46px"><span>نزّل الفاير</span><input type="range" id="fl" min="0" max="90" value="${Math.round(fs.lower * 100)}"><output class="ltr"></output></div>
       <div class="slider-row" style="grid-template-columns:90px 1fr 46px"><span>الشفافية</span><input type="range" id="fo" min="10" max="100" value="${Math.round(fs.opacity * 100)}"><output class="ltr"></output></div></div>
+      <div class="hstat" id="fstat"></div>
+      <h3 style="margin:10px 0 0">${icon('fire', 18)} الفاير بالأرض <span class="muted small">(النار اللي تولّعها)</span></h3>
+      <div class="seg" id="gmode"><button data-g="1">عادي</button><button data-g="0.6">صغير</button><button data-g="0.35">صغير مرة</button><button data-g="0">مخفي</button></div>
+      <div><div class="slider-row" style="grid-template-columns:90px 1fr 46px"><span>الطول</span><input type="range" id="gsz" min="0" max="100" value="${Math.round(fs.gSize * 100)}"><output class="ltr"></output></div>
+      <div class="slider-row" style="grid-template-columns:90px 1fr 46px"><span>الشفافية</span><input type="range" id="gop" min="10" max="100" value="${Math.round(fs.gOpacity * 100)}"><output class="ltr"></output></div></div>
       <label class="check"><span class="switch"><input type="checkbox" id="ft" ${fs.useTint ? 'checked' : ''}><span></span></span>لوّن الفاير<input type="color" id="ftc" value="${fs.tint || '#7c3aed'}" style="margin-inline-start:auto"></label>
+      <label class="check small"><span class="switch"><input type="checkbox" id="fgt" ${fs.gTint !== false ? 'checked' : ''}><span></span></span>نفس اللون للنار اللي بالأرض</label>
       <div class="row"><button class="btn primary" id="fapply">${icon('check', 16)} طبّق على الفاير</button><button class="btn" id="fedit">${icon('pencil', 16)} ارسم بيدك</button><button class="btn ghost" id="freset">${icon('reset', 16)} الأصلي</button></div>
-      <span class="muted small" style="line-height:1.7">يعدّل طبقتين الفاير (${esc(p0.split('/').pop())} و ${esc(p1.split('/').pop())}) مع كل إطارات الأنيميشن.</span>
     </div>
-    <div class="card"><h3>معاينة (منظور أول شخص)</h3><div class="stage" id="fstage"><div class="xh"></div><canvas id="fcv" style="position:absolute;inset:0;width:100%;height:100%"></canvas></div></div></div>`;
+    <div class="stack">
+      <div class="card"><h3>كيف بيطلع على الشاشة <span class="muted small">(نفس حسابات ماينكرافت)</span></h3><div class="fp-stage"><canvas id="fcv"></canvas></div></div>
+      <div class="card"><h3>النار بالأرض</h3><div class="fp-stage"><canvas id="gcv"></canvas></div></div>
+    </div></div>`;
   bindBaseActions(b);
-  const base = await api.tex.get(p, p0, true) || await api.tex.get(p, p0);
-  const baseImg = base ? await IMG.fromB64(base.data) : null;
+  const im1 = await texImg(p, p1), im0 = await texImg(p, p0);
   let mode = fs.lower === 0 && fs.opacity === 1 ? 'normal' : fs.opacity === 0 ? 'none' : 'low';
+  const outs = () => $$('.slider-row output', b).forEach((o) => o.textContent = o.previousElementSibling.value + '%');
   const setMode = (md) => { mode = md; $$('#fmode button', b).forEach((x) => x.classList.toggle('on', x.dataset.m === md)); if (md === 'normal') { $('#fl', b).value = 0; $('#fo', b).value = 100; } if (md === 'low' && +$('#fl', b).value === 0) $('#fl', b).value = 45; upd(); };
+  const syncG = () => { const v = +$('#gsz', b).value / 100; $$('#gmode button', b).forEach((x) => x.classList.toggle('on', Math.abs(+x.dataset.g - v) < 0.01)); };
   $$('#fmode button', b).forEach((x) => x.onclick = () => setMode(x.dataset.m));
-  let preview = null;
-  function cur() { return { lower: +$('#fl', b).value / 100, opacity: mode === 'none' ? 0 : +$('#fo', b).value / 100, useTint: $('#ft', b).checked, tint: $('#ftc', b).value }; }
+  $$('#gmode button', b).forEach((x) => x.onclick = () => { $('#gsz', b).value = Math.round(+x.dataset.g * 100); upd(); });
+  function cur() { return { lower: +$('#fl', b).value / 100, opacity: mode === 'none' ? 0 : +$('#fo', b).value / 100, useTint: $('#ft', b).checked, tint: $('#ftc', b).value, gSize: +$('#gsz', b).value / 100, gOpacity: +$('#gop', b).value / 100, gTint: $('#fgt', b).checked }; }
+  let scr = null, gnd = null;
   function upd() {
-    $$('.slider-row output', b).forEach((o) => o.textContent = o.previousElementSibling.value + '%');
-    if (baseImg) { const c = cur(); preview = IMG.toCanvas(fireTransform(baseImg, c.lower, c.opacity, c.useTint ? c.tint : null)); }
+    outs(); syncG(); const c = cur();
+    scr = im1 ? IMG.toCanvas(fireTransform(im1, c.lower, c.opacity, c.useTint ? c.tint : null)) : null;
+    gnd = im1 ? [im0 || im1, im1].map((im) => IMG.toCanvas(fireGround(im, c.gSize, c.gOpacity, c.useTint && c.gTint ? c.tint : null))) : null;
+    const st = $('#fstat', b);
+    if (!scr) { st.className = 'hstat'; st.innerHTML = `<span class="muted small">المعاينة تحتاج ملفات الفانيلا</span>`; return; }
+    const w = scr.width, fr = document.createElement('canvas'); fr.width = fr.height = w; fr.getContext('2d').drawImage(scr, 0, 0, w, w, 0, 0, w, w);
+    const cv = fireCoverage(fr), pct = Math.round(cv.cover * 100);
+    const k = cv.cover < 0.005 ? ['off', 'الفاير ما بيطلع على الشاشة أبد — بس اللي حولك يشوفونك تحترق'] : cv.cover < 0.12 ? ['ok', `فاير قصير ✓ — يغطي ${pct}% من الشاشة بس`] : cv.cover < 0.3 ? ['cut', `يغطي ${pct}% من الشاشة`] : ['cut', `يغطي ${pct}% من الشاشة — كثير (هذا الطبيعي باللعبة)`];
+    st.className = 'hstat ' + k[0]; st.innerHTML = `${icon('fire', 15)}<span>${k[1]}</span>`;
   }
-  ['fl', 'fo', 'ft', 'ftc'].forEach((id) => $('#' + id, b).oninput = () => { if (mode === 'normal' && (id === 'fl' || id === 'fo')) { mode = 'low'; $$('#fmode button', b).forEach((x) => x.classList.toggle('on', x.dataset.m === 'low')); } upd(); });
+  ['fl', 'fo', 'ft', 'ftc', 'gsz', 'gop', 'fgt'].forEach((id) => $('#' + id, b).oninput = () => { if (mode === 'normal' && (id === 'fl' || id === 'fo')) { mode = 'low'; $$('#fmode button', b).forEach((x) => x.classList.toggle('on', x.dataset.m === 'low')); } upd(); });
   setMode(mode);
-  const cv = $('#fcv', b), cx = cv.getContext('2d'); let fr = 0;
+  const cv = $('#fcv', b), gv = $('#gcv', b); let tick = 0;
+  const sky = (x, W, H) => { const g = x.createLinearGradient(0, 0, 0, H * 0.55); g.addColorStop(0, '#78a7ff'); g.addColorStop(1, '#c4dcff'); x.fillStyle = g; x.fillRect(0, 0, W, H); x.fillStyle = '#5d9b3a'; x.fillRect(0, H * 0.55, W, H); };
   const loop = () => {
     if (!document.body.contains(cv)) return;
-    const r = cv.getBoundingClientRect(); cv.width = r.width; cv.height = r.height; cx.imageSmoothingEnabled = false;
-    if (preview) {
-      const w = preview.width, n = Math.max(1, preview.height / w); fr = (fr + 1) % (n * 3);
-      const f = Math.floor(fr / 3), S2 = r.height * 0.95;
-      cx.globalAlpha = .95;
-      cx.drawImage(preview, 0, f * w, w, w, -S2 * 0.25, r.height - S2, S2, S2);
-      cx.save(); cx.scale(-1, 1); cx.drawImage(preview, 0, f * w, w, w, -r.width - S2 * 0.25, r.height - S2, S2, S2); cx.restore();
-    } else { cx.fillStyle = '#0008'; cx.fillRect(0, 0, r.width, r.height); cx.fillStyle = '#fff'; cx.font = '14px Segoe UI'; cx.textAlign = 'center'; cx.fillText('المعاينة تحتاج ملفات الفانيلا', r.width / 2, r.height / 2); }
-    setTimeout(() => requestAnimationFrame(loop), 50);
+    tick++;
+    for (const c of [cv, gv]) { const r = c.getBoundingClientRect(); c.width = Math.max(320, r.width * devicePixelRatio); c.height = c.width * 9 / 16; }
+    // screen
+    let x = cv.getContext('2d'), W = cv.width, H = cv.height; x.imageSmoothingEnabled = false; sky(x, W, H);
+    if (scr) { const w = scr.width, n = Math.max(1, Math.floor(scr.height / w)), f = tick % n; x.globalAlpha = 0.9;
+      for (const rc of fireScreenRects(W, H)) { const xs = rc.map((q) => q[0]), ys = rc.map((q) => q[1]); x.drawImage(scr, 0, f * w, w, w, Math.min(...xs), Math.min(...ys), Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)); }
+      x.globalAlpha = 1; }
+    const u = H / 100; x.fillStyle = 'rgba(255,255,255,.9)'; x.fillRect(W / 2 - u * 1.6, H / 2 - u * 0.25, u * 3.2, u * 0.5); x.fillRect(W / 2 - u * 0.25, H / 2 - u * 1.6, u * 0.5, u * 3.2);
+    // ground: a burning block in front of you, with a player-height marker
+    x = gv.getContext('2d'); W = gv.width; H = gv.height; x.imageSmoothingEnabled = false; sky(x, W, H);
+    const bs = H * 0.34, bx = W / 2 - bs / 2, by = H * 0.55;
+    x.fillStyle = '#6b4a2b'; x.fillRect(bx - bs * 1.2, by, bs * 3.4, bs * 0.9); x.fillStyle = '#5d9b3a'; x.fillRect(bx - bs * 1.2, by, bs * 3.4, bs * 0.18);
+    if (gnd) for (let k = 0; k < 2; k++) { const im = gnd[k], w = im.width, n = Math.max(1, Math.floor(im.height / w)), f = (tick + k * 7) % n, fh = bs * 1.4; x.globalAlpha = 0.95; x.drawImage(im, 0, f * w, w, w, bx + (k ? bs * 0.12 : -bs * 0.12), by - fh + bs * 0.04, bs, fh); }
+    x.globalAlpha = 1;
+    x.fillStyle = 'rgba(0,0,0,.45)'; const ph = bs * 1.8; x.fillRect(bx + bs * 1.7, by - ph, bs * 0.45, ph); x.fillStyle = '#fff'; x.font = `${Math.round(u * 3.4)}px Segoe UI`; x.textAlign = 'center'; x.fillText('طول اللاعب', bx + bs * 1.92, by - ph - u * 2);
+    setTimeout(() => requestAnimationFrame(loop), 70);
   };
   loop();
   $('#fapply', b).onclick = async () => {
-    const c = cur(); p.fire = c; await saveProject();
-    for (const path of [p0, p1]) {
-      const src = await api.tex.get(p, path, true) || await api.tex.get(p, path);
-      if (!src) { toast('ما فيه تكستر فاير أساسي — حمّل ملفات الفانيلا أو ارسمه', 'err'); return; }
-      const meta = await api.tex.getMeta(p, path);
-      const out = fireTransform(await IMG.fromB64(src.data), c.lower, c.opacity, c.useTint ? c.tint : null);
-      await api.tex.put(p.id, path, IMG.toB64(out), meta || '{"animation":{}}');
-    }
-    toast('تغيّر الفاير 🔥');
+    const ok = await applyFire(p, cur()); if (!ok) return toast('ما فيه تكستر فاير أساسي — حمّل ملفات الفانيلا أو ارسمه', 'err');
+    await saveProject(); celebrate(); toast('تغيّر الفاير 🔥 — الشاشة والأرض كل واحد لحاله');
   };
-  $('#freset', b).onclick = async () => { await api.tex.reset(p.id, p0); await api.tex.reset(p.id, p1); p.fire = null; await saveProject(); toast('رجع الفاير للأصلي'); tabFire(b); };
-  $('#fedit', b).onclick = () => editTexture({ ...t0, path: p0 }, () => tabFire(b));
+  $('#freset', b).onclick = async () => { await resetFire(p); await saveProject(); toast('رجع الفاير للأصلي'); tabFire(b); };
+  $('#fedit', b).onclick = () => editTexture({ ...t1, path: p1 }, () => tabFire(b));
 }
 
 // ---------- shield tab

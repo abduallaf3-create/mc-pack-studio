@@ -581,6 +581,17 @@ ipcMain.handle('pack:fix', (_e, project, items) => {
 
 
 // ---------------------------------------------------------------- held item size (low sword / small items)
+// Minecraft applies display rotation as X then Y then Z (degrees); left hand mirrors Y and Z
+function heldRot(v, r, left) {
+  const [rx, ry, rz] = r.map((a, i) => (left && i > 0 ? -a : a) * Math.PI / 180);
+  let [x, y, zz] = v;
+  [x, y] = [x * Math.cos(rz) - y * Math.sin(rz), x * Math.sin(rz) + y * Math.cos(rz)];
+  [x, zz] = [x * Math.cos(ry) + zz * Math.sin(ry), -x * Math.sin(ry) + zz * Math.cos(ry)];
+  [y, zz] = [y * Math.cos(rx) - zz * Math.sin(rx), y * Math.sin(rx) + zz * Math.cos(rx)];
+  return [x, y, zz];
+}
+// centre of code-drawn items in item space (blocks): shield plate is drawn flipped around the -0.5 corner
+const SPECIAL_CENTER = (n) => (/shield/.test(n) ? [-0.5, -0.5, -0.41] : [-0.5, -0.5, -0.5]);
 ipcMain.handle('held:build', (_e, project, cfg) => {
   const z = openJar(project.baseJar); if (!z) return { error: 'nojar', extras: {}, count: 0 };
   const pre = 'assets/minecraft/models/item/';
@@ -588,26 +599,37 @@ ipcMain.handle('held:build', (_e, project, cfg) => {
   const read = (n) => { const e = z.getEntry(pre + n + '.json'); if (!e) return null; try { return JSON.parse(e.getData().toString('utf8')); } catch { return null; } };
   const isTool = (n) => /(_sword|_axe|_pickaxe|_shovel|_hoe|_spear)$/.test(n) || /^(stick|blaze_rod|breeze_rod|bone|fishing_rod|carrot_on_a_stick|warped_fungus_on_a_stick|mace|handheld|handheld_rod|handheld_mace|trident)$/.test(n);
   const skip = (n) => /^(shield|shield_blocking|template_|air)/.test(n);
-  const mod = (m, lower, scale, xs) => {
+  // items rendered by code (shield, trident…) sit far from their origin, so shrinking them must keep their centre in place
+  const isSpecial = (n, m) => {
+    const it = z.getEntry('assets/minecraft/items/' + n + '.json');
+    if (it) { try { if (/"minecraft:special"|"special"/.test(it.getData().toString('utf8'))) return true; } catch {} }
+    let cur = m, d = 0; while (cur && d++ < 6) { const pn = String(cur.parent || '').replace(/^minecraft:/, ''); if (/builtin\/entity/.test(pn)) return true; if (!pn || pn.startsWith('builtin/')) break; cur = read(pn.replace(/^item\//, '')); }
+    return false;
+  };
+  const mod = (m, lower, scale, xs, center) => {
     let ch = false;
     for (const k of Object.keys(m.display || {})) {
       if (!/^firstperson/.test(k)) continue;
       const d = m.display[k];
       d.translation = [...(d.translation || [0, 0, 0])];
-      d.translation[1] = +(d.translation[1] - lower).toFixed(3);
-      if (xs) d.translation[0] = +(d.translation[0] + xs).toFixed(3);
-      d.scale = (d.scale || [1, 1, 1]).map((v) => +(v * scale).toFixed(3));
+      const S0 = d.scale || [1, 1, 1], S1 = S0.map((v) => v * scale);
+      if (center) { const dv = heldRot([0, 1, 2].map((i) => (S0[i] - S1[i]) * center[i]), d.rotation || [0, 0, 0], /left/.test(k)); if (/left/.test(k)) dv[0] = -dv[0]; for (let i = 0; i < 3; i++) d.translation[i] += dv[i] * 16; }
+      d.translation[1] = d.translation[1] - lower;
+      if (xs) d.translation[0] = d.translation[0] + (/left/.test(k) ? -xs : xs);
+      d.translation = d.translation.map((v) => +Math.max(-80, Math.min(80, v)).toFixed(3));
+      d.scale = S1.map((v) => +Math.max(-4, Math.min(4, v)).toFixed(3));
       ch = true;
     }
     return ch;
   };
   const out = {};
   const groups = [];
-  if (cfg.hOn) groups.push([names.filter((n) => isTool(n) && !skip(n)), cfg.hLower, cfg.hScale, cfg.hX]);
-  if (cfg.gOn) groups.push([names.filter((n) => !isTool(n) && !skip(n)), cfg.gLower, cfg.gScale, 0]);
-  for (const [list, lower, scale, xs] of groups) for (const n of list) {
+  const anc = (a) => (Array.isArray(a) && a.length === 3 ? a : null);
+  if (cfg.hOn) groups.push([names.filter((n) => isTool(n) && !skip(n)), cfg.hLower, cfg.hScale, cfg.hX, anc(cfg.hAnchor)]);
+  if (cfg.gOn) groups.push([names.filter((n) => !isTool(n) && !skip(n)), cfg.gLower, cfg.gScale, 0, anc(cfg.gAnchor)]);
+  for (const [list, lower, scale, xs, a] of groups) for (const n of list) {
     const m = read(n); if (!m || !m.display) continue; // only models that define their own hand position
-    if (mod(m, +lower || 0, +scale || 1, +xs || 0)) out[pre + n + '.json'] = JSON.stringify(m, null, 2);
+    if (mod(m, +lower || 0, +scale || 1, +xs || 0, a)) out[pre + n + '.json'] = JSON.stringify(m, null, 2);
   }
   // per-item sizes (any item): copy the inherited hand position into the item's own model, then change it
   const resolveDisplay = (m, depth = 0) => {
@@ -626,7 +648,7 @@ ipcMain.handle('held:build', (_e, project, cfg) => {
     const disp = resolveDisplay(m);
     if (!disp) continue;
     const mm = { ...m, display: { ...(m.display || {}), ...disp } };
-    if (mod(mm, +c.lower || 0, +c.scale || 1, +c.x || 0)) out[pre + n + '.json'] = JSON.stringify(mm, null, 2);
+    if (mod(mm, +c.lower || 0, +c.scale || 1, +c.x || 0, Array.isArray(c.anchor) && c.anchor.length === 3 ? c.anchor : isSpecial(n, m) ? SPECIAL_CENTER(n) : null)) out[pre + n + '.json'] = JSON.stringify(mm, null, 2);
   }
   return { extras: out, count: Object.keys(out).length };
 });
@@ -646,6 +668,7 @@ ipcMain.handle('versions:list', async () => {
   return out.length ? out : [{ id: MIN_VERSION }];
 });
 // exact resource pack format from the game's own version.json
+ipcMain.handle('jar:text', (_e, project, rel) => { const z = openJar(project.baseJar); const e = z && z.getEntry(rel); return e ? e.getData().toString('utf8') : null; });
 ipcMain.handle('jar:packFormat', (_e, jarPath) => {
   const z = openJar(jarPath); const e = z && z.getEntry('version.json'); if (!e) return null;
   try {
@@ -665,6 +688,18 @@ ipcMain.handle('models:list', (_e, project) => {
   return z.getEntries().map((e) => e.entryName).filter((n) => n.startsWith(pre) && n.endsWith('.json') && !n.slice(pre.length).includes('/'))
     .map((n) => { let tex = null; try { const j = JSON.parse(z.getEntry(n).getData().toString('utf8')); const l = j.textures && (j.textures.layer0 || Object.values(j.textures)[0]); if (l) tex = 'textures/' + String(l).replace(/^minecraft:/, '') + '.png'; } catch {} return { name: n.slice(pre.length, -5), tex }; })
     .filter((x) => !/^(template_|generated|handheld|air$)/.test(x.name)).sort((a, b) => a.name.localeCompare(b.name));
+});
+
+// the real hand position of items (for an exact preview)
+ipcMain.handle('held:displays', (_e, project, names) => {
+  const z = openJar(project.baseJar); if (!z) return {};
+  const pre = 'assets/minecraft/models/item/';
+  const read = (n) => { const e = z.getEntry(pre + n + '.json'); if (!e) return null; try { return JSON.parse(e.getData().toString('utf8')); } catch { return null; } };
+  const res = (m, d = 0) => { if (!m || d > 6) return null; if (m.display && m.display.firstperson_righthand) return m.display.firstperson_righthand; const pn = String(m.parent || '').replace(/^minecraft:/, ''); if (!pn || pn.startsWith('builtin/')) return null; if (pn.startsWith('block/')) { const be = z.getEntry('assets/minecraft/models/' + pn + '.json'); if (be) { try { return res(JSON.parse(be.getData().toString('utf8')), d + 1); } catch {} } return null; } return res(read(pn.replace(/^item\//, '')), d + 1); };
+  const special = (n, m) => { const it = z.getEntry('assets/minecraft/items/' + n + '.json'); if (it && /special/.test(it.getData().toString('utf8'))) return true; let c = m, d = 0; while (c && d++ < 6) { const pn = String(c.parent || '').replace(/^minecraft:/, ''); if (/builtin\/entity/.test(pn)) return true; if (!pn || pn.startsWith('builtin/')) break; c = read(pn.replace(/^item\//, '')); } return false; };
+  const out = {};
+  for (const n of names) { const m = read(n); if (!m) continue; const sp = special(n, m); out[n] = { disp: res(m), special: sp, center: sp ? SPECIAL_CENTER(n) : null }; }
+  return out;
 });
 
 // share a whole pack project with friends (.mcps file)
