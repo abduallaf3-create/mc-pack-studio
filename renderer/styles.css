@@ -646,3 +646,8 @@ html.no-anim *, html.no-anim *::before { animation: none !important; transition:
 .gc-row { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); }
 .gc-stage { border-radius: 14px; overflow: hidden; border: 1px solid var(--line); }
 .gc-stage canvas { width: 100%; display: block; }
+.pat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 6px; max-height: 260px; overflow: auto; padding: 2px; }
+.pat-grid button { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 4px; border-radius: 10px; border: 1px solid var(--line); background: rgba(255,255,255,.02); color: inherit; font: inherit; font-size: 11px; cursor: pointer; }
+.pat-grid button canvas { width: 36px; height: 36px; image-rendering: pixelated; border-radius: 6px; }
+.pat-grid button.on { border-color: var(--a1, #8b5cf6); background: rgba(139,92,246,.14); }
+.pat-grid button:hover { border-color: rgba(255,255,255,.2); }

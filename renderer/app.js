@@ -1685,7 +1685,11 @@ const ARMOR_DEF = { diamond: '#3b82f6', netherite: '#ef4444', iron: '#e5e7eb', g
 const armorItemPaths = (mat) => { const n = mat === 'gold' ? 'golden' : mat; return ['helmet', 'chestplate', 'leggings', 'boots'].map((x) => `textures/item/${n}_${x}.png`); };
 // ---------- armor & elytra style: colour + pattern + glow (keeps the game's shading)
 const SWATCHES = ['#ef4444', '#f97316', '#facc15', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#ffffff', '#111111'];
-const PATTERNS = [['solid', 'سادة'], ['grad', 'تدرّج'], ['camo', 'كامو'], ['rainbow', 'قوس قزح'], ['galaxy', 'جالكسي']];
+const PATTERNS = [['solid', 'سادة'], ['grad', 'تدرّج'], ['grad2', 'تدرّج مزدوج'], ['camo', 'كامو'], ['rainbow', 'قوس قزح'], ['galaxy', 'جالكسي'],
+  ['stripes', 'خطوط مايلة'], ['hstripes', 'خطوط عرضية'], ['checker', 'مربعات'], ['dots', 'نقاط'], ['waves', 'موج'], ['carbon', 'كاربون'],
+  ['zebra', 'زيبرا'], ['tiger', 'نمر'], ['marble', 'رخام'], ['scales', 'حراشف'], ['crystal', 'كريستال'], ['chrome', 'كروم'],
+  ['neon', 'نيون'], ['fire', 'نار'], ['ice', 'ثلج'], ['lava', 'لافا'], ['toxic', 'سام'], ['noise', 'نويز']];
+const PAT_C2 = new Set(['grad', 'grad2', 'camo', 'galaxy', 'stripes', 'hstripes', 'checker', 'dots', 'waves', 'carbon', 'zebra', 'tiger', 'marble', 'scales', 'neon', 'noise']);
 function styleTex(img, st) {
   if (!img || !st || !st.on) return img;
   const W = img.width, H = img.height, out = IMG.clone(img), d = out.data, src = img.data, k = Math.max(1, W / 64);
@@ -1698,10 +1702,32 @@ function styleTex(img, st) {
     const i = (y * W + x) * 4; if (src[i + 3] < 8) continue;
     const lum = (0.299 * src[i] + 0.587 * src[i + 1] + 0.114 * src[i + 2]) / 255;
     let c = c1;
-    if (st.pattern === 'grad') { const t = y / H; c = c1.map((v, j) => v + (c2[j] - v) * t); }
-    else if (st.pattern === 'camo') { const n = noise(x / (3 * k), y / (3 * k)) * 0.65 + noise(x / (1.5 * k), y / (1.5 * k)) * 0.35; c = n < 0.38 ? c2 : n < 0.62 ? c1 : c1.map((v, j) => (v + c2[j]) / 2 * 0.75); }
-    else if (st.pattern === 'rainbow') c = hslRgb(((x + y) / (W * 0.6)) % 1, 0.85, 0.55);
-    else if (st.pattern === 'galaxy') { const n = noise(x / (4 * k), y / (4 * k)); c = c1.map((v, j) => v * (1 - n) + c2[j] * n); if (hash(x, y) > 0.965) c = [255, 255, 255]; }
+    const P = st.pattern, mix = (a, b2, t) => a.map((v, j) => v + (b2[j] - v) * t), K = 2 * k;
+    if (P === 'grad') { const t = y / H; c = mix(c1, c2, t); }
+    else if (P === 'grad2') { const t = 1 - Math.abs(y / H * 2 - 1); c = mix(c2, c1, t); }
+    else if (P === 'stripes') c = Math.floor((x + y) / (K * 1.5)) % 2 ? c2 : c1;
+    else if (P === 'hstripes') c = Math.floor(y / (K * 1.5)) % 2 ? c2 : c1;
+    else if (P === 'checker') c = (Math.floor(x / K) + Math.floor(y / K)) % 2 ? c2 : c1;
+    else if (P === 'dots') { const g = 4 * k, dx = (x % g) - g / 2 + 0.5, dy = (y % g) - g / 2 + 0.5; c = dx * dx + dy * dy < (g * 0.3) ** 2 ? c2 : c1; }
+    else if (P === 'waves') c = Math.sin(x / (2.2 * k)) * 2 * k + (y % (6 * k)) < 3 * k ? c1 : c2;
+    else if (P === 'carbon') { const cx = Math.floor(x / K), cy = Math.floor(y / K), h2 = (cx + cy) % 2, f = h2 ? ((x % K) / K) : ((y % K) / K); c = mix(c2, c1, 0.25 + 0.5 * f); }
+    else if (P === 'zebra') c = Math.sin((x + noise(x / (5 * k), y / (5 * k)) * 10 * k) / (1.6 * k)) > 0 ? c1 : c2;
+    else if (P === 'tiger') { const v2 = Math.sin((y + noise(x / (4 * k), y / (6 * k)) * 8 * k) / (2.2 * k)); c = v2 > 0.55 ? c2 : c1; }
+    else if (P === 'marble') { const v2 = Math.abs(Math.sin((x + y) / (5 * k) + noise(x / (3 * k), y / (3 * k)) * 6)); c = v2 < 0.12 ? c2 : mix(c1, [255, 255, 255], 0.15 * v2); }
+    else if (P === 'scales') { const g = 3 * k, row = Math.floor(y / g), ox = row % 2 ? g / 2 : 0, dx = ((x + ox) % g) - g / 2, dy = (y % g); const r2 = (dx * dx + dy * dy) / (g * g); c = r2 > 0.55 ? c2 : mix(c1, [255, 255, 255], 0.25 * (1 - r2)); }
+    else if (P === 'crystal') { const g = 4 * k, gx = Math.floor(x / g), gy = Math.floor(y / g); let best = 9e9, bh = 0; for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) { const cx = (gx + ox + hash(gx + ox, gy + oy)) * g, cy = (gy + oy + hash(gy + oy, gx + ox)) * g, dd = (x - cx) ** 2 + (y - cy) ** 2; if (dd < best) { best = dd; bh = hash(gx + ox + 7, gy + oy + 3); } } c = mix(c1, [255, 255, 255], 0.1 + 0.55 * bh); }
+    else if (P === 'chrome') { const band = 0.5 + 0.5 * Math.sin(y / (2.5 * k) + lum * 4), g = 60 + 195 * band; c = mix([g, g, g], c1, 0.25); }
+    else if (P === 'neon') { let edge = 0; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (alpha(x + dx, y + dy) < 8) edge = 1; c = edge || lum > 0.75 ? c1.map((v) => Math.min(255, v * 1.25 + 30)) : c2.map((v) => v * 0.6); }
+    else if (P === 'fire' || P === 'lava' || P === 'ice' || P === 'toxic') {
+      const n = noise(x / (2.5 * k), y / (2.5 * k) + (P === 'fire' ? 0 : 3));
+      const stops = { fire: ['#3a0000', '#b91c1c', '#f97316', '#facc15', '#fff7cc'], lava: ['#120202', '#3f0d0d', '#c2410c', '#f97316', '#fde047'], ice: ['#0c2a4a', '#3b82f6', '#93c5fd', '#e0f2fe', '#ffffff'], toxic: ['#04140a', '#166534', '#22c55e', '#a3e635', '#f7fee7'] }[P];
+      const t = P === 'fire' ? Math.min(1, Math.max(0, (1 - y / H) * 0.7 + n * 0.5)) : P === 'lava' ? (Math.abs(Math.sin(n * 9)) < 0.25 ? 0.85 : 0.2 * n) : Math.min(1, n * 0.9 + lum * 0.3);
+      c = gradMap(stops, t);
+    }
+    else if (P === 'noise') c = mix(c1, c2, hash(Math.floor(x / k), Math.floor(y / k)) * 0.8);
+    else if (P === 'camo') { const n = noise(x / (3 * k), y / (3 * k)) * 0.65 + noise(x / (1.5 * k), y / (1.5 * k)) * 0.35; c = n < 0.38 ? c2 : n < 0.62 ? c1 : c1.map((v, j) => (v + c2[j]) / 2 * 0.75); }
+    else if (P === 'rainbow') c = hslRgb(((x + y) / (W * 0.6)) % 1, 0.85, 0.55);
+    else if (P === 'galaxy') { const n = noise(x / (4 * k), y / (4 * k)); c = c1.map((v, j) => v * (1 - n) + c2[j] * n); if (hash(x, y) > 0.965) c = [255, 255, 255]; }
     const shade = 0.3 + 0.95 * lum, t = [c[0] * shade, c[1] * shade, c[2] * shade].map((v) => Math.min(255, v));
     for (let j = 0; j < 3; j++) d[i + j] = src[i + j] + (t[j] - src[i + j]) * s;
     // glow: brighten the edges of every piece (next to an empty pixel) toward the glow colour
@@ -1748,7 +1774,7 @@ async function tabArmor(b) {
         <div class="row"><button class="btn sm" id="eimg">${icon('image', 15)} حط صورة عليها</button><button class="btn sm" id="edraw">${icon('edit', 15)} ارسمها وأنت طاير</button></div>
       </div>
       <h3 style="margin:8px 0 0">${icon('star', 16)} النقشة <span class="muted small" id="stfor"></span></h3>
-      <div class="seg wrap" id="apat">${PATTERNS.map(([k, n]) => `<button data-p="${k}">${n}</button>`).join('')}</div>
+      <div class="pat-grid" id="apat">${PATTERNS.map(([k, n]) => `<button data-p="${k}" title="${n}"><canvas width="32" height="32"></canvas><span>${n}</span></button>`).join('')}</div>
       <div class="row" id="c2row"><span class="muted small">اللون الثاني:</span>${SWATCHES.map((c) => `<button class="sw" data-c2="${c}" style="background:${c}"></button>`).join('')}<input type="color" id="acol2"></div>
       <h3 style="margin:8px 0 0">${icon('sun', 16)} الجلو</h3>
       <div class="slider-row" style="grid-template-columns:90px 1fr 46px"><span>قوة الجلو</span><input type="range" id="aglow" min="0" max="100"><output class="ltr"></output></div>
@@ -1780,11 +1806,19 @@ async function tabArmor(b) {
       if (!v || v.kind !== 'e') { if (v) v.stop(); $('#pvbox', b).classList.add('sky3d'); v = Lite3D.viewer($('#a3d', b), q, { dist: 70, pitch: 0.55, yaw: Math.PI }); v.kind = 'e'; } else v.set(q);
     }
   }
+  // little previews of every pattern in the current colours
+  const thumbBase = (() => { const im = new ImageData(32, 32); for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) { const i = (y * 32 + x) * 4, v = 150 + ((x * 7 + y * 13) % 40) - (x < 2 || y < 2 || x > 29 || y > 29 ? 60 : 0); im.data[i] = im.data[i + 1] = im.data[i + 2] = v; im.data[i + 3] = 255; } return im; })();
+  let lastThumbKey = '';
+  function drawPatThumbs(s) {
+    const key = [s.color, s.color2].join(); if (key === lastThumbKey) return; lastThumbKey = key;
+    $$('#apat button', b).forEach((bt) => { const cv = bt.querySelector('canvas'); const im = styleTex(thumbBase, { on: true, pattern: bt.dataset.p, color: s.color, color2: s.color2, s: 1, seed: 3 }); cv.getContext('2d').putImageData(im, 0, 0); });
+  }
   function syncUI() {
     const s = cur();
     $('#stfor', b).textContent = target === 'armor' ? '— ' + ARMOR_MATS.find((x) => x[0] === mat)[1] : '— الإليترا';
     $$('#apat button', b).forEach((x) => x.classList.toggle('on', x.dataset.p === s.pattern));
-    $('#c2row', b).style.display = s.pattern === 'grad' || s.pattern === 'camo' || s.pattern === 'galaxy' ? '' : 'none';
+    $('#c2row', b).style.display = PAT_C2.has(s.pattern) ? '' : 'none';
+    drawPatThumbs(s);
     $('#acol2', b).value = s.color2; $('#aglow', b).value = Math.round((s.glow || 0) * 100); $('#aemis', b).checked = !!s.emissive; $('#astr', b).value = Math.round(s.s * 100);
     $('#aicons', b).checked = s.icons !== false; $('#iconsrow', b).style.display = target === 'armor' ? '' : 'none';
     $$('.slider-row output', b).forEach((o) => o.textContent = o.previousElementSibling.value + '%');
