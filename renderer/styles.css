@@ -588,3 +588,4 @@ html.no-anim *, html.no-anim *::before { animation: none !important; transition:
 .mg-all { display: inline-flex; gap: 6px; margin-inline-start: 12px; vertical-align: middle; }
 .mrow { justify-content: flex-start; }
 .mrow > b { flex: none; }
+.where-box { padding: 14px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid var(--line); }

@@ -1059,3 +1059,21 @@ OptiFine (سما، CIT...)	OptiFine (sky, CIT...)
 من جديد	Replay
 كل تكستر باللعبة هنا — اختر المجلد على الجنب، اضغط على أي تكستر وعدّله. المعدّل يطلع بـ "المعدّل".	Every texture in the game is here — pick a folder on the side, click any texture and edit it. Edited ones show under "Edited".
 كل تكسترات اللعبة	All game textures
+تقدر تختار أي مجلد: مجلد resourcepacks حق أي كلاينت، أو سطح المكتب، أو فلاشة… إذا اخترت مجلد resourcepacks حق كلاينت، الباك يتفعّل باللعبة لحاله.	You can pick any folder: a client's resourcepacks folder, the desktop, a USB drive… If you pick a client's resourcepacks folder, the pack is enabled in game automatically.
+بنسخ كل باكاتك وإعداداتك للمكان الجديد، وبعدها التطبيق يقفل ويفتح لحاله.	I'll copy all your packs and settings to the new place, then the app restarts by itself.
+النسخة القديمة تبقى مكانها احتياط.	The old copy stays where it is as a backup.
+ما ينفع تختار مجلد داخل مجلد البيانات نفسه	You can't pick a folder inside the data folder itself
+نقلت ملفاتك ✓ — التطبيق بيفتح من جديد	Files moved ✓ — the app will restart
+لما تضغط "تثبيت" الباك ينحفظ هنا	When you press "Install", the pack is saved here
+صار الباك ينحفظ في:	The pack now saves to:
+اختر وين تنحفظ باكاتك	Choose where your packs are stored
+اختر وين ينحفظ الباك	Choose where the pack is saved
+هذا نفس المكان الحالي	That's the same place
+اختر مكان ثاني	Pick another place
+المكان الافتراضي	Default location
+المكان الحالي	Current location
+مكان حفظ الباك	Pack save location
+رجّع لمجلد	Back to the folder of
+مكان الحفظ	Save location
+نقل ملفاتك	Move your files
+انقل	Move

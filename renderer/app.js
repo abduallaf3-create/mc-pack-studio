@@ -328,6 +328,7 @@ async function renderProject(main) {
       <label class="btn live ${p.live ? 'on' : ''}" id="live" title="كل ما تحفظ شي، الباك يتثبّت لحاله — باللعبة اضغط F3+T"><span class="dotlive"></span>تثبيت تلقائي</label>
       <button class="btn" id="chk">${icon('check', 17)} فحص</button>
       <button class="btn" id="exp">${icon('zip', 17)} تصدير ZIP</button>
+      <button class="btn" id="where" title="${esc(p.rpPath || '')}">${icon('folder', 17)} مكان الحفظ</button>
       <button class="btn primary lg" id="inst">${icon('play', 18)} تثبيت في ${esc(c.name)}</button>
     </div>
     <div class="ws-split"><nav class="tabs side">${TAB_GROUPS.map(([g, list]) => `<div class="tgrp">${g}</div>` + list.map(([id, n, ic]) => `<button class="tab ${S.tab === id ? 'on' : ''}" data-t="${id}">${icon(ic, 16)}<span>${n}</span></button>`).join('')).join('')}</nav>
@@ -336,6 +337,7 @@ async function renderProject(main) {
   $('#picon').onclick = editPackIcon;
   $$('.tab').forEach((t) => t.onclick = () => { S.tab = t.dataset.t; $$('.tab').forEach((x) => x.classList.toggle('on', x === t)); renderTab(); });
   $('#inst').onclick = () => installPack();
+  $('#where').onclick = () => openSaveWhere();
   if (!(S.settings.tours || {}).project && !$('.tour-box')) setTimeout(() => { if (S.view === 'project' && !$('.tour-box') && !$('.modal-bg')) startTour('project'); }, 900);
   $('#chk').onclick = () => openChecker();
   $('#live').onclick = async () => { p.live = !p.live; $('#live').classList.toggle('on', p.live); await saveProject(); toast(p.live ? 'التثبيت التلقائي شغال — عدّل واحفظ، وباللعبة اضغط F3+T' : 'وقّفت التثبيت التلقائي'); if (p.live) installPack(true); };
@@ -2284,7 +2286,7 @@ async function tabPSettings(b) {
       <div class="kv"><span class="muted">الاسم</span><b>${esc(p.name)}</b></div>
       <div class="kv"><span class="muted">الكلاينت</span><span>${esc(clientOf(p.clientId).name)}${p.instance ? ' · ' + esc(p.instance) : ''}</span></div>
       <div class="kv"><span class="muted">النسخة</span><span class="ltr">${esc(p.version)} (pack_format ${p.packFormat})</span></div>
-      <div class="kv"><span class="muted">الريسورس باك</span><span class="ltr small" style="max-width:60%;overflow:hidden;text-overflow:ellipsis">${esc(p.rpPath || '—')}</span></div>
+      <div class="kv"><span class="muted">مكان حفظ الباك</span><span class="row" style="gap:6px;max-width:70%"><span class="ltr small" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.rpPath || '—')}</span><button class="btn sm" id="srp">${icon('folder', 14)} غيّر</button></span></div>
       <div class="kv"><span class="muted">المودات</span><span class="ltr small" style="max-width:60%;overflow:hidden;text-overflow:ellipsis">${esc(p.modsPath || '—')}</span></div>
       <div class="kv"><span class="muted">ملفات الفانيلا</span><span class="ltr small" style="max-width:60%;overflow:hidden;text-overflow:ellipsis">${esc(p.baseJar || '—')}</span></div>
       <div class="row" style="margin-top:14px"><button class="btn primary" id="sedit">${icon('edit', 16)} تعديل الإعدادات</button><button class="btn" id="sjar">${icon('cube', 16)} اختر jar</button><button class="btn ghost" id="sopen">${icon('folder', 16)} مجلد الريسورس باك</button></div></div>
@@ -2302,6 +2304,7 @@ async function tabPSettings(b) {
   $('#sedit', b).onclick = () => openProjectForm(p);
   $('#sjar', b).onclick = async () => { const r = await api.fs.pickFiles('اختر ملف jar', ['jar']); if (r) { p.baseJar = r[0]; await saveProject(); render(); } };
   $('#sopen', b).onclick = () => api.fs.open(p.rpPath);
+  $('#srp', b).onclick = () => openSaveWhere();
   $('#iedit', b).onclick = async () => { await editPackIcon(); };
   $('#iimp', b).onclick = async () => { const f = await api.fs.pickFiles('صورة', ['png', 'jpg', 'jpeg', 'webp']); if (!f) return; const im = await IMG.load('data:image/png;base64,' + await api.fs.readB64(f[0])); const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'); const s = Math.min(im.width, im.height); x.drawImage(im, (im.width - s) / 2, (im.height - s) / 2, s, s, 0, 0, 128, 128); await api.file.setIcon(p.id, c.toDataURL('image/png').split(',')[1]); setI(); };
   $('#igen', b).onclick = async () => { await api.file.setIcon(p.id, await makeIcon(p.name, clientOf(p.clientId).color)); setI(); };
@@ -2345,6 +2348,19 @@ function renderClients(main) {
 }
 
 // ------------------------------------------------------------- app settings
+// where the pack gets saved (installed) — any folder the user wants
+function openSaveWhere() {
+  const p = S.project, c = clientOf(p.clientId);
+  const def = p.instance && c.instances ? (c.instances.find((i) => i.name === p.instance) || {}).rp : c.rpPath;
+  const m = modal({ title: `${icon('folder', 18)} مكان حفظ الباك`, sub: 'لما تضغط "تثبيت" الباك ينحفظ هنا',
+    body: `<div class="stack"><div class="where-box"><div class="muted small">المكان الحالي</div><div class="ltr" id="wcur" style="word-break:break-all;font-weight:600">${esc(p.rpPath || '—')}</div></div>
+      <div class="muted small" style="line-height:1.7">تقدر تختار أي مجلد: مجلد resourcepacks حق أي كلاينت، أو سطح المكتب، أو فلاشة… إذا اخترت مجلد resourcepacks حق كلاينت، الباك يتفعّل باللعبة لحاله.</div></div>`,
+    foot: `<button class="btn" data-open>${icon('folder', 15)} افتح المجلد</button>${def && def !== p.rpPath ? `<button class="btn ghost" data-def>${icon('reset', 15)} رجّع لمجلد ${esc(c.name)}</button>` : ''}<span class="spacer"></span><button class="btn primary" data-pick>${icon('edit', 15)} اختر مكان ثاني</button>` });
+  const set = async (dir) => { p.rpPath = dir; await saveProject(); m.close(true); toast('صار الباك ينحفظ في: ' + dir); const w = $('#where'); if (w) w.title = dir; if (S.tab === 'psettings') renderTab(); };
+  m.el.querySelector('[data-open]').onclick = () => p.rpPath && api.fs.open(p.rpPath);
+  const d = m.el.querySelector('[data-def]'); if (d) d.onclick = () => set(def);
+  m.el.querySelector('[data-pick]').onclick = async () => { const dir = await api.fs.pickFolder('اختر وين ينحفظ الباك'); if (dir) set(dir); };
+}
 async function setLang(l) {
   S.settings.lang = l; await api.settings.set(S.settings);
   if (l === 'en') { I18N.set('en'); render(); } else location.reload();
@@ -2365,12 +2381,18 @@ async function renderSettings(main) {
       <div class="kv"><span class="muted">الإصدار</span><span class="row"><span class="ltr">MC Pack Studio ${esc(info.version)}</span><button class="btn sm primary" id="oupd">${icon('reset', 14)} تحقق من التحديثات</button></span></div>
       <div class="kv"><span class="muted">تحقق تلقائي من التحديثات</span><label class="switch"><input type="checkbox" id="oauto" ${S.settings.autoUpdate !== false ? 'checked' : ''}><span></span></label></div>
       <div class="kv"><span class="muted">مجلد ماينكرافت</span><span class="ltr small">${esc(info.mcDir)}</span></div>
-      <div class="kv"><span class="muted">مكان حفظ ملفاتك</span><span class="row"><span class="ltr small">${esc(info.dataDir)}</span><button class="btn sm ghost icon" id="odata">${icon('folder', 15)}</button></span></div>
+      <div class="kv"><span class="muted">مكان حفظ ملفاتك</span><span class="row"><span class="ltr small">${esc(info.dataDir)}</span><button class="btn sm ghost icon" id="odata">${icon('folder', 15)}</button><button class="btn sm" id="mdata">${icon('edit', 14)} غيّر</button>${info.dataDefault ? '' : `<button class="btn sm ghost" id="rdata">${icon('reset', 14)} الافتراضي</button>`}</span></div>
       <div class="kv"><span class="muted">ملفات اللعبة المحمّلة</span><span class="row"><button class="btn sm" id="owiz">${icon('download', 15)} معالج الإعداد</button><button class="btn sm ghost icon" id="ogame">${icon('folder', 15)}</button></span></div>
       <div class="kv"><span class="muted">النسخ الاحتياطية للمودات</span><button class="btn sm ghost" id="obak">${icon('folder', 15)} افتح</button></div></div>
     <p class="dim small" style="margin-top:18px;line-height:1.8">التطبيق ما فيه أي ملفات من ماينكرافت — يقرأ التكسترات الأصلية من نسخة اللعبة المثبتة عندك. مو تابع لـ Mojang أو Microsoft.</p></div>`;
   $$('[data-th]', main).forEach((x) => x.onclick = async () => { S.settings.theme = x.dataset.th; await api.settings.set(S.settings); applyAccent(); renderSettings(main); renderRail(); });
   $$('[data-acc]', main).forEach((x) => x.onclick = async () => { S.settings.accent = x.dataset.acc; await api.settings.set(S.settings); applyAccent(); renderSettings(main); renderRail(); });
+  const moveData = async (dir) => {
+    if (!(await confirmBox('نقل ملفاتك', `بنسخ كل باكاتك وإعداداتك للمكان الجديد، وبعدها التطبيق يقفل ويفتح لحاله.<br><span class="ltr small">${esc(dir || 'المكان الافتراضي')}</span><br>النسخة القديمة تبقى مكانها احتياط.`, 'انقل'))) return;
+    try { const r = await api.app.moveData(dir); if (r && r.same) toast('هذا نفس المكان الحالي'); else toast('نقلت ملفاتك ✓ — التطبيق بيفتح من جديد'); } catch (e) { toast(String(e.message || e).replace(/^Error.*?: /, ''), 'err'); }
+  };
+  $('#mdata', main).onclick = async () => { const dir = await api.fs.pickFolder('اختر وين تنحفظ باكاتك'); if (dir) moveData(dir); };
+  const rd = $('#rdata', main); if (rd) rd.onclick = () => moveData('');
   $('#odata', main).onclick = () => api.fs.open(info.dataDir);
   $('#obak', main).onclick = async () => api.fs.open(await api.mods.backups());
   $('#owiz', main).onclick = () => openWizard();

@@ -14,7 +14,10 @@ const MC_DIR = process.platform === 'darwin'
   ? path.join(APPDATA, 'minecraft')
   : path.join(APPDATA, '.minecraft');
 
-const DATA_DIR = path.join(app.getPath('userData'), 'studio');
+// where packs & app data live — the user can move it (a small pointer file remembers the place)
+const DEFAULT_DATA = path.join(app.getPath('userData'), 'studio');
+const DATA_PTR = path.join(app.getPath('userData'), 'data-location.txt');
+const DATA_DIR = (() => { try { const d = fs.readFileSync(DATA_PTR, 'utf8').trim(); if (d && fs.existsSync(d)) return d; } catch {} return DEFAULT_DATA; })();
 const PROJECTS_DIR = path.join(DATA_DIR, 'projects');
 const BACKUP_DIR = path.join(DATA_DIR, 'mod-backups');
 const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
@@ -749,7 +752,7 @@ ipcMain.handle('pack:install', (_e, project, extra, activate, target) => {
   const out = path.join(project.rpPath, name);
   buildZip(project, extra).writeZip(out);
   let activated = false;
-  if (activate) { try { activated = activateInOptions(path.dirname(project.rpPath), name, project.packFormat <= 3); } catch {} }
+  if (activate && /^resourcepacks$/i.test(path.basename(project.rpPath))) { try { activated = activateInOptions(path.dirname(project.rpPath), name, project.packFormat <= 3); } catch {} }
   return { path: out, activated };
 });
 ipcMain.handle('pack:export', async (_e, project, extra) => {
@@ -762,8 +765,20 @@ ipcMain.handle('pack:export', async (_e, project, extra) => {
 // ---------------------------------------------------------------- generic fs helpers
 ipcMain.handle('fs:exists', (_e, p) => exists(p));
 ipcMain.handle('fs:pickFolder', async (_e, title) => {
+  if (testPicks && testPicks.length) return testPicks.shift();
   const r = await dialog.showOpenDialog(win, { title, properties: ['openDirectory', 'createDirectory'] });
   return r.canceled ? null : r.filePaths[0];
+});
+// move all packs/app data to another folder, then restart (the old copy is left untouched as a backup)
+ipcMain.handle('app:moveData', async (_e, parent) => {
+  const target = parent === '' ? DEFAULT_DATA : path.join(parent, 'MC Pack Studio');
+  if (path.resolve(target) === path.resolve(DATA_DIR)) return { same: true };
+  if (path.resolve(target).startsWith(path.resolve(DATA_DIR) + path.sep)) throw new Error('ما ينفع تختار مجلد داخل مجلد البيانات نفسه');
+  fs.mkdirSync(target, { recursive: true });
+  fs.cpSync(DATA_DIR, target, { recursive: true, force: false, errorOnExist: false });
+  if (target === DEFAULT_DATA) fs.rmSync(DATA_PTR, { force: true }); else fs.writeFileSync(DATA_PTR, target);
+  setTimeout(() => { app.relaunch(); app.exit(0); }, 400);
+  return { path: target };
 });
 const testPicks = process.env.MCS_PICK ? process.env.MCS_PICK.split(',') : null;
 ipcMain.handle('fs:pickFiles', async (_e, title, exts, multi) => {
@@ -926,7 +941,7 @@ function createWindow() {
   win.webContents.setWindowOpenHandler(({ url }) => { shell.openExternal(url); return { action: 'deny' }; });
   if (process.env.MCS_SHOT) require(process.env.MCS_SCRIPT || './test/shot.js')(win, app);
 }
-ipcMain.handle('app:info', () => ({ version: app.getVersion(), platform: process.platform, mcDir: MC_DIR, dataDir: DATA_DIR }));
+ipcMain.handle('app:info', () => ({ version: app.getVersion(), platform: process.platform, mcDir: MC_DIR, dataDir: DATA_DIR, dataDefault: DATA_DIR === DEFAULT_DATA }));
 
 app.whenReady().then(createWindow);
 app.on('window-all-closed', () => app.quit());
