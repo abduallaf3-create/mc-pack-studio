@@ -217,6 +217,8 @@ function openProjectForm(edit) {
         <label class="f">نسخة ماينكرافت<select class="inp" id="f-ver">${verList.map((v) => `<option value="${v.id}" ${v.id === p.version ? 'selected' : ''}>${v.label}</option>`).join('')}</select></label>
       </div>
       <label class="f">الوصف (يطلع تحت اسم الباك باللعبة)<input class="inp" id="f-desc" value="${esc(p.description)}" placeholder="§dMade with MC Pack Studio"></label>
+      ${edit ? '' : `<div><div class="row" style="margin-bottom:10px"><b>ابدأ من قالب</b><span class="muted small">تقدر تغيّر كل شي بعدين</span></div>
+        <div class="tpl-grid">${TEMPLATES.map(([id, n, ic, d]) => `<div class="tpl ${id === 'blank' ? 'on' : ''}" data-tpl="${id}"><div class="ti">${icon(ic, 20)}</div><b>${n}</b><span>${d}</span></div>`).join('')}</div></div>`}
       <div><div class="row" style="margin-bottom:10px"><b>الكلاينت</b><span class="muted small">الأخضر = موجود على جهازك</span></div>
         <div class="client-grid">${S.clients.map((c) => `<div class="client ${c.id === p.clientId ? 'on' : ''}" data-c="${c.id}">
           ${clientLogo(c)}<div class="nm">${esc(c.name)}</div>${c.detected ? '<span class="det"></span>' : ''}</div>`).join('')}</div></div>
@@ -226,8 +228,7 @@ function openProjectForm(edit) {
         <label class="f">مجلد المودات<div class="path-row"><input class="inp" id="f-mods" placeholder="—"><button class="btn icon" data-pick="f-mods">${icon('folder')}</button></div></label>
       </div>
       <div id="f-note"></div>
-      ${edit ? '' : `<div><div class="row" style="margin-bottom:10px"><b>ابدأ من قالب</b><span class="muted small">تقدر تغيّر كل شي بعدين</span></div>
-        <div class="tpl-grid">${TEMPLATES.map(([id, n, ic, d]) => `<div class="tpl ${id === 'blank' ? 'on' : ''}" data-tpl="${id}"><div class="ti">${icon(ic, 20)}</div><b>${n}</b><span>${d}</span></div>`).join('')}</div></div>`}
+
       <label class="check"><span class="switch"><input type="checkbox" id="f-act" ${p.activate ? 'checked' : ''}><span></span></span>
         <span>فعّل الباك تلقائياً في اللعبة بعد التثبيت <span class="dim small">(يعدّل options.txt — سكّر اللعبة قبل)</span></span></label>
     </div>`,
@@ -624,9 +625,10 @@ async function importShared() {
 // ------------------------------------------------------------- starter templates
 const TEMPLATES = [
   ['blank', 'فاضي', 'file', 'تبدأ من تكسترات ماينكرافت الأصلية بدون أي تغيير'],
-  ['pvp', 'PvP نظيف', 'sword', 'نار قصيرة، شيلد قصير، سيف صغير، كروس هير نقطة، زجاج شفاف'],
-  ['bedwars', 'Bedwars', 'cube', 'زجاج شفاف، نار قصيرة، أدوات صغيرة، بدون قرعة'],
-  ['fps', 'رؤية صافية', 'monitor', 'بدون تظليل وبدون قرعة، نار شفافة، زجاج شفاف'],
+  ['light', 'PvP خفيف', 'wand', 'أدوات أصغر شوي، شيلد قصير، نار قصيرة، توتم أصغر، كروس هير نقطة، زجاج شفاف'],
+  ['strong', 'PvP قوي', 'sword', 'أدوات صغيرة ونازلة، شيلد قصير مرة، نار قصيرة مرة، زجاج شفاف، بدون قرعة'],
+  ['bedwars', 'Bedwars', 'cube', 'بلوكات وأدوات أصغر، نار قصيرة، زجاج شفاف، بدون قرعة'],
+  ['fps', 'شاشة صافية', 'monitor', 'كل شي صغير، نار شبه مخفية، بدون تظليل وبدون قرعة، زجاج شفاف'],
   ['dark', 'داكن', 'palette', 'واجهة داكنة بلون بنفسجي غامق مع نار بنفسجية'],
 ];
 async function texImg(p, rel, baseOnly = true) { const r = await api.tex.get(p, rel, baseOnly) || (baseOnly ? await api.tex.get(p, rel) : null); return r ? IMG.fromB64(r.data) : null; }
@@ -650,19 +652,15 @@ async function applyTemplate(p, tpl) {
   if (!tpl || tpl === 'blank' || !p.baseJar) return;
   const done = toastLoading('أجهّز القالب...');
   try {
-    if (tpl === 'pvp') {
-      await applyFire(p, { lower: 0.5, opacity: 1, useTint: false });
-      p.shield = { enabled: true, lower: 6, blockLower: 5, scale: 0.9 };
-      p.held = Object.assign({}, HELD_DEF, { on: true, hLower: 2.5, hScale: 0.85 });
-      await applyCross(p, { style: 'dot', size: 2, thick: 1, gap: 0, color: '#ffffff', outline: true, dot: true });
+    if (tpl === 'pvp') tpl = 'light'; // old name
+    if (['light', 'strong', 'bedwars', 'fps'].includes(tpl)) {
+      if (tpl === 'light' || tpl === 'strong') await applyCross(p, { style: 'dot', size: 2, thick: 1, gap: 0, color: '#ffffff', outline: true, dot: true });
       await applyQuickTweak(p, 'glass');
-    } else if (tpl === 'bedwars') {
-      await applyQuickTweak(p, 'glass'); await applyQuickTweak(p, 'pumpkin');
-      await applyFire(p, { lower: 0.45, opacity: 1, useTint: false });
-      p.held = Object.assign({}, HELD_DEF, { on: true, hLower: 3, hScale: 0.8, gOn: true, gLower: 2, gScale: 0.8 });
-    } else if (tpl === 'fps') {
-      await applyQuickTweak(p, 'vignette'); await applyQuickTweak(p, 'pumpkin'); await applyQuickTweak(p, 'glass');
-      await applyFire(p, { lower: 0.55, opacity: 0.5, useTint: false });
+      if (tpl !== 'light') await applyQuickTweak(p, 'pumpkin');
+      if (tpl === 'fps') await applyQuickTweak(p, 'vignette');
+      // the same ready-made sizes as in "القياسات" (worked out with the game's own maths)
+      const tmp = document.createElement('div'); tmp.style.cssText = 'position:fixed;left:-9999px;top:0;width:900px;height:700px;visibility:hidden'; document.body.append(tmp);
+      try { await tabMeasure(tmp, tpl); } finally { tmp.remove(); }
     } else if (tpl === 'dark') {
       await applyTint(p, ['gui'], '#3b2a5c', 0.75);
       await applyFire(p, { lower: 0.4, opacity: 1, useTint: true, tint: '#7c3aed' });
@@ -1203,7 +1201,7 @@ async function tabHeld(b) {
 
 // ------------------------------------------------------------- القياسات: every size/position in one place
 const MEAS_CATS = [['all', 'الكل'], ['changed', 'المتغيّر'], ['main', 'الأساسية'], ['weapons', 'أسلحة'], ['tools', 'أدوات'], ['throw', 'رمي'], ['food', 'أكل'], ['armor', 'دروع وتوتم'], ['misc', 'باقي الأشياء'], ['blocks', 'بلوكات']];
-async function tabMeasure(b) {
+async function tabMeasure(b, autoPreset) {
   const p = S.project, h = p.held = Object.assign({ on: false }, HELD_DEF, p.held || {});
   h.items = h.items || {}; h.imported = h.imported || {};
   const sh = p.shield = Object.assign({ enabled: false, lower: 0, scale: 1, blockLower: 0 }, p.shield || {});
@@ -1413,18 +1411,23 @@ async function tabMeasure(b) {
     fps: { cats: [3, 0.65, 0.5, 0, 0], other: [3, 0.6, 0, 0, 0], shield: [2.5, 0.6, 0, 0, 0], block: [2.5, 0.6, 0, 0, 0], fire: 0.75, totem: 0.25, name: 'شاشة صافية' },
     reset: { cats: N5, other: N5, shield: N5, block: N5, fire: 0, totem: 1, name: 'الأصلي' },
   };
-  $$('[data-preset]', b).forEach((bt) => bt.onclick = async () => {
-    const P = PRESETS[bt.dataset.preset]; bt.disabled = true;
+  async function runPreset(key, quiet) {
+    const P = PRESETS[key];
     for (const t of things) {
       if (t.kind === 'cat') await setVals(t, /weapons|tools/.test(t.catKey) ? P.cats : P.other);
       else if (t.kind === 'blocks') await setVals(t, P.other);
       else if (t.kind === 'shield') await setVals(t, t.block ? P.block : P.shield);
-      else if (t.kind === 'fire') await setVals(t, [P.fire]);
+      else if (t.kind === 'fire') { p.fire = Object.assign(fireCfg(), { lower: P.fire }); await applyFire(p, p.fire); }
       else if (t.kind === 'totem') await setVals(t, [0, P.totem]);
-      else if (t.kind === 'item' && bt.dataset.preset === 'reset') await setVals(t, N5);
+      else if (t.kind === 'item' && key === 'reset') await setVals(t, N5);
     }
-    if (bt.dataset.preset === 'reset') { h.cats = {}; delete h.blocks; }
-    bt.disabled = false; drawList(); drawEditor(); celebrate(); toast(`طبّقت «${P.name}» ✓ — تقدر تعدّل أي شي بعدها`);
+    if (key === 'reset') { h.cats = {}; delete h.blocks; }
+    clearTimeout(setVals.t); await saveProject();
+    if (!quiet) { drawList(); drawEditor(); celebrate(); toast(`طبّقت «${P.name}» ✓ — تقدر تعدّل أي شي بعدها`); }
+  }
+  if (autoPreset) return runPreset(autoPreset, true);
+  $$('[data-preset]', b).forEach((bt) => bt.onclick = async () => {
+    bt.disabled = true; await runPreset(bt.dataset.preset); bt.disabled = false;
   });
   $('#mmeas', b).onclick = () => importMeasurements(() => tabMeasure(b));
   const mc = $('#mclr', b); if (mc) mc.onclick = async () => { h.imported = {}; delete sh.imported; await saveProject(); tabMeasure(b); toast('رجعت القياسات لقياسات اللعبة'); };
