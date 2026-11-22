@@ -309,8 +309,36 @@ function itemCat(m) {
   return 'misc';
 }
 const ITEM_AR = { shield: 'الشيلد', diamond_sword: 'سيف دايموند', netherite_sword: 'سيف نذرايت', iron_sword: 'سيف حديد', golden_sword: 'سيف ذهب', stone_sword: 'سيف حجر', wooden_sword: 'سيف خشب', diamond_axe: 'فاس دايموند', netherite_axe: 'فاس نذرايت', iron_axe: 'فاس حديد', bow: 'القوس', crossbow: 'الكروس بو', trident: 'الترايدنت', mace: 'الميس', shield: 'الشيلد', ender_pearl: 'إندر بيرل', snowball: 'كرة ثلج', egg: 'البيضة', totem_of_undying: 'التوتم', golden_apple: 'تفاحة ذهبية', enchanted_golden_apple: 'تفاحة ذهبية مإنشانت', fishing_rod: 'السنارة', flint_and_steel: 'ولّاعة', water_bucket: 'سطل ماء', lava_bucket: 'سطل لافا', cooked_beef: 'ستيك', elytra: 'الإليترا', diamond_pickaxe: 'معول دايموند', netherite_pickaxe: 'معول نذرايت', experience_bottle: 'قارورة XP', fire_charge: 'كرة نار', wind_charge: 'شحنة الريح', ender_eye: 'عين الإندر', arrow: 'السهم', compass: 'البوصلة', clock: 'الساعة', spyglass: 'المنظار', shears: 'المقص' };
+const FAM_AR_MORE = { meat: 'كل اللحوم', fish: 'كل السمك', potato: 'كل البطاطس', bread: 'الخبز', sweet: 'كل الحلويات', stew: 'كل الشوربات', spawn_egg: 'كل بيض الموبات', music_disc: 'كل الأسطوانات', pottery_sherd: 'كل قطع الفخار', smithing_template: 'كل قوالب الحدادة', banner_pattern: 'كل نقوش البانر', boat: 'كل القوارب', chest_boat: 'كل القوارب بصندوق', minecart: 'كل عربات المنجم', bucket: 'كل السطول',
+  wool: 'كل الصوف', stained_glass: 'كل الزجاج الملوّن', stained_glass_pane: 'كل ألواح الزجاج الملوّن', terracotta: 'كل الطين المحروق', glazed_terracotta: 'كل الطين المزخرف', concrete: 'كل الكونكريت', concrete_powder: 'كل بودرة الكونكريت', bed: 'كل الأسرّة', banner: 'كل البانرات', carpet: 'كل السجاد', candle: 'كل الشموع', shulker_box: 'كل الشلكر بوكس', dye: 'كل الأصباغ', harness: 'كل السروج الملوّنة',
+  planks: 'كل الألواح الخشبية', log: 'كل الجذوع', wood: 'كل الخشب', stripped_log: 'كل الجذوع المقشّرة', leaves: 'كل أوراق الشجر', sapling: 'كل الشتلات', door: 'كل الأبواب', trapdoor: 'كل الأبواب الأرضية', fence: 'كل السياج', fence_gate: 'كل بوابات السياج', stairs: 'كل الدرج', slab: 'كل السلابات', button: 'كل الأزرار', pressure_plate: 'كل لوحات الضغط', sign: 'كل اللافتات', hanging_sign: 'كل اللافتات المعلّقة', ingot: 'كل السبايك', nugget: 'كل القطع', block: 'كل البلوكات المعدنية', ore: 'كل الخامات' };
 const FAM_AR = { sword: 'كل السيوف', axe: 'كل الفؤوس', pickaxe: 'كل المعاول', shovel: 'كل المجارف', hoe: 'كل المحاريث', helmet: 'كل الخوذ', chestplate: 'كل الصدريات', leggings: 'كل البناطيل', boots: 'كل البوتات', potion: 'كل الجرعات', arrow: 'كل الأسهم', horse_armor: 'كل دروع الخيل', ingot: 'كل السبايك', nugget: 'كل القطع', apple: 'كل التفاح', carrot: 'كل الجزر' };
-const FAM_SING = { sword: 'سيف', axe: 'فاس فأس', pickaxe: 'معول', shovel: 'مجرفة', hoe: 'محراث', helmet: 'خوذة', chestplate: 'صدرية درع', leggings: 'بنطلون درع', boots: 'بوت جزمة درع', potion: 'جرعة', arrow: 'سهم', horse_armor: 'درع خيل', ingot: 'سبيكة', nugget: 'قطعة' };
+// which "kind" an item/block belongs to — every boots, every apple, every wool colour… become one choice
+const FAM_FOOD = { apple: 'apple', golden_apple: 'apple', enchanted_golden_apple: 'apple', beef: 'meat', cooked_beef: 'meat', porkchop: 'meat', cooked_porkchop: 'meat', chicken: 'meat', cooked_chicken: 'meat', mutton: 'meat', cooked_mutton: 'meat', rabbit: 'meat', cooked_rabbit: 'meat', cod: 'fish', cooked_cod: 'fish', salmon: 'fish', cooked_salmon: 'fish', tropical_fish: 'fish', pufferfish: 'fish', carrot: 'carrot', golden_carrot: 'carrot', potato: 'potato', baked_potato: 'potato', poisonous_potato: 'potato', potion: 'potion', splash_potion: 'potion', lingering_potion: 'potion', arrow: 'arrow', spectral_arrow: 'arrow', tipped_arrow: 'arrow', bread: 'bread', cookie: 'sweet', pumpkin_pie: 'sweet', cake: 'sweet' };
+const COLORS_RE = /^(white|orange|magenta|light_blue|yellow|lime|pink|gray|light_gray|cyan|purple|blue|brown|green|red|black)_(.+)$/;
+const WOODS_RE = /^(oak|spruce|birch|jungle|acacia|dark_oak|mangrove|cherry|bamboo|crimson|warped|pale_oak)_(.+)$/;
+const MATS_RE = /^(wooden|stone|iron|golden|gold|diamond|netherite|copper|leather|chainmail|turtle)_(.+)$/;
+function itemFamily(n) {
+  if (FAM_FOOD[n]) return FAM_FOOD[n];
+  let m;
+  if (/_spawn_egg$/.test(n)) return 'spawn_egg';
+  if (/^music_disc_/.test(n)) return 'music_disc';
+  if (/_pottery_sherd$/.test(n)) return 'pottery_sherd';
+  if (/_smithing_template$/.test(n)) return 'smithing_template';
+  if (/_banner_pattern$/.test(n)) return 'banner_pattern';
+  if (/_(stew|soup)$/.test(n)) return 'stew';
+  if (/_chest_boat$|_chest_raft$/.test(n)) return 'chest_boat';
+  if (/_boat$|_raft$/.test(n)) return 'boat';
+  if (/(^|_)minecart$/.test(n)) return 'minecart';
+  if (/_bucket$/.test(n) || n === 'bucket') return 'bucket';
+  if ((m = n.match(MATS_RE))) return m[2];
+  if ((m = n.match(COLORS_RE))) return m[2];
+  if ((m = n.match(WOODS_RE))) return m[2];
+  return null;
+}
+const FAM_SING = { meat: 'لحم لحوم ستيك', fish: 'سمك', apple: 'تفاح تفاحة', carrot: 'جزر', potato: 'بطاطس', wool: 'صوف', stained_glass: 'زجاج', bed: 'سرير', planks: 'خشب ألواح', log: 'جذع خشب', concrete: 'كونكريت', terracotta: 'طين', boat: 'قارب', bucket: 'سطل', spawn_egg: 'بيض', dye: 'صبغ', banner: 'بانر', candle: 'شمعة', carpet: 'سجاد', leaves: 'ورق شجر', door: 'باب', sword: 'سيف', axe: 'فاس فأس', pickaxe: 'معول', shovel: 'مجرفة', hoe: 'محراث', helmet: 'خوذة', chestplate: 'صدرية درع', leggings: 'بنطلون درع', boots: 'بوت جزمة درع', potion: 'جرعة', arrow: 'سهم', horse_armor: 'درع خيل', ingot: 'سبيكة', nugget: 'قطعة' };
+Object.assign(FAM_AR, FAM_AR_MORE);
+const famLabel = (f) => FAM_AR[f] || 'كل الـ ' + String(f).replace(/_/g, ' ');
 const itemName = (n) => ITEM_AR[n] || n.replace(/_/g, ' ');
 const TAB_GROUPS = [
   ['الشكل', [['textures', 'التكسترات', 'star'], ['all', 'كل تكسترات اللعبة', 'layers'], ['armor', 'الدروع والإليترا', 'shield'], ['particles', 'الجزيئات', 'wand'], ['fire', 'النار', 'fire'], ['sky', 'السما', 'sun'], ['font', 'الخط', 'edit']]],
@@ -1115,7 +1143,7 @@ async function tabHeld(b) {
   $('#hgosh', b).onclick = () => $('.tab[data-t=shield]').click();
   // ---- per-item list — the same kind of item (all swords, all axes…) is handled together
   const MAT_RE = /^(wooden|stone|iron|golden|gold|diamond|netherite|copper|leather|chainmail|turtle)_(.+)$/;
-  const famKey = (n) => { if (/^(splash_|lingering_)?potion$/.test(n)) return 'potion'; if (/^(spectral_|tipped_)?arrow$/.test(n)) return 'arrow'; const m = n.match(MAT_RE); return m ? m[2] : null; };
+  const famKey = itemFamily;
   const famCount = {}; models.forEach((m) => { const f = famKey(m.name); if (f) famCount[f] = (famCount[f] || 0) + 1; });
   for (let i = models.length - 1; i >= 0; i--) if (/^shield/.test(models[i].name)) models.splice(i, 1);
   if (h.items) Object.keys(h.items).forEach((n) => { if (/^shield/.test(n)) delete h.items[n]; });
@@ -1125,9 +1153,9 @@ async function tabHeld(b) {
     let u = units.find((x) => x.key === key);
     if (!u) { u = { key, fam: key.startsWith('fam:') ? f : null, members: [], rep: m }; units.push(u); }
     u.members.push(m.name); unitOf[m.name] = u;
-    if (/^diamond_/.test(m.name) || (u.fam === 'potion' && m.name === 'potion') || (u.fam === 'arrow' && m.name === 'arrow')) u.rep = m;
+    if (/^(diamond_|golden_apple$|cooked_beef$|cooked_cod$|red_|oak_|potion$|arrow$|baked_potato$|golden_carrot$|bucket$)/.test(m.name) && !(u.rep && /^diamond_/.test(u.rep.name))) u.rep = m;
   }
-  const unitLabel = (u) => (u.fam ? (FAM_AR[u.fam] || 'كل الـ ' + u.fam.replace(/_/g, ' ')) : itemName(u.key));
+  const unitLabel = (u) => (u.fam ? (famLabel(u.fam)) : itemName(u.key));
   const unitOn = (u) => u.members.some((n) => h.items[n]);
   // old saves: items added one by one still show (as their own row)
   Object.keys(h.items).forEach((n) => { if (!unitOf[n]) { const u = { key: n, fam: null, members: [n], rep: { name: n } }; units.push(u); unitOf[n] = u; } });
@@ -1210,7 +1238,7 @@ async function tabMeasure(b) {
   const fireCfg = () => Object.assign({ lower: 0, opacity: 1 }, p.fire || {});
   // ---- units: families of items (all swords…) and single items
   const MAT_RE = /^(wooden|stone|iron|golden|gold|diamond|netherite|copper|leather|chainmail|turtle)_(.+)$/;
-  const famKey = (n) => { if (/^(splash_|lingering_)?potion$/.test(n)) return 'potion'; if (/^(spectral_|tipped_)?arrow$/.test(n)) return 'arrow'; const m = n.match(MAT_RE); return m ? m[2] : null; };
+  const famKey = itemFamily;
   const famCount = {}; models.forEach((m) => { const f = famKey(m.name); if (f) famCount[f] = (famCount[f] || 0) + 1; });
   const units = []; const unitOf = {};
   for (const m of models) {
@@ -1218,7 +1246,7 @@ async function tabMeasure(b) {
     let u = units.find((x) => x.key === key);
     if (!u) { u = { key, fam: key.startsWith('fam:') ? f : null, members: [], rep: m }; units.push(u); }
     u.members.push(m.name); unitOf[m.name] = u;
-    if (/^diamond_/.test(m.name) || (u.fam === 'potion' && m.name === 'potion') || (u.fam === 'arrow' && m.name === 'arrow')) u.rep = m;
+    if (/^(diamond_|golden_apple$|cooked_beef$|cooked_cod$|red_|oak_|potion$|arrow$|baked_potato$|golden_carrot$|bucket$)/.test(m.name) && !(u.rep && /^diamond_/.test(u.rep.name))) u.rep = m;
   }
   const things = [];
   const oldGrp = h.on && (h.hLower || h.hScale !== 1 || h.hX || (h.gOn && (h.gLower || h.gScale !== 1)));
@@ -1237,7 +1265,7 @@ async function tabMeasure(b) {
     catThings.push(t); things.push(t);
   }
   things.push({ id: 'c:*', kind: 'everything', cat: 'main', label: 'كل شي باللعبة مرة وحدة', en: 'everything all كل شي', rep: (catThings[0] || {}).rep || 'diamond_sword', sliders: ['lower', 'scale', 'x'] });
-  for (const u of units) if (u.rep.tex) things.push({ id: 'u:' + u.key, kind: 'item', unit: u, cat: itemCat(u.rep), label: u.fam ? FAM_AR[u.fam] || 'كل الـ ' + u.fam.replace(/_/g, ' ') : itemName(u.key), en: u.members.join(' ').replace(/_/g, ' ') + ' ' + u.members.map(itemName).join(' ') + ' ' + (FAM_SING[u.fam] || ''), rep: u.rep.name, sliders: ['lower', 'scale', 'x'] });
+  for (const u of units) if (u.rep.tex) things.push({ id: 'u:' + u.key, kind: 'item', unit: u, cat: itemCat(u.rep), label: u.fam ? famLabel(u.fam) : itemName(u.key), en: u.members.join(' ').replace(/_/g, ' ') + ' ' + u.members.map(itemName).join(' ') + ' ' + (FAM_SING[u.fam] || ''), rep: u.rep.name, sliders: ['lower', 'scale', 'x'] });
   // ---- values per thing
   const valsOf = (t) => {
     if (t.kind === 'group') return grpVals(t.tool);
@@ -1527,13 +1555,13 @@ async function openMerge() {
   const allRels = [...new Set(ok.flatMap((k) => k.files))].filter((r) => !r.endsWith('.mcmeta') || !sets.some((st) => st.has(r.slice(0, -7)))).sort();
   const items = allRels.map((rel) => { const t = known[rel]; return { rel, t, cat: t ? t.cat : mergeGroup(rel), name: t ? t.name : rel.split('/').pop().replace(/\.(png|json|ogg|properties|mcmeta|txt)$/, '').replace(/_/g, ' '), png: rel.endsWith('.png'), in: ok.map((k, i) => (sets[i].has(rel) ? i : -1)).filter((i) => i >= 0) }; });
   // all swords / axes / armor… become one row: picking a pack changes every one of them
-  const famOfRel = (rel) => { let m = rel.match(/^assets\/minecraft\/textures\/items?\/(wooden|stone|iron|golden|gold|diamond|netherite|copper|leather|chainmail|turtle)_([a-z_]+)\.png$/); if (m && !/overlay/.test(m[2])) return 'i:' + m[2]; m = rel.match(/^assets\/minecraft\/textures\/entity\/equipment\/(humanoid|humanoid_leggings)\/[a-z_]+\.png$/); if (m) return 'e:' + m[1]; m = rel.match(/^assets\/minecraft\/textures\/models\/armor\/[a-z]+_layer_([12])\.png$/); if (m) return 'e:layer' + m[1]; return null; };
-  const famLabel = (k) => ({ 'e:humanoid': 'كل الدروع وهي ملبوسة (فوق)', 'e:humanoid_leggings': 'كل البناطيل وهي ملبوسة', 'e:layer1': 'كل الدروع وهي ملبوسة (فوق)', 'e:layer2': 'كل البناطيل وهي ملبوسة' })[k] || FAM_AR[k.slice(2)] || 'كل الـ ' + k.slice(2).replace(/_/g, ' ');
+  const famOfRel = (rel) => { let m = rel.match(/^assets\/minecraft\/textures\/(items?|blocks?)\/([a-z0-9_]+)\.png$/); if (m && !/overlay|_top$|_bottom$|_side$|_front$|_inner$|_end$/.test(m[2])) { const f = itemFamily(m[2]); return f ? (m[1].startsWith('item') ? 'i:' : 'b:') + f : null; } m = rel.match(/^assets\/minecraft\/textures\/entity\/equipment\/(humanoid|humanoid_leggings)\/[a-z_]+\.png$/); if (m) return 'e:' + m[1]; m = rel.match(/^assets\/minecraft\/textures\/models\/armor\/[a-z]+_layer_([12])\.png$/); if (m) return 'e:layer' + m[1]; return null; };
+  const famLabelM = (k) => ({ 'e:humanoid': 'كل الدروع وهي ملبوسة (فوق)', 'e:humanoid_leggings': 'كل البناطيل وهي ملبوسة', 'e:layer1': 'كل الدروع وهي ملبوسة (فوق)', 'e:layer2': 'كل البناطيل وهي ملبوسة' })[k] || famLabel(k.slice(2));
   const fams = {}; items.forEach((x) => { const k = famOfRel(x.rel); if (k) (fams[k] = fams[k] || []).push(x); });
   for (const [k, list] of Object.entries(fams)) {
     if (list.length < 2) continue;
     const rep = list.find((x) => /diamond/.test(x.rel)) || list[0];
-    const row = { rel: 'fam:' + k, fam: true, members: list.map((x) => x.rel), thumb: rep.rel, t: null, cat: rep.cat, name: famLabel(k) + ` (${list.length})`, png: true, in: ok.map((_, i) => (list.some((x) => x.in.includes(i)) ? i : -1)).filter((i) => i >= 0) };
+    const row = { rel: 'fam:' + k, fam: true, members: list.map((x) => x.rel), thumb: rep.rel, t: null, cat: rep.cat, name: famLabelM(k) + ` (${list.length})`, png: true, in: ok.map((_, i) => (list.some((x) => x.in.includes(i)) ? i : -1)).filter((i) => i >= 0) };
     const at = items.indexOf(list[0]); list.forEach((x) => items.splice(items.indexOf(x), 1)); items.splice(Math.min(at, items.length), 0, row);
   }
   const choice = {}; // rel -> pack index | -1 (keep)
@@ -2500,10 +2528,10 @@ async function importMeasurements(after) {
     if (van) { const d = top(await IMG.fromB64(r.fire)) - top(van); if (d > 0.03) fireLow = Math.min(0.95, +d.toFixed(2)); }
   }
   const names0 = Object.keys(r.models).sort((a, b) => (/shield/.test(b) ? 1 : 0) - (/shield/.test(a) ? 1 : 0) || a.localeCompare(b));
-  const MRE = /^(wooden|stone|iron|golden|gold|diamond|netherite|copper|leather|chainmail|turtle)_(.+)$/, fk = (n) => { const m = n.match(MRE); return m ? m[2] : null; };
+  const fk = itemFamily;
   const fc = {}; names0.forEach((n) => { const f = fk(n); if (f) (fc[f] = fc[f] || []).push(n); });
   const groupsM = []; const seen = new Set();
-  for (const n of names0) { if (seen.has(n)) continue; const f = fk(n); if (f && fc[f].length >= 2) { fc[f].forEach((x) => seen.add(x)); groupsM.push({ key: 'fam:' + f, label: (FAM_AR[f] || 'كل الـ ' + f) + ` (${fc[f].length})`, members: fc[f] }); } else { seen.add(n); groupsM.push({ key: n, members: [n] }); } }
+  for (const n of names0) { if (seen.has(n)) continue; const f = fk(n); if (f && fc[f].length >= 2) { fc[f].forEach((x) => seen.add(x)); groupsM.push({ key: 'fam:' + f, label: famLabel(f) + ` (${fc[f].length})`, members: fc[f] }); } else { seen.add(n); groupsM.push({ key: n, members: [n] }); } }
   const names = groupsM.map((g) => g.key);
   if (!names0.length && fireLow == null) return toast('هذا الباك ما فيه قياسات مختلفة (أحجام أو نار قصيرة)');
   const label = (n) => (n === 'shield' ? 'الشيلد' : n === 'shield_blocking' ? 'الشيلد وقت البلوك' : /^(handheld|generated|handheld_rod|handheld_mace)$/.test(n) ? `كل ${n === 'generated' ? 'الأشياء العادية' : n === 'handheld_rod' ? 'السنانير' : 'السيوف والأدوات'} (${n})` : itemName(n));
