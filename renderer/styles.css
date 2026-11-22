@@ -566,3 +566,25 @@ html.no-anim *, html.no-anim *::before { animation: none !important; transition:
 .ftype { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 8px; background: rgba(255,255,255,.06); font: 700 10px/1 monospace; text-transform: uppercase; color: var(--muted); }
 .use-stage { height: 440px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); }
 .use-stage canvas { width: 100%; height: 100%; display: block; }
+
+/* ---------- side sections (no more tabs wrapping across the top) ---------- */
+.ws-split { flex: 1; min-height: 0; display: grid; grid-template-columns: 210px 1fr; gap: 0; margin-top: 16px; }
+.tabs.side { flex-direction: column; flex-wrap: nowrap; gap: 2px; padding: 4px 12px 30px 12px; padding-inline-start: 32px; overflow: auto; border-inline-end: 1px solid var(--line); }
+.tabs.side .tgrp { font-size: 11px; font-weight: 700; letter-spacing: .3px; color: var(--muted); opacity: .75; padding: 14px 10px 6px; align-self: stretch; }
+.tabs.side .tgrp:first-child { padding-top: 2px; }
+.tabs.side .tab { height: 38px; width: 100%; justify-content: flex-start; padding: 0 12px; font-size: 13.5px; }
+.tabs.side .tab span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ws-col { min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+.ws-col #wsh { padding: 0 32px 0 24px; padding-inline-start: 24px; padding-inline-end: 32px; }
+.ws-col .ws-body { padding-top: 14px; padding-inline-start: 24px; padding-inline-end: 32px; }
+.merge-split { display: grid; grid-template-columns: 250px 1fr; height: 100%; min-height: 0; }
+.merge-side { display: flex; flex-direction: column; gap: 8px; padding: 18px; border-inline-end: 1px solid var(--line); overflow: auto; }
+.merge-side .btn { justify-content: flex-start; }
+.merge-main { overflow: auto; padding: 4px 18px 18px; }
+.merge-nav { display: flex; flex-direction: column; gap: 2px; }
+.merge-nav button { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 9px; border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 12.5px; cursor: pointer; text-align: start; }
+.merge-nav button:hover { background: rgba(255,255,255,.05); color: var(--text); }
+.merge-nav button span { flex: 1; } .merge-nav button b { font-weight: 600; font-size: 11px; opacity: .7; }
+.mg-all { display: inline-flex; gap: 6px; margin-inline-start: 12px; vertical-align: middle; }
+.mrow { justify-content: flex-start; }
+.mrow > b { flex: none; }

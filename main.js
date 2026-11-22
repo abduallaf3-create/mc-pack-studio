@@ -495,8 +495,10 @@ function packEntries(zipPath) {
   if (!mergeZips.has(zipPath)) mergeZips.set(zipPath, new AdmZip(zipPath));
   const z = mergeZips.get(zipPath);
   const all = z.getEntries().filter((e) => !e.isDirectory);
-  const mc = all.find((e) => /(^|\/)pack\.mcmeta$/.test(e.entryName));
-  const prefix = mc ? mc.entryName.replace(/pack\.mcmeta$/, '') : '';
+  // the real root is the shallowest pack.mcmeta (some zips wrap the pack in a folder, some have extra mcmeta inside)
+  const mcs = all.filter((e) => /(^|\/)pack\.mcmeta$/.test(e.entryName)).sort((a, b) => a.entryName.split('/').length - b.entryName.split('/').length);
+  let prefix = mcs.length ? mcs[0].entryName.replace(/pack\.mcmeta$/, '') : '';
+  if (!all.some((e) => e.entryName.startsWith(prefix + 'assets/'))) { const a = all.find((e) => /(^|\/)assets\//.test(e.entryName)); prefix = a ? a.entryName.slice(0, a.entryName.search(/(^|\/)assets\//) + (a.entryName.match(/(^|\/)assets\//)[1] ? 1 : 0)) : prefix; }
   return { z, prefix, all };
 }
 ipcMain.handle('merge:open', async () => {

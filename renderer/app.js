@@ -311,10 +311,10 @@ function itemCat(m) {
 const ITEM_AR = { diamond_sword: 'سيف دايموند', netherite_sword: 'سيف نذرايت', iron_sword: 'سيف حديد', golden_sword: 'سيف ذهب', stone_sword: 'سيف حجر', wooden_sword: 'سيف خشب', diamond_axe: 'فاس دايموند', netherite_axe: 'فاس نذرايت', iron_axe: 'فاس حديد', bow: 'القوس', crossbow: 'الكروس بو', trident: 'الترايدنت', mace: 'الميس', shield: 'الشيلد', ender_pearl: 'إندر بيرل', snowball: 'كرة ثلج', egg: 'البيضة', totem_of_undying: 'التوتم', golden_apple: 'تفاحة ذهبية', enchanted_golden_apple: 'تفاحة ذهبية مإنشانت', fishing_rod: 'السنارة', flint_and_steel: 'ولّاعة', water_bucket: 'سطل ماء', lava_bucket: 'سطل لافا', cooked_beef: 'ستيك', elytra: 'الإليترا', diamond_pickaxe: 'معول دايموند', netherite_pickaxe: 'معول نذرايت', experience_bottle: 'قارورة XP', fire_charge: 'كرة نار', wind_charge: 'شحنة الريح', ender_eye: 'عين الإندر', arrow: 'السهم', compass: 'البوصلة', clock: 'الساعة', spyglass: 'المنظار', shears: 'المقص' };
 const itemName = (n) => ITEM_AR[n] || n.replace(/_/g, ' ');
 const TAB_GROUPS = [
-  ['الشكل', [['textures', 'التكسترات', 'star'], ['armor', 'الدروع والإليترا', 'shield'], ['particles', 'الجزيئات', 'wand'], ['fire', 'الفاير', 'fire'], ['shield', 'الشيلد', 'shield'], ['sky', 'السما', 'sun'], ['font', 'الخط', 'edit']]],
+  ['الشكل', [['textures', 'التكسترات', 'star'], ['all', 'كل تكسترات اللعبة', 'layers'], ['armor', 'الدروع والإليترا', 'shield'], ['particles', 'الجزيئات', 'wand'], ['fire', 'الفاير', 'fire'], ['shield', 'الشيلد', 'shield'], ['sky', 'السما', 'sun'], ['font', 'الخط', 'edit']]],
   ['PvP', [['tweaks', 'تحسينات PvP', 'wand'], ['held', 'حجم الأدوات', 'sword'], ['cit', 'أسماء مخصصة', 'star']]],
   ['الصوت', [['sounds', 'الأصوات', 'sound']]],
-  ['متقدم', [['all', 'كل الملفات', 'layers'], ['theme', 'سمة الألوان', 'palette'], ['mods', 'المودات', 'puzzle'], ['configs', 'إعدادات المودات', 'file'], ['psettings', 'إعدادات الباك', 'gear']]],
+  ['متقدم', [['theme', 'سمة الألوان', 'palette'], ['mods', 'المودات', 'puzzle'], ['configs', 'إعدادات المودات', 'file'], ['psettings', 'إعدادات الباك', 'gear']]],
 ];
 const TABS = TAB_GROUPS.flatMap((g) => g[1]);
 async function renderProject(main) {
@@ -330,8 +330,8 @@ async function renderProject(main) {
       <button class="btn" id="exp">${icon('zip', 17)} تصدير ZIP</button>
       <button class="btn primary lg" id="inst">${icon('play', 18)} تثبيت في ${esc(c.name)}</button>
     </div>
-    <div class="tabs">${TAB_GROUPS.map(([g, list]) => `<span class="tgrp">${g}</span>` + list.map(([id, n, ic]) => `<button class="tab ${S.tab === id ? 'on' : ''}" data-t="${id}">${icon(ic, 16)}${n}</button>`).join('')).join('')}</div>
-    <div id="wsh"></div><div class="ws-body" id="wsb"></div>`;
+    <div class="ws-split"><nav class="tabs side">${TAB_GROUPS.map(([g, list]) => `<div class="tgrp">${g}</div>` + list.map(([id, n, ic]) => `<button class="tab ${S.tab === id ? 'on' : ''}" data-t="${id}">${icon(ic, 16)}<span>${n}</span></button>`).join('')).join('')}</nav>
+    <div class="ws-col"><div id="wsh"></div><div class="ws-body" id="wsb"></div></div></div>`;
   api.file.icon(p.id).then((b) => { if (b) { const u = 'data:image/png;base64,' + b; $('#picon').src = u; $('#pbg').style.backgroundImage = `url(${u})`; } });
   $('#picon').onclick = editPackIcon;
   $$('.tab').forEach((t) => t.onclick = () => { S.tab = t.dataset.t; $$('.tab').forEach((x) => x.classList.toggle('on', x === t)); renderTab(); });
@@ -354,7 +354,7 @@ const TAB_HINTS = {
   held: 'كبّر أو صغّر الأدوات اللي بيدك. وتحت تختار أي أداة من القائمة وتعطيها حجمها الخاص.',
   cit: 'خل السيف يتغيّر شكله لما تسميه بالسندان — مثلاً سمّه "Fire" ويطلع بشكل ثاني.',
   sounds: 'غيّر أي صوت باللعبة — صوت الضربة، الـ XP، وغيرها. تقدر تحط أي صوت من جهازك.',
-  all: 'كل ملفات الباك. هذا للمحترفين — لو أنت جديد استخدم الأقسام الثانية.',
+  all: 'كل تكستر باللعبة هنا — اختر المجلد على الجنب، اضغط على أي تكستر وعدّله. المعدّل يطلع بـ "المعدّل".',
   theme: 'غيّر ألوان واجهة اللعبة (القوائم والأزرار) بلون واحد.',
   mods: 'المودات حقت الكلاينت — فعّل أو عطّل أو عدّل فيها.',
   configs: 'إعدادات المودات — للمحترفين.',
@@ -1185,18 +1185,23 @@ async function openMerge() {
   const items = allRels.map((rel) => { const t = known[rel]; return { rel, t, cat: t ? t.cat : mergeGroup(rel), name: t ? t.name : rel.split('/').pop().replace(/\.(png|json|ogg|properties|mcmeta|txt)$/, '').replace(/_/g, ' '), png: rel.endsWith('.png'), in: ok.map((k, i) => (sets[i].has(rel) ? i : -1)).filter((i) => i >= 0) }; });
   const choice = {}; // rel -> pack index | -1 (keep)
   const m = modal({ cls: 'xl', title: `${icon('layers', 18)} دمج الباكات`, sub: `${ok.length} باك — اختر من كل باك اللي يعجبك`,
-    body: `<div style="padding:18px;overflow:auto;height:100%"><div class="row" style="margin-bottom:14px"><span class="muted small">باك أساسي (ياخذ منه كل شي، وبعدها اختياراتك فوقه):</span>
-      <select class="inp" id="mbase" style="width:260px"><option value="-1">بدون — بس اللي أختاره</option>${ok.map((k, i) => `<option value="${i}">${esc(k.name)}</option>`).join('')}</select>
-      <span class="spacer"></span><div class="row" style="gap:6px">${ok.map((k, i) => `<button class="btn sm" data-all="${i}">كله من ${esc(k.name.slice(0, 14))}</button>`).join('')}</div></div>
-      <div id="mlist"></div></div>`,
+    body: `<div class="merge-split"><aside class="merge-side">
+        <div class="muted small">باك أساسي (ياخذ منه كل شي، وبعدها اختياراتك فوقه):</div>
+        <select class="inp" id="mbase"><option value="-1">بدون — بس اللي أختاره</option>${ok.map((k, i) => `<option value="${i}">${esc(k.name)}</option>`).join('')}</select>
+        <div class="muted small" style="margin-top:8px">اختر كل شي من باك واحد:</div>
+        ${ok.map((k, i) => `<button class="btn sm" data-all="${i}">كله من ${esc(k.name.slice(0, 18))}</button>`).join('')}
+        <div class="muted small" style="margin-top:8px">الأقسام:</div><div id="mnav" class="merge-nav"></div>
+      </aside><div class="merge-main" id="mmain"><div id="mlist"></div></div></div>`,
     foot: `<button class="btn primary" id="mgo">${icon('check', 16)} ادمج في الباك</button><span class="muted small" id="mcount"></span>` });
   const list = $('#mlist', m.el);
   const groups = [...CATEGORIES.map((c) => [c.id, c.name, c.icon]), ...MERGE_GROUPS].filter(([id]) => items.some((x) => x.cat === id));
-  list.innerHTML = `<div class="muted small" style="margin-bottom:6px">${items.length} ملف متغيّر بالباكات</div>` + groups.map(([id, name, ic]) => { const its = items.filter((x) => x.cat === id); return `<details class="mgrp" ${its.length <= 60 ? 'open' : ''}><summary><h3 style="display:inline-flex;gap:8px;align-items:center;margin:14px 0 10px">${icon(ic, 16)} ${name} <span class="badge">${its.length}</span></h3>
-      <span class="row" style="gap:6px;display:inline-flex;margin-inline-start:12px">${ok.map((k, i) => `<button class="btn sm ghost" data-gall="${i}" data-g="${id}">كله من ${esc(k.name.slice(0, 12))}</button>`).join('')}</span></summary>` + its.map((x) => `
+  list.innerHTML = `<div class="muted small" style="margin-bottom:6px">${items.length} ملف متغيّر بالباكات</div>` + groups.map(([id, name, ic]) => { const its = items.filter((x) => x.cat === id); return `<details class="mgrp" open id="mg-${id}"><summary><h3 style="display:inline-flex;gap:8px;align-items:center;margin:14px 0 10px">${icon(ic, 16)} ${name} <span class="badge">${its.length}</span></h3>
+      <span class="mg-all">${ok.map((k, i) => `<button class="btn sm ghost" data-gall="${i}" data-g="${id}">كله من ${esc(k.name.slice(0, 12))}</button>`).join('')}</span></summary>` + its.map((x) => `
     <div class="mrow" data-rel="${esc(x.rel)}" title="${esc(x.rel)}"><b class="small" style="width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.name)}</b>
       <div class="mopt on" data-i="-1"><span class="small muted">بدون تغيير</span></div>
       ${ok.map((k, i) => x.in.includes(i) ? `<div class="mopt" data-i="${i}">${x.png ? '<canvas></canvas>' : `<span class="ftype">${esc(x.rel.split('.').pop())}</span>`}<span class="small">${esc(k.name.slice(0, 16))}</span></div>` : `<div class="mopt off"><span class="dim small">—</span></div>`).join('')}</div>`).join('') + '</details>'; }).join('');
+  $('#mnav', m.el).innerHTML = groups.map(([id, name, ic]) => `<button data-go="${id}">${icon(ic, 14)}<span>${name}</span><b>${items.filter((x) => x.cat === id).length}</b></button>`).join('');
+  $$('#mnav [data-go]', m.el).forEach((bt) => bt.onclick = () => $('#mg-' + bt.dataset.go, m.el).scrollIntoView({ behavior: 'smooth', block: 'start' }));
   list.addEventListener('click', (e) => { const g = e.target.closest('[data-gall]'); if (!g) return; e.preventDefault(); const i = +g.dataset.gall; $$('.mrow', g.closest('.mgrp')).forEach((row) => { const o = $(`.mopt[data-i="${i}"]`, row); if (o) { $$('.mopt', row).forEach((x) => x.classList.toggle('on', x === o)); choice[row.dataset.rel] = i; } }); count(); });
   const count = () => { const n = Object.values(choice).filter((v) => v >= 0).length; $('#mcount', m.el).textContent = n ? `${n} تكستر مختار` : ''; };
   list.onclick = (e) => {
@@ -1208,7 +1213,7 @@ async function openMerge() {
   const io = new IntersectionObserver((ents) => ents.forEach(async (en) => {
     if (!en.isIntersecting) return; io.unobserve(en.target); const row = en.target;
     for (const o of $$('.mopt[data-i]', row)) { const i = +o.dataset.i; if (i < 0 || !$('canvas', o)) continue; const b64 = await api.merge.read(ok[i].path, row.dataset.rel); if (!b64) continue; const im = await IMG.fromB64(b64); const c = $('canvas', o); c.width = im.width; c.height = Math.min(im.width, im.height); c.getContext('2d').putImageData(im, 0, 0); }
-  }), { root: list.parentElement, rootMargin: '200px' });
+  }), { root: $('#mmain', m.el), rootMargin: '200px' });
   $$('.mrow', list).forEach((r) => io.observe(r));
   $('#mgo', m.el).onclick = async () => {
     $('#mgo', m.el).disabled = true;
