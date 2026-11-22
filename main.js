@@ -596,7 +596,10 @@ ipcMain.handle('held:build', (_e, project, cfg) => {
   const z = openJar(project.baseJar); if (!z) return { error: 'nojar', extras: {}, count: 0 };
   const pre = 'assets/minecraft/models/item/';
   const names = z.getEntries().map((e) => e.entryName).filter((n) => n.startsWith(pre) && n.endsWith('.json')).map((n) => n.slice(pre.length, -5)).filter((n) => !n.includes('/'));
-  const read = (n) => { const e = z.getEntry(pre + n + '.json'); if (!e) return null; try { return JSON.parse(e.getData().toString('utf8')); } catch { return null; } };
+  const imp = cfg.imported || {}, active = cfg.on !== false;
+  const jread = (n) => { const e = z.getEntry(pre + n + '.json'); if (!e) return null; try { return JSON.parse(e.getData().toString('utf8')); } catch { return null; } };
+  // sizes taken from another pack replace the game's hand positions (only the numbers, never its textures)
+  const read = (n) => { const m = jread(n); if (!imp[n]) return m; return { ...(m || {}), display: { ...((m && m.display) || {}), ...JSON.parse(JSON.stringify(imp[n])) } }; };
   const isTool = (n) => /(_sword|_axe|_pickaxe|_shovel|_hoe|_spear)$/.test(n) || /^(stick|blaze_rod|breeze_rod|bone|fishing_rod|carrot_on_a_stick|warped_fungus_on_a_stick|mace|handheld|handheld_rod|handheld_mace|trident)$/.test(n);
   const skip = (n) => /^(shield|shield_blocking|template_|air)/.test(n);
   // items rendered by code (shield, trident…) sit far from their origin, so shrinking them must keep their centre in place
@@ -625,8 +628,8 @@ ipcMain.handle('held:build', (_e, project, cfg) => {
   const out = {};
   const groups = [];
   const anc = (a) => (Array.isArray(a) && a.length === 3 ? a : null);
-  if (cfg.hOn) groups.push([names.filter((n) => isTool(n) && !skip(n)), cfg.hLower, cfg.hScale, cfg.hX, anc(cfg.hAnchor)]);
-  if (cfg.gOn) groups.push([names.filter((n) => !isTool(n) && !skip(n)), cfg.gLower, cfg.gScale, 0, anc(cfg.gAnchor)]);
+  if (active && cfg.hOn) groups.push([names.filter((n) => isTool(n) && !skip(n)), cfg.hLower, cfg.hScale, cfg.hX, anc(cfg.hAnchor)]);
+  if (active && cfg.gOn) groups.push([names.filter((n) => !isTool(n) && !skip(n)), cfg.gLower, cfg.gScale, 0, anc(cfg.gAnchor)]);
   for (const [list, lower, scale, xs, a] of groups) for (const n of list) {
     const m = read(n); if (!m || !m.display) continue; // only models that define their own hand position
     if (mod(m, +lower || 0, +scale || 1, +xs || 0, a)) out[pre + n + '.json'] = JSON.stringify(m, null, 2);
@@ -643,7 +646,8 @@ ipcMain.handle('held:build', (_e, project, cfg) => {
     }
     return resolveDisplay(read(pn), depth + 1);
   };
-  for (const [n, c] of Object.entries(cfg.items || {})) {
+  for (const n of Object.keys(imp)) if (!out[pre + n + '.json'] && !skip(n)) { const m = read(n); if (m) out[pre + n + '.json'] = JSON.stringify(m, null, 2); }
+  for (const [n, c] of Object.entries(active ? cfg.items || {} : {})) {
     const m = read(n); if (!m) continue;
     const disp = resolveDisplay(m);
     if (!disp) continue;
@@ -690,11 +694,28 @@ ipcMain.handle('models:list', (_e, project) => {
     .filter((x) => !/^(template_|generated|handheld|air$)/.test(x.name)).sort((a, b) => a.name.localeCompare(b.name));
 });
 
+// read only the hand positions/sizes out of someone's pack (no textures)
+ipcMain.handle('pack:measure', async () => {
+  const r = testPicks ? { canceled: !testPicks.length, filePaths: testPicks.splice(0, 1) } : await dialog.showOpenDialog(win, { title: 'اختر الباك اللي تبي تاخذ قياساته', filters: [{ name: 'Resource Pack', extensions: ['zip'] }], properties: ['openFile'] });
+  if (r.canceled) return null;
+  const f = r.filePaths[0];
+  try {
+    const { z, prefix, all } = packEntries(f), pre = prefix + 'assets/minecraft/models/item/', models = {};
+    for (const e of all) {
+      if (!e.entryName.startsWith(pre) || !e.entryName.endsWith('.json')) continue;
+      const n = e.entryName.slice(pre.length, -5); if (n.includes('/')) continue;
+      try { const j = JSON.parse(e.getData().toString('utf8').replace(/^\uFEFF/, '')); if (j.display && Object.keys(j.display).some((k) => /^(firstperson|thirdperson)/.test(k))) models[n] = j.display; } catch {}
+    }
+    const fe = z.getEntry(prefix + 'assets/minecraft/textures/block/fire_1.png');
+    return { path: f, name: path.basename(f, '.zip'), models, fire: fe ? fe.getData().toString('base64') : null };
+  } catch (e) { return { error: String(e.message) }; }
+});
 // the real hand position of items (for an exact preview)
 ipcMain.handle('held:displays', (_e, project, names) => {
   const z = openJar(project.baseJar); if (!z) return {};
   const pre = 'assets/minecraft/models/item/';
-  const read = (n) => { const e = z.getEntry(pre + n + '.json'); if (!e) return null; try { return JSON.parse(e.getData().toString('utf8')); } catch { return null; } };
+  const imp = (project.held && project.held.imported) || {};
+  const read = (n) => { const e = z.getEntry(pre + n + '.json'); let m = null; if (e) { try { m = JSON.parse(e.getData().toString('utf8')); } catch {} } if (imp[n]) m = { ...(m || {}), display: { ...((m && m.display) || {}), ...imp[n] } }; return m; };
   const res = (m, d = 0) => { if (!m || d > 6) return null; if (m.display && m.display.firstperson_righthand) return m.display.firstperson_righthand; const pn = String(m.parent || '').replace(/^minecraft:/, ''); if (!pn || pn.startsWith('builtin/')) return null; if (pn.startsWith('block/')) { const be = z.getEntry('assets/minecraft/models/' + pn + '.json'); if (be) { try { return res(JSON.parse(be.getData().toString('utf8')), d + 1); } catch {} } return null; } return res(read(pn.replace(/^item\//, '')), d + 1); };
   const special = (n, m) => { const it = z.getEntry('assets/minecraft/items/' + n + '.json'); if (it && /special/.test(it.getData().toString('utf8'))) return true; let c = m, d = 0; while (c && d++ < 6) { const pn = String(c.parent || '').replace(/^minecraft:/, ''); if (/builtin\/entity/.test(pn)) return true; if (!pn || pn.startsWith('builtin/')) break; c = read(pn.replace(/^item\//, '')); } return false; };
   const out = {};

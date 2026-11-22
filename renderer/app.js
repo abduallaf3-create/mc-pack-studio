@@ -1019,12 +1019,13 @@ async function tabHeld(b) {
           <div class="slider-row" style="grid-template-columns:90px 1fr 40px"><span>نزول</span><input type="range" id="gl" min="0" max="8" step="0.25" value="${h.gLower}"><output class="ltr"></output></div>
           <div class="slider-row" style="grid-template-columns:90px 1fr 40px"><span>الحجم</span><input type="range" id="gs" min="0.3" max="1.3" step="0.05" value="${h.gScale}"><output class="ltr"></output></div></div>
         <div class="row"><button class="btn sm" data-hp="2.5,0.85,0">Low Sword</button><button class="btn sm" data-hp="4,0.7,0.5">صغير ونازل</button><button class="btn sm" data-hp="5.5,0.55,1">أصغر شي</button><button class="btn sm ghost" data-hp="0,1,0">الأصلي</button></div>
+        <div class="row"><button class="btn sm" id="hmeas">${icon('download', 15)} خذ القياسات من باك</button>${Object.keys(h.imported || {}).length ? `<button class="btn sm ghost" id="hclr">${icon('x', 14)} شيل القياسات المأخوذة (${Object.keys(h.imported).length})</button>` : ''}<button class="btn sm ghost" id="hgosh">${icon('shield', 14)} الشيلد له قسم خاص</button></div>
       </div>
       <span class="muted small" style="line-height:1.7">يعدّل موديلات الأدوات بالباك وقت التثبيت. يحتاج ملفات اللعبة محمّلة. يشتغل على كل النسخ.</span>
     </div>
     <div class="card"><h3>كيف بيطلع باللعبة <span class="muted small">(نفس حسابات ماينكرافت بالضبط)</span></h3><div class="fp-stage"><canvas id="hcv"></canvas></div>
       <div class="hstat" id="hstat"></div>
-      <div class="row" style="margin-top:10px"><span class="seg" id="hpv"><button data-v="sword" class="on">سيف</button><button data-v="pearl">بيرل</button><button data-v="shield">شيلد</button></span><span class="muted small" id="hpvn"></span></div></div></div>
+      <div class="row" style="margin-top:10px"><span class="seg" id="hpv"><button data-v="sword" class="on">سيف</button><button data-v="pearl">بيرل</button></span><span class="muted small" id="hpvn"></span></div></div></div>
     <div class="card" style="margin-top:20px"><div class="row" style="margin-bottom:12px"><h3 style="margin:0;flex:1">${icon('sword', 18)} كل أداة لحالها</h3><span class="muted small">اختر أي أداة من القائمة واعطها حجمها ومكانها الخاص (يغلب على الإعدادات اللي فوق)</span></div>
       <div id="hitems" class="stack" style="gap:8px;margin-bottom:14px"></div>
       <div class="row" style="gap:6px;margin-bottom:10px" id="hcats">${ITEM_CATS.map(([k, n]) => `<button class="chip ${k === 'weapons' ? 'on' : ''}" data-c="${k}">${n}</button>`).join('')}</div>
@@ -1072,6 +1073,7 @@ async function tabHeld(b) {
   async function statusFor(n) { await ensureAnchor(n); const q = await quadsOf(n); if (!q.length) return null; return heldStatus(heldProject(q, effFor(n), 1600, 900), baseOf(n, q)); }
   async function ensureAnchor(n) { if (!h.items[n]) return; const u = unitOf[n], a = await anchorOf(u ? u.rep.name : n); (u ? u.members : [n]).forEach((m) => { if (h.items[m] && !h.items[m].anchor && a) h.items[m].anchor = a; }); }
   async function draw() {
+    if (!cv.isConnected) return;
     const n = pv === 'item' ? pvItem && pvItem.name : PV[pv]; if (!n) return;
     await ensureAnchor(n);
     const r = cv.getBoundingClientRect(); cv.width = Math.max(320, r.width * devicePixelRatio); cv.height = cv.width * 9 / 16;
@@ -1104,11 +1106,15 @@ async function tabHeld(b) {
   $$('[data-hp]', b).forEach((x) => x.onclick = () => { const [l, s, xx] = x.dataset.hp.split(',').map(Number); $('#hl', b).value = l; $('#hs', b).value = s; $('#hx', b).value = xx; $('#gl', b).value = l * 0.8; $('#gs', b).value = s; upd(); });
   $$('#hpv button', b).forEach((x) => x.onclick = () => { pv = x.dataset.v; $('#hpvn', b).textContent = ''; $$('#hpv button', b).forEach((y) => y.classList.toggle('on', y === x)); draw(); });
   new ResizeObserver(() => draw()).observe(cv);
+  $('#hmeas', b).onclick = () => importMeasurements(() => tabHeld(b));
+  const hc = $('#hclr', b); if (hc) hc.onclick = async () => { h.imported = {}; await saveProject(); tabHeld(b); toast('رجعت القياسات لقياسات اللعبة'); };
+  $('#hgosh', b).onclick = () => $('.tab[data-t=shield]').click();
   // ---- per-item list — the same kind of item (all swords, all axes…) is handled together
   const MAT_RE = /^(wooden|stone|iron|golden|gold|diamond|netherite|copper|leather|chainmail|turtle)_(.+)$/;
   const famKey = (n) => { if (/^(splash_|lingering_)?potion$/.test(n)) return 'potion'; if (/^(spectral_|tipped_)?arrow$/.test(n)) return 'arrow'; const m = n.match(MAT_RE); return m ? m[2] : null; };
   const famCount = {}; models.forEach((m) => { const f = famKey(m.name); if (f) famCount[f] = (famCount[f] || 0) + 1; });
-  if (!models.find((m) => m.name === 'shield') && p.baseJar) { const info = await api.held.displays(p, ['shield']); if (info.shield) models.push({ name: 'shield', tex: 'shield' }); }
+  for (let i = models.length - 1; i >= 0; i--) if (/^shield/.test(models[i].name)) models.splice(i, 1);
+  if (h.items) Object.keys(h.items).forEach((n) => { if (/^shield/.test(n)) delete h.items[n]; });
   const units = []; const unitOf = {};
   for (const m of models) {
     const f = famKey(m.name), key = f && famCount[f] >= 2 ? 'fam:' + f : m.name;
@@ -2225,63 +2231,123 @@ const SHIELD_BLOCK_DEFAULT = {
     gui: { rotation: [15, -25, -5], translation: [2, 3, 0], scale: [0.65, 0.65, 0.65] },
   },
 };
+// shield base models: sizes taken from another pack win, then the game's own, then the built-in copy
+async function shieldBase(p) {
+  const get = async (rel, def) => { const t = await api.asset.baseText(p, rel); try { if (t) return JSON.parse(t); } catch {} return p.packFormat >= 46 ? JSON.parse(JSON.stringify(def)) : JSON.parse(JSON.stringify(def)); };
+  const a = await get('models/item/shield.json', SHIELD_DEFAULT), bl = await get('models/item/shield_blocking.json', SHIELD_BLOCK_DEFAULT);
+  const imp = (p.shield && p.shield.imported) || {};
+  if (imp.shield && a) a.display = { ...(a.display || {}), ...JSON.parse(JSON.stringify(imp.shield)) };
+  if (imp.shield_blocking && bl) bl.display = { ...(bl.display || {}), ...JSON.parse(JSON.stringify(imp.shield_blocking)) };
+  return { a, bl };
+}
+async function shieldQuadsOf(p) {
+  const st = texPath(TEXTURES.find((t) => t.id === 'shield_tex'), p.packFormat); const r = st && await api.tex.get(p, st);
+  return r ? heldQuads(await IMG.fromB64(r.data), true, 'shield') : [];
+}
+// same maths as held:build — shrink around the part you see, then lower
+function shieldMod(m, lower, scale, anchor, p) {
+  if (!m || !m.display) return m;
+  if (p && p.packFormat <= 3) delete m.gui_light;
+  for (const k of ['firstperson_righthand', 'firstperson_lefthand']) {
+    const d = m.display[k]; if (!d) continue; const left = k.includes('left');
+    d.translation = [...(d.translation || [0, 0, 0])];
+    const S0 = d.scale || [1, 1, 1], S1 = S0.map((v) => v * scale);
+    if (anchor) { const dv = heldRot([0, 1, 2].map((i) => (S0[i] - S1[i]) * anchor[i]), d.rotation || [0, 0, 0], left); if (left) dv[0] = -dv[0]; for (let i = 0; i < 3; i++) d.translation[i] += dv[i] * 16; }
+    d.translation[1] -= lower;
+    d.translation = d.translation.map((v) => +Math.max(-80, Math.min(80, v)).toFixed(3));
+    d.scale = S1.map((v) => +Math.max(-4, Math.min(4, v)).toFixed(3));
+  }
+  return m;
+}
+async function shieldAnchors(p, base) {
+  const q = await shieldQuadsOf(p); if (!q.length) return [null, null];
+  const an = (m) => (m && m.display && m.display.firstperson_righthand ? heldAnchor(q, heldApply(m.display.firstperson_righthand, null, 0, 1, 0)) : null);
+  return [an(base.a) || [-0.5, -0.5, -0.41], an(base.bl) || [-0.5, -0.5, -0.41]];
+}
 async function buildExtras() {
   const p = S.project, ex = {};
   const sh = p.shield;
-  if (sh && sh.enabled && p.packFormat >= 2) {
-    const get = async (rel, def) => { const t = await api.asset.baseText(p, rel); try { if (t) return JSON.parse(t); } catch {} return p.packFormat >= 46 ? null : JSON.parse(JSON.stringify(def)); };
-    const a = await get('models/item/shield.json', SHIELD_DEFAULT), bl = await get('models/item/shield_blocking.json', SHIELD_BLOCK_DEFAULT);
-    const mod = (m, lower) => {
-      if (!m || !m.display) return m;
-      if (p.packFormat <= 3) delete m.gui_light;
-      for (const k of ['firstperson_righthand', 'firstperson_lefthand']) {
-        const d = m.display[k]; if (!d) continue;
-        d.translation = [...(d.translation || [0, 0, 0])]; d.translation[1] = +(d.translation[1] - lower).toFixed(2);
-        d.scale = (d.scale || [1, 1, 1]).map((v) => +(v * sh.scale).toFixed(3));
-      }
-      return m;
-    };
-    if (a) ex['assets/minecraft/models/item/shield.json'] = JSON.stringify(mod(a, sh.lower), null, 2);
-    if (bl) ex['assets/minecraft/models/item/shield_blocking.json'] = JSON.stringify(mod(bl, sh.blockLower), null, 2);
+  if (sh && (sh.enabled || sh.imported) && p.packFormat >= 2) {
+    const base = await shieldBase(p), [an, abl] = sh.enabled ? await shieldAnchors(p, base) : [null, null];
+    const on = !!sh.enabled;
+    if (base.a) ex['assets/minecraft/models/item/shield.json'] = JSON.stringify(on ? shieldMod(base.a, sh.lower, sh.scale, an, p) : base.a, null, 2);
+    if (base.bl) ex['assets/minecraft/models/item/shield_blocking.json'] = JSON.stringify(on ? shieldMod(base.bl, sh.blockLower, sh.scale, abl, p) : base.bl, null, 2);
   }
-  if (p.held && p.held.on && p.baseJar) { const r = await api.held.build(p, p.held); Object.assign(ex, r.extras || {}); }
+  if (p.held && (p.held.on || Object.keys(p.held.imported || {}).length) && p.baseJar) { const r = await api.held.build(p, p.held); Object.assign(ex, r.extras || {}); }
   return ex;
 }
+// take only sizes/positions from any pack (shield, swords, every item, low fire) — no textures
+async function importMeasurements(after) {
+  const p = S.project; const r = await api.pack.measure(); if (!r) return;
+  if (r.error) return toast('ما قدرت أقرأ الباك', 'err');
+  let fireLow = null;
+  if (r.fire) {
+    const top = (im) => { const w = im.width, h = Math.min(im.width, im.height); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (im.data[(y * w + x) * 4 + 3] > 20) return y / h; return 1; };
+    const t1 = texPath(TEXTURES.find((t) => t.id === 'fire_1'), p.packFormat), van = await texImg(p, t1);
+    if (van) { const d = top(await IMG.fromB64(r.fire)) - top(van); if (d > 0.03) fireLow = Math.min(0.95, +d.toFixed(2)); }
+  }
+  const names = Object.keys(r.models).sort((a, b) => (/shield/.test(b) ? 1 : 0) - (/shield/.test(a) ? 1 : 0) || a.localeCompare(b));
+  if (!names.length && fireLow == null) return toast('هذا الباك ما فيه قياسات مختلفة (أحجام أو فاير قصير)');
+  const label = (n) => (n === 'shield' ? 'الشيلد' : n === 'shield_blocking' ? 'الشيلد وقت البلوك' : /^(handheld|generated|handheld_rod|handheld_mace)$/.test(n) ? `كل ${n === 'generated' ? 'الأشياء العادية' : n === 'handheld_rod' ? 'السنانير' : 'السيوف والأدوات'} (${n})` : itemName(n));
+  const m = modal({ title: `${icon('download', 18)} خذ القياسات من «${esc(r.name)}»`, sub: 'آخذ الأحجام والأماكن بس — التكسترات حقتك ما تتغيّر',
+    body: `<div class="stack" style="gap:6px;max-height:420px;overflow:auto">
+      ${fireLow != null ? `<label class="check mrow2"><span class="switch"><input type="checkbox" data-fire checked><span></span></span>${icon('fire', 16)} الفاير القصير <span class="muted small">(نازل ${Math.round(fireLow * 100)}%)</span></label>` : ''}
+      ${names.map((n) => `<label class="check mrow2"><span class="switch"><input type="checkbox" data-n="${esc(n)}" checked><span></span></span>${esc(label(n))}<span class="dim small ltr" style="margin-inline-start:auto">${esc(n)}</span></label>`).join('')}</div>`,
+    foot: `<button class="btn ghost" data-all>${icon('check', 15)} الكل</button><span class="spacer"></span><button class="btn primary" data-go>${icon('check', 16)} خذ المختار</button>` });
+  m.el.querySelector('[data-all]').onclick = () => $$('input[type=checkbox]', m.el).forEach((x) => (x.checked = true));
+  m.el.querySelector('[data-go]').onclick = async () => {
+    const pick = $$('input[data-n]', m.el).filter((x) => x.checked).map((x) => x.dataset.n);
+    p.held = Object.assign({ on: false }, HELD_DEF, p.held || {}); p.held.imported = { ...(p.held.imported || {}) };
+    const shImp = {};
+    for (const n of pick) { if (/^shield(_blocking)?$/.test(n)) shImp[n] = r.models[n]; else { p.held.imported[n] = r.models[n]; if (p.held.items) delete p.held.items[n]; } }
+    if (Object.keys(shImp).length) p.shield = Object.assign({ enabled: false, lower: 0, scale: 1, blockLower: 0 }, p.shield || {}, { imported: { ...((p.shield && p.shield.imported) || {}), ...shImp }, enabled: false, lower: 0, blockLower: 0, scale: 1 });
+    const fc = m.el.querySelector('[data-fire]');
+    if (fc && fc.checked) await applyFire(p, { ...(p.fire || {}), lower: fireLow, opacity: (p.fire && p.fire.opacity) || 1 });
+    await saveProject(); m.close(true); celebrate();
+    toast(`أخذت ${pick.length + (fc && fc.checked ? 1 : 0)} قياسات من ${r.name} ✓`); after && after();
+  };
+}
+function clearMeasurements(p) { if (p.held) p.held.imported = {}; if (p.shield) delete p.shield.imported; }
 async function tabShield(b) {
   const p = S.project;
   if (p.packFormat < 2) { b.innerHTML = `<div class="empty"><div class="big">${icon('shield', 32)}</div><h2>الشيلد مو موجود في ${esc(p.version)}</h2><p>الشيلد انضاف في 1.9 — غيّر نسخة الملف من إعدادات الملف لو تبي تعدّله.</p></div>`; return; }
-  const sh = p.shield = p.shield || { enabled: false, lower: 4, scale: 1, blockLower: 4 };
-  const needJar = p.packFormat >= 46 && !p.baseJar;
-  b.innerHTML = `${needJar ? `<div class="notice">${icon('shield', 20)}<div style="flex:1"><b>نسخة ${esc(p.version)} تحتاج ملفات الفانيلا لتعديل الشيلد</b><span class="muted small">من 1.21.4 تغيّر نظام الموديلات، فلازم نقرأ موديل الشيلد الأصلي من اللعبة.</span></div><div class="row"><button class="btn sm primary" data-a="dljar">حمّل ملفات اللعبة</button><button class="btn sm" data-a="pickjar">اختر jar</button></div></div>` : ''}
+  const sh = p.shield = Object.assign({ enabled: false, lower: 0, scale: 1, blockLower: 0 }, p.shield || {});
+  const imp = sh.imported && Object.keys(sh.imported).length;
+  b.innerHTML = `${p.baseJar ? '' : noBaseNotice()}
   <div class="two"><div class="card stack">
     <label class="check" style="justify-content:space-between"><b>${icon('shield', 18)} شيلد قصير (Low Shield)</b><span class="switch"><input type="checkbox" id="sen" ${sh.enabled ? 'checked' : ''}><span></span></span></label>
     <div id="sctl">
-      <div class="slider-row" style="grid-template-columns:110px 1fr 40px"><span>نزول الشيلد</span><input type="range" id="sl" min="0" max="12" step="0.5" value="${sh.lower}"><output class="ltr"></output></div>
-      <div class="slider-row" style="grid-template-columns:110px 1fr 40px"><span>وقت البلوك</span><input type="range" id="sb" min="0" max="12" step="0.5" value="${sh.blockLower}"><output class="ltr"></output></div>
-      <div class="slider-row" style="grid-template-columns:110px 1fr 40px"><span>الحجم</span><input type="range" id="ss" min="0.4" max="1.3" step="0.05" value="${sh.scale}"><output class="ltr"></output></div>
-      <div class="row" style="margin-top:6px"><button class="btn sm" data-pre="4,4,1">قصير</button><button class="btn sm" data-pre="7,7,0.9">قصير مرة</button><button class="btn sm" data-pre="10,10,0.75">أقصى شي</button><button class="btn sm ghost" data-pre="0,0,1">الأصلي</button></div>
+      <div class="slider-row" style="grid-template-columns:110px 1fr 40px"><span>نزول الشيلد</span><input type="range" id="sl" min="-4" max="12" step="0.5" value="${sh.lower}"><output class="ltr"></output></div>
+      <div class="slider-row" style="grid-template-columns:110px 1fr 40px"><span>وقت البلوك</span><input type="range" id="sb" min="-4" max="12" step="0.5" value="${sh.blockLower}"><output class="ltr"></output></div>
+      <div class="slider-row" style="grid-template-columns:110px 1fr 40px"><span>الحجم</span><input type="range" id="ss" min="0.3" max="1.3" step="0.05" value="${sh.scale}"><output class="ltr"></output></div>
+      <div class="row" style="margin-top:6px"><button class="btn sm" data-pre="1,1,0.85">قصير</button><button class="btn sm" data-pre="2,2,0.7">قصير مرة</button><button class="btn sm" data-pre="3,3,0.55">أقصى شي</button><button class="btn sm ghost" data-pre="0,0,1">الأصلي</button></div>
     </div>
-    <div class="row"><button class="btn" id="stex">${icon('pencil', 16)} عدّل تكستر الشيلد</button></div>
-    <span class="muted small" style="line-height:1.7">يتعدّل موديل <span class="mono">shield.json</span> و <span class="mono">shield_blocking.json</span> ويتضاف للباك وقت التثبيت.</span>
+    <div class="row"><button class="btn" id="smeas">${icon('download', 16)} خذ القياسات من باك</button>${imp ? `<button class="btn ghost" id="sclr">${icon('x', 15)} شيل القياسات المأخوذة</button>` : ''}<button class="btn" id="stex">${icon('pencil', 16)} عدّل تكستر الشيلد</button></div>
+    ${imp ? `<div class="muted small">${icon('check', 14)} مستخدم قياسات شيلد من باك ثاني</div>` : ''}
+    <span class="muted small" style="line-height:1.7">يتعدّل موديل <span class="mono">shield.json</span> و <span class="mono">shield_blocking.json</span> — نفس الملف اللي يعدّله "حجم الأدوات"، فكل شي عن الشيلد هنا.</span>
   </div>
-  <div class="card"><h3>معاينة تقريبية</h3><div class="stage"><div class="xh"></div><canvas id="scv" style="position:absolute;inset:0;width:100%;height:100%"></canvas></div>
-    <div class="row" style="margin-top:12px"><span class="seg" id="sview"><button data-v="0" class="on">عادي</button><button data-v="1">وقت البلوك</button></span></div></div></div>`;
+  <div class="card"><h3>كيف بيطلع باللعبة <span class="muted small">(نفس حسابات ماينكرافت)</span></h3><div class="fp-stage"><canvas id="scv"></canvas></div><div class="hstat" id="sstat"></div>
+    <div class="row" style="margin-top:10px"><span class="seg" id="sview"><button data-v="0" class="on">عادي</button><button data-v="1">وقت البلوك</button></span></div></div></div>`;
   bindBaseActions(b);
   const st = texPath(TEXTURES.find((t) => t.id === 'shield_tex'), p.packFormat);
-  const tr = await api.tex.get(p, st);
-  let shImg = null;
-  if (tr) { const im = await IMG.fromB64(tr.data); const s = im.width / 64; const c = document.createElement('canvas'); c.width = 12 * s; c.height = 22 * s; c.getContext('2d').putImageData(im, -1 * s, -1 * s); shImg = c; }
+  const base = await shieldBase(p), q = await shieldQuadsOf(p), [an, abl] = await shieldAnchors(p, base);
   let view = 0;
   const cv = $('#scv', b);
+  const eff = (v, on) => { const m = v ? base.bl : base.a, d = m && m.display && m.display.firstperson_righthand; return heldApply(d, v ? abl : an, on ? +(v ? $('#sb', b).value : $('#sl', b).value) : 0, on ? +$('#ss', b).value : 1, 0); };
   function draw() {
-    const r = cv.getBoundingClientRect(); cv.width = r.width; cv.height = r.height; const cx = cv.getContext('2d'); cx.imageSmoothingEnabled = false;
-    const on = $('#sen', b).checked, lower = on ? +(view ? $('#sb', b).value : $('#sl', b).value) : 0, sc = on ? +$('#ss', b).value : 1;
-    const H = r.height * 0.78 * sc, W = H * 12 / 22;
-    const x = view ? r.width * 0.36 : r.width * 0.6, y = r.height * (view ? 0.3 : 0.4) + lower * r.height * 0.035;
-    cx.save(); cx.translate(x + W / 2, y + H / 2); cx.rotate(view ? -0.05 : 0.08); cx.translate(-W / 2, -H / 2);
-    cx.fillStyle = 'rgba(0,0,0,.25)'; cx.fillRect(8, 10, W, H);
-    if (shImg) cx.drawImage(shImg, 0, 0, W, H); else { cx.fillStyle = '#6b4a2b'; cx.fillRect(0, 0, W, H); cx.fillStyle = '#8a8f99'; cx.fillRect(W * 0.42, 0, W * 0.16, H); }
-    cx.restore();
+    if (!cv.isConnected) return;
+    const r = cv.getBoundingClientRect(); cv.width = Math.max(320, r.width * devicePixelRatio); cv.height = cv.width * 9 / 16;
+    const res = heldProject(q, eff(view, $('#sen', b).checked), cv.width, cv.height); heldDraw(cv, res);
+    const box = $('#sstat', b);
+    if (!q.length) { box.className = 'hstat'; box.innerHTML = `<span class="muted small">حمّل ملفات اللعبة عشان تشوف الشيلد</span>`; return; }
+    const stt = heldStatus(heldProject(q, eff(view, $('#sen', b).checked), 1600, 900), heldProject(q, eff(view, false), 1600, 900));
+    box.className = 'hstat ' + stt.k; box.innerHTML = `${icon(stt.k === 'ok' ? 'check' : 'sun', 15)}<span>${stt.t}</span>${stt.k !== 'ok' ? `<button class="btn sm" id="sfix">${icon('wand', 14)} صلّحها لي</button>` : ''}`;
+    const fx = $('#sfix', b); if (fx) fx.onclick = fix;
+  }
+  function fix() {
+    let l = +(view ? $('#sb', b).value : $('#sl', b).value), sc = +$('#ss', b).value; const m = view ? base.bl : base.a, d = m.display.firstperson_righthand, bs = heldProject(q, eff(view, false), 1600, 900);
+    for (let i = 0; i < 40; i++) { const s2 = heldStatus(heldProject(q, heldApply(d, view ? abl : an, l, sc, 0), 1600, 900), bs); if (s2.k === 'ok') break; l = l > 0 ? Math.max(0, l - 0.5) : Math.min(0, l + 0.5); sc = sc < 1 ? Math.min(1, sc + 0.05) : Math.max(1, sc - 0.05); }
+    $(view ? '#sb' : '#sl', b).value = Math.round(l * 2) / 2; $('#ss', b).value = Math.round(sc * 20) / 20; upd(); toast('ضبطت الشيلد عشان يبان ✓');
   }
   const upd = () => {
     sh.enabled = $('#sen', b).checked; sh.lower = +$('#sl', b).value; sh.blockLower = +$('#sb', b).value; sh.scale = +$('#ss', b).value;
@@ -2290,9 +2356,12 @@ async function tabShield(b) {
     draw(); clearTimeout(upd.t); upd.t = setTimeout(saveProject, 400);
   };
   ['sen', 'sl', 'sb', 'ss'].forEach((id) => $('#' + id, b).oninput = upd);
-  $$('[data-pre]', b).forEach((x) => x.onclick = () => { const [l, bl, s] = x.dataset.pre.split(',').map(Number); $('#sl', b).value = l; $('#sb', b).value = bl; $('#ss', b).value = s; upd(); });
+  $$('[data-pre]', b).forEach((x) => x.onclick = () => { const [l, bl, s] = x.dataset.pre.split(',').map(Number); $('#sen', b).checked = true; $('#sl', b).value = l; $('#sb', b).value = bl; $('#ss', b).value = s; upd(); });
   $$('#sview button', b).forEach((x) => x.onclick = () => { view = +x.dataset.v; $$('#sview button', b).forEach((y) => y.classList.toggle('on', y === x)); draw(); });
   $('#stex', b).onclick = () => editTexture({ ...TEXTURES.find((t) => t.id === 'shield_tex'), path: st }, () => tabShield(b));
+  $('#smeas', b).onclick = () => importMeasurements(() => tabShield(b));
+  const cl = $('#sclr', b); if (cl) cl.onclick = async () => { delete sh.imported; await saveProject(); tabShield(b); toast('رجع الشيلد لقياسات اللعبة'); };
+  new ResizeObserver(() => draw()).observe(cv);
   requestAnimationFrame(upd);
 }
 

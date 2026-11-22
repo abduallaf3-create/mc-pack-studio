@@ -5,7 +5,7 @@ const chans = [
   'files:list', 'jar:find', 'tex:get', 'tex:getMeta', 'tex:put', 'tex:reset', 'file:putRaw', 'file:remove', 'file:icon', 'file:setIcon',
   'pack:import', 'pack:install', 'pack:export', 'fs:exists', 'fs:pickFolder', 'fs:pickFiles', 'fs:readB64', 'fs:open', 'fs:reveal', 'fs:saveB64',
   'mods:list', 'mods:toggle', 'mods:delete', 'mods:add', 'mods:entries', 'mods:read', 'mods:write', 'mods:backups',
-  'cfg:list', 'cfg:read', 'cfg:write', 'app:info', 'app:moveData', 'asset:baseText', 'assets:list', 'skins:list', 'skins:save', 'skins:delete', 'mods:folders', 'game:status', 'game:download', 'game:dir', 'game:scan', 'game:found', 'jar:valid', 'sounds:list', 'sounds:get', 'snap:list', 'snap:create', 'snap:restore', 'snap:delete', 'update:check', 'update:install', 'update:open', 'merge:open', 'merge:read', 'merge:copy', 'pack:check', 'pack:fix', 'held:build', 'held:displays', 'file:getRaw', 'versions:list', 'jar:packFormat', 'jar:text', 'models:list', 'proj:export', 'proj:import', 'font:layout',
+  'cfg:list', 'cfg:read', 'cfg:write', 'app:info', 'app:moveData', 'asset:baseText', 'assets:list', 'skins:list', 'skins:save', 'skins:delete', 'mods:folders', 'game:status', 'game:download', 'game:dir', 'game:scan', 'game:found', 'jar:valid', 'sounds:list', 'sounds:get', 'snap:list', 'snap:create', 'snap:restore', 'snap:delete', 'update:check', 'update:install', 'update:open', 'merge:open', 'merge:read', 'merge:copy', 'pack:check', 'pack:fix', 'held:build', 'held:displays', 'pack:measure', 'file:getRaw', 'versions:list', 'jar:packFormat', 'jar:text', 'models:list', 'proj:export', 'proj:import', 'font:layout',
 ];
 const api = {};
 for (const c of chans) {
