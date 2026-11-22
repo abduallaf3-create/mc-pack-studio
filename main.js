@@ -666,6 +666,18 @@ ipcMain.handle('held:build', (_e, project, cfg) => {
     const mm = { ...m, display: { ...(m.display || {}), ...disp } };
     if (mod(mm, +c.lower || 0, +c.scale || 1, +c.x || 0, Array.isArray(c.anchor) && c.anchor.length === 3 ? c.anchor : isSpecial(n, m) ? SPECIAL_CENTER(n) : null, +c.z || 0, +c.rot || 0)) out[pre + n + '.json'] = JSON.stringify(mm, null, 2);
   }
+  // the totem that pops on screen is drawn with the item's "fixed" display → shrink that one
+  if (active && cfg.totemPop && (cfg.totemPop.scale !== 1 || cfg.totemPop.lower)) {
+    const n = 'totem_of_undying', key = pre + n + '.json';
+    let m = out[key] ? JSON.parse(out[key]) : read(n);
+    if (m) {
+      const fixedOf = (mm, d = 0) => { if (!mm || d > 6) return null; if (mm.display && mm.display.fixed) return mm.display.fixed; const pn = String(mm.parent || '').replace(/^minecraft:/, ''); if (!pn || pn.startsWith('builtin/')) return null; return fixedOf(read(pn.replace(/^item\//, '')), d + 1); };
+      const f0 = JSON.parse(JSON.stringify(fixedOf(m) || { rotation: [0, 180, 0], translation: [0, 0, 0], scale: [1, 1, 1] }));
+      const sc = +cfg.totemPop.scale || 1, t = [...(f0.translation || [0, 0, 0])]; t[1] -= +cfg.totemPop.lower || 0;
+      m = { ...m, display: { ...(m.display || {}), fixed: { ...f0, translation: t.map((v) => +Math.max(-80, Math.min(80, v)).toFixed(3)), scale: (f0.scale || [1, 1, 1]).map((v) => +Math.max(-4, Math.min(4, v * sc)).toFixed(3)) } } };
+      out[key] = JSON.stringify(m, null, 2);
+    }
+  }
   return { extras: out, count: Object.keys(out).length };
 });
 ipcMain.handle('file:getRaw', (_e, id, rel) => { const f = path.join(filesDir(id), safeRel(rel)); return exists(f) ? fs.readFileSync(f, 'utf8') : null; });

@@ -377,7 +377,7 @@ async function renderProject(main) {
 }
 const TAB_HINTS = {
   textures: 'اضغط على أي شي تبي تغيّره (سيف، توتم، سكن...) — تقدر تعدّل على الأصلي أو ترسم من الصفر.',
-  armor: 'لوّن كل نوع درع بلونه — مثلاً الدايموند أزرق والنذرايت أحمر. فعّل الأنواع اللي تبيها واضغط "طبّق الألوان". وتحت تشوف الإليترا وأنت طاير.',
+  armor: 'لوّن كل درع بضغطة على اللون جنبه — ينحفظ لحاله. وتحت تقدر تحط نقشة (تدرّج، كامو، جالكسي) وجلو. والإليترا من الزر فوق.',
   particles: 'غيّر شكل ولون الجزيئات — مثلاً خل السويب نار أو ثلج، أو حط شكل من عندك (صورة أو GIF).',
   fire: 'نزّل النار عشان ما تغطي الشاشة، وغيّر لونها.',
   shield: 'قصّر الشيلد عشان تشوف أكثر وقت البلوك، أو غيّر شكله.',
@@ -1210,6 +1210,8 @@ async function tabMeasure(b) {
   b.innerHTML = `${p.baseJar ? '' : noBaseNotice()}
     <div class="row" style="margin-bottom:12px;gap:8px"><div class="search" style="flex:1"><input class="inp" id="mq" placeholder="ابحث: سيف، شيلد، نار، بيرل، sword...">${icon('search', 18)}</div>
       <button class="btn" id="mmeas">${icon('download', 16)} خذ القياسات من باك</button>${nImp ? `<button class="btn ghost" id="mclr">${icon('x', 15)} شيل المأخوذة (${nImp})</button>` : ''}</div>
+    <div class="presets-row" id="mpre"><span class="muted small">${icon('star', 14)} جاهز بضغطة:</span>
+      <button class="btn sm" data-preset="light">${icon('wand', 14)} PvP خفيف</button><button class="btn sm" data-preset="strong">${icon('sword', 14)} PvP قوي</button><button class="btn sm" data-preset="bedwars">${icon('layers', 14)} Bedwars</button><button class="btn sm" data-preset="fps">${icon('monitor', 14)} شاشة صافية</button><button class="btn sm ghost" data-preset="reset">${icon('reset', 14)} رجّع الكل</button></div>
     <div class="row" style="gap:6px;margin-bottom:12px" id="mcats">${MEAS_CATS.map(([k, n]) => `<button class="chip ${k === 'main' ? 'on' : ''}" data-c="${k}">${n}</button>`).join('')}</div>
     <div class="meas-split"><div class="meas-list" id="mlistm"></div>
       <div class="card meas-ed" id="med"></div></div>`;
@@ -1255,6 +1257,8 @@ async function tabMeasure(b) {
   if (oldGrp) things.push({ id: 'g:h', kind: 'group', tool: true, cat: 'main', label: 'كل السيوف والأدوات مع بعض', en: 'all swords tools handheld low sword سيف فاس معول أدوات', rep: 'diamond_sword', sliders: ['lower', 'scale', 'x', 'z', 'rot'] });
   if (oldGrp) things.push({ id: 'g:g', kind: 'group', tool: false, cat: 'main', label: 'كل الأشياء العادية مع بعض', en: 'all items generated pearl apple بيرل تفاح أكل', rep: 'ender_pearl', sliders: ['lower', 'scale'] });
   if (shBase) { things.push({ id: 'sh:0', kind: 'shield', block: false, cat: 'main', label: 'الشيلد', en: 'shield low shield', sliders: ['lower', 'scale', 'x', 'z', 'rot'] }); things.push({ id: 'sh:1', kind: 'shield', block: true, cat: 'main', label: 'الشيلد وقت البلوك', en: 'shield blocking', sliders: ['lower', 'scale', 'x', 'z', 'rot'] }); }
+  const totemRel = 'textures/item/totem_of_undying.png';
+  if (modelOf('totem_of_undying')) things.push({ id: 'totem', kind: 'totem', cat: 'main', label: 'التوتم لما ينكسر', en: 'totem pop break توتم ينكسر', rep: 'totem_of_undying', sliders: ['lower', 'scale'] });
   if (fireOrig) things.push({ id: 'fire', kind: 'fire', cat: 'main', label: 'النار على الشاشة', en: 'fire low fire نار نار قصيرة', sliders: ['fire'] });
   // whole categories at once
   const CAT_ALL = [['blocks', 'كل البلوكات', 'stone red_wool end_stone obsidian oak_planks', 'بلوك بلوكات block'], ['weapons', 'كل الأسلحة', 'diamond_sword bow', 'سلاح أسلحة سيف'], ['tools', 'كل الأدوات', 'diamond_pickaxe fishing_rod', 'أداة أدوات معول'], ['throw', 'كل أشياء الرمي', 'ender_pearl snowball', 'رمي بيرل'], ['food', 'كل الأكل', 'golden_apple cooked_beef', 'أكل تفاح'], ['armor', 'كل الدروع والتوتم', 'totem_of_undying diamond_chestplate', 'درع دروع توتم'], ['misc', 'كل باقي الأشياء', '', 'باقي']];
@@ -1274,6 +1278,7 @@ async function tabMeasure(b) {
     if (t.kind === 'item') return itemVals(t.rep) || N5;
     if (t.kind === 'shield') return sh.enabled ? shVals(t.block) : N5;
     if (t.kind === 'fire') return [fireCfg().lower];
+    if (t.kind === 'totem') return h.on && h.totemPop ? [h.totemPop.lower || 0, h.totemPop.scale] : [0, 1];
     if (t.kind === 'blocks') return h.on && h.blocks ? pad5([h.blocks.lower, h.blocks.scale, h.blocks.x, h.blocks.z, h.blocks.rot]) : N5;
     if (t.kind === 'cat' || t.kind === 'everything') { const v = (h.cats || {})[t.kind === 'cat' ? t.catKey : '*']; return h.on && v ? pad5(v) : N5; }
   };
@@ -1293,6 +1298,7 @@ async function tabMeasure(b) {
     else if (t.kind === 'fire') { p.fire = Object.assign(fireCfg(), { lower: v[0] }); clearTimeout(fireTimer); fireTimer = setTimeout(() => applyFire(p, p.fire), 500); }
     else if (t.kind === 'blocks') { v = pad5(v); if (isNeutral(v)) delete h.blocks; else { ensureOn(); h.blocks = { lower: v[0], scale: v[1], x: v[2], z: v[3], rot: v[4], anchor: await anchorOf(t.rep) }; } }
     else if (t.kind === 'cat') await setCat(t, v);
+    else if (t.kind === 'totem') { if (!v[0] && v[1] === 1) delete h.totemPop; else { ensureOn(); h.totemPop = { lower: v[0], scale: v[1] }; } }
     else if (t.kind === 'everything') { h.cats = h.cats || {}; h.cats['*'] = v.slice(); for (const ct of catThings) { if (ct.kind === 'blocks') await setVals(ct, v); else await setCat(ct, v); } }
     clearTimeout(setVals.t); setVals.t = setTimeout(saveProject, 400);
   }
@@ -1308,6 +1314,7 @@ async function tabMeasure(b) {
   }
   function fireFrame(lower) { const c = fireCfg(); const im = IMG.toCanvas(fireTransform(fireOrig, lower, c.opacity, c.useTint ? c.tint : null)); const w = im.width, fr = document.createElement('canvas'); fr.width = fr.height = w; fr.getContext('2d').drawImage(im, 0, 0, w, w, 0, 0, w, w); return fr; }
   async function statusOf(t) {
+    if (t.kind === 'totem') { const sc = valsOf(t)[1]; return sc < 0.15 ? { k: 'tiny', t: 'صغير مرة — بالكاد بتشوفه لما ينكسر', s: '⚠ صغير مرة' } : sc < 0.999 ? { k: 'ok', t: `التوتم بيطلع ${Math.round(sc * 100)}% من حجمه لما ينكسر ✓`, s: `✓ ${Math.round(sc * 100)}%` } : { k: 'cut', t: 'الحجم الأصلي — يغطي نص الشاشة لما ينكسر', s: '' }; }
     if (t.kind === 'fire') { const cv = fireCoverage(fireFrame(fireCfg().lower)), pct = Math.round(cv.cover * 100); return cv.cover < 0.005 ? { k: 'off', t: 'النار ما بتطلع على الشاشة أبد', s: '⚠ ما بيبان' } : cv.cover < 0.12 ? { k: 'ok', t: `نار قصيرة ✓ — تغطي ${pct}% من الشاشة`, s: `✓ ${pct}%` } : { k: 'cut', t: `تغطي ${pct}% من الشاشة`, s: `${pct}%` }; }
     const now = await project(t, 1600, 900), base = await project(t, 1600, 900, true); if (!now) return null;
     const st = heldStatus(now, base); return { ...st, s: st.k === 'ok' ? '✓ واضح' : st.k === 'off' ? '⚠ ما بيبان' : st.k === 'tiny' ? '⚠ صغير مرة' : '⚠ نصه برا' };
@@ -1338,11 +1345,11 @@ async function tabMeasure(b) {
   function drawEditor() {
     const t = sel; if (!t) { ed.innerHTML = ''; return; }
     const v = valsOf(t);
-    const presets = t.kind === 'fire' ? [['عادي', [0]], ['قصير', [0.45]], ['قصير مرة', [0.6]], ['مخفي', [0.9]]] : t.kind === 'shield' ? [['قصير', [1, 0.85, 0, 0, 0]], ['قصير مرة', [2, 0.7, 0, 0, 0]], ['الأصلي', N5]] : [['Low', [2.5, 0.85, 0, 0, 0]], ['صغير', [3, 0.65, 0.5, 0, 0]], ['الأصلي', N5]];
+    const presets = t.kind === 'totem' ? [['الأصلي', [0, 1]], ['أصغر', [0, 0.6]], ['صغير', [0, 0.35]], ['صغير مرة', [0, 0.15]]] : t.kind === 'fire' ? [['عادي', [0]], ['قصير', [0.45]], ['قصير مرة', [0.6]], ['مخفي', [0.9]]] : t.kind === 'shield' ? [['قصير', [1, 0.85, 0, 0, 0]], ['قصير مرة', [2, 0.7, 0, 0, 0]], ['الأصلي', N5]] : [['Low', [2.5, 0.85, 0, 0, 0]], ['صغير', [3, 0.65, 0.5, 0, 0]], ['الأصلي', N5]];
     ed.innerHTML = `<div class="row" style="margin-bottom:10px"><h3 style="margin:0;flex:1">${esc(t.label)}</h3>${t.unit && t.unit.fam ? `<span class="muted small" title="${esc(t.unit.members.join(', '))}">ينطبق على ${t.unit.members.length} أنواع</span>` : t.kind === 'cat' ? `<span class="muted small">ينطبق على ${t.members.length} شي</span>` : ''}</div>
       ${t.kind === 'cat' || t.kind === 'blocks' || t.kind === 'everything' ? `<div class="muted small" style="margin-bottom:8px;line-height:1.6">${t.kind === 'everything' ? 'يغيّر كل الأقسام مرة وحدة (البلوكات والأسلحة والأدوات والأكل وكل شي).' : `يغيّر ${t.members.length} شي مرة وحدة. المعاينة على ${esc(itemName(t.rep))}.`} بعدها تقدر تعدّل أي شي لحاله.</div>` : ''}
       ${t.kind === 'group' ? `<div class="muted small" style="margin-bottom:8px;line-height:1.6">ينطبق على كل ${t.tool ? 'السيوف والأدوات' : 'الأشياء العادية'} اللي ما لها قياس خاص. الأداة اللي تعطيها قياس لحالها يغلب.</div>` : ''}
-      <div class="fp-stage"><canvas id="mpcv"></canvas></div><div class="muted small mhint">${icon('wand', 13)}<span>${t.kind === 'fire' ? 'اسحب لفوق أو لتحت عشان تنزّل النار' : 'اسحب الأداة بالماوس عشان تحرّكها — العجلة تكبّر وتصغّر، ومع Shift تميّلها'}</span></div><div class="hstat" id="mstat"></div>
+      <div class="fp-stage"><canvas id="mpcv"></canvas></div><div class="muted small mhint">${icon('wand', 13)}<span>${t.kind === 'totem' ? 'هذا التوتم اللي يطلع بنص الشاشة لما ينكسر — العجلة تكبّره وتصغّره' : t.kind === 'fire' ? 'اسحب لفوق أو لتحت عشان تنزّل النار' : 'اسحب الأداة بالماوس عشان تحرّكها — العجلة تكبّر وتصغّر، ومع Shift تميّلها'}</span></div><div class="hstat" id="mstat"></div>
       <div class="stack" style="gap:2px;margin-top:10px">${t.sliders.map((k, i) => `<div class="slider-row" style="grid-template-columns:90px 1fr 46px"><span>${SL[k][0]}</span><input type="range" data-i="${i}" min="${SL[k][1]}" max="${SL[k][2]}" step="${SL[k][3]}" value="${v[i]}"><output class="ltr">${k === 'fire' ? Math.round(v[i] * 100) + '%' : v[i]}</output></div>`).join('')}</div>
       <div class="row" style="margin-top:8px;gap:6px">${presets.map(([n, pv], i) => `<button class="btn sm ${n === 'الأصلي' || n === 'عادي' ? 'ghost' : ''}" data-pre="${i}">${n}</button>`).join('')}</div>`;
     pcv = $('#mpcv', ed);
@@ -1369,7 +1376,13 @@ async function tabMeasure(b) {
   async function render() {
     const t = sel; if (!pcv || !pcv.isConnected) return;
     const r = pcv.getBoundingClientRect(); pcv.width = Math.max(320, r.width * devicePixelRatio); pcv.height = pcv.width * 9 / 16;
-    if (t.kind === 'fire') {
+    if (t.kind === 'totem') {
+      const x = pcv.getContext('2d'), W = pcv.width, H = pcv.height; heldDraw(pcv, { polys: [] });
+      const im = await imgOf(totemRel), [l, sc] = valsOf(t);
+      if (im) { const c = IMG.toCanvas(im), w = c.width, size = H * 0.62 * sc, k = ((performance.now() / 1600) % 1), grow = Math.sin(Math.min(1, k * 2.2) * Math.PI / 2);
+        x.imageSmoothingEnabled = false; x.save(); x.translate(W / 2, H / 2 + l / 16 * H * 0.6); x.rotate(Math.sin(k * 9) * 0.2 * (1 - k)); const sz = size * (0.5 + 0.5 * grow); x.globalAlpha = k > 0.8 ? 1 - (k - 0.8) / 0.2 : 1; x.drawImage(c, 0, 0, w, w, -sz / 2, -sz / 2, sz, sz); x.restore(); }
+      clearTimeout(render.t); render.t = setTimeout(() => sel === t && render(), 60);
+    } else if (t.kind === 'fire') {
       const x = pcv.getContext('2d'), W = pcv.width, H = pcv.height, fr = fireFrame(fireCfg().lower); heldDraw(pcv, { polys: [] }); x.imageSmoothingEnabled = false; x.globalAlpha = 0.9;
       for (const rc of fireScreenRects(W, H)) { const xs = rc.map((q) => q[0]), ys = rc.map((q) => q[1]); x.drawImage(fr, Math.min(...xs), Math.min(...ys), Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)); }
       x.globalAlpha = 1;
@@ -1391,6 +1404,27 @@ async function tabMeasure(b) {
     }
     toast('ضبطتها عشان تبان زين ✓'); drawEditor();
   }
+  // ready-made sets: a whole look in one click (you can still change anything after)
+  const PRESETS = {
+    light: { cats: [1.5, 0.85, 0, 0, 0], other: [1, 0.85, 0, 0, 0], shield: [1, 0.85, 0, 0, 0], block: [1, 0.85, 0, 0, 0], fire: 0.45, totem: 0.6, name: 'PvP خفيف' },
+    strong: { cats: [2.5, 0.7, 0.5, 0, 0], other: [2, 0.7, 0, 0, 0], shield: [2, 0.7, 0, 0, 0], block: [2, 0.7, 0, 0, 0], fire: 0.6, totem: 0.35, name: 'PvP قوي' },
+    bedwars: { cats: [2, 0.8, 0, 0, 0], other: [1.5, 0.75, 0, 0, 0], shield: [1.5, 0.8, 0, 0, 0], block: [1.5, 0.8, 0, 0, 0], fire: 0.5, totem: 0.5, name: 'Bedwars' },
+    fps: { cats: [3, 0.65, 0.5, 0, 0], other: [3, 0.6, 0, 0, 0], shield: [2.5, 0.6, 0, 0, 0], block: [2.5, 0.6, 0, 0, 0], fire: 0.75, totem: 0.25, name: 'شاشة صافية' },
+    reset: { cats: N5, other: N5, shield: N5, block: N5, fire: 0, totem: 1, name: 'الأصلي' },
+  };
+  $$('[data-preset]', b).forEach((bt) => bt.onclick = async () => {
+    const P = PRESETS[bt.dataset.preset]; bt.disabled = true;
+    for (const t of things) {
+      if (t.kind === 'cat') await setVals(t, /weapons|tools/.test(t.catKey) ? P.cats : P.other);
+      else if (t.kind === 'blocks') await setVals(t, P.other);
+      else if (t.kind === 'shield') await setVals(t, t.block ? P.block : P.shield);
+      else if (t.kind === 'fire') await setVals(t, [P.fire]);
+      else if (t.kind === 'totem') await setVals(t, [0, P.totem]);
+      else if (t.kind === 'item' && bt.dataset.preset === 'reset') await setVals(t, N5);
+    }
+    if (bt.dataset.preset === 'reset') { h.cats = {}; delete h.blocks; }
+    bt.disabled = false; drawList(); drawEditor(); celebrate(); toast(`طبّقت «${P.name}» ✓ — تقدر تعدّل أي شي بعدها`);
+  });
   $('#mmeas', b).onclick = () => importMeasurements(() => tabMeasure(b));
   const mc = $('#mclr', b); if (mc) mc.onclick = async () => { h.imported = {}; delete sh.imported; await saveProject(); tabMeasure(b); toast('رجعت القياسات لقياسات اللعبة'); };
   new ResizeObserver(() => render()).observe(ed);
@@ -1648,110 +1682,155 @@ const armorPaths = (mat, pf) => pf >= 42
   : [`textures/models/armor/${mat}_layer_1.png`, `textures/models/armor/${mat}_layer_2.png`];
 const ARMOR_DEF = { diamond: '#3b82f6', netherite: '#ef4444', iron: '#e5e7eb', gold: '#facc15', chainmail: '#9ca3af', leather: '#a16207' };
 const armorItemPaths = (mat) => { const n = mat === 'gold' ? 'golden' : mat; return ['helmet', 'chestplate', 'leggings', 'boots'].map((x) => `textures/item/${n}_${x}.png`); };
+// ---------- armor & elytra style: colour + pattern + glow (keeps the game's shading)
+const SWATCHES = ['#ef4444', '#f97316', '#facc15', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#ffffff', '#111111'];
+const PATTERNS = [['solid', 'سادة'], ['grad', 'تدرّج'], ['camo', 'كامو'], ['rainbow', 'قوس قزح'], ['galaxy', 'جالكسي']];
+function styleTex(img, st) {
+  if (!img || !st || !st.on) return img;
+  const W = img.width, H = img.height, out = IMG.clone(img), d = out.data, src = img.data, k = Math.max(1, W / 64);
+  const c1 = hexRgb(st.color || '#3b82f6'), c2 = hexRgb(st.color2 || '#111111'), s = st.s === undefined ? 0.9 : st.s;
+  const hash = (x, y) => { const v = Math.sin(x * 127.1 + y * 311.7 + (st.seed || 0) * 17.3) * 43758.5453; return v - Math.floor(v); };
+  const noise = (x, y) => { const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi, a = hash(xi, yi), b = hash(xi + 1, yi), c = hash(xi, yi + 1), e = hash(xi + 1, yi + 1), u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf); return a + (b - a) * u + (c - a) * v * (1 - u) + (e - b) * u * v; };
+  const alpha = (x, y) => (x < 0 || y < 0 || x >= W || y >= H ? 0 : src[(y * W + x) * 4 + 3]);
+  const gc = hexRgb(st.glowColor || st.color || '#ffffff');
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = (y * W + x) * 4; if (src[i + 3] < 8) continue;
+    const lum = (0.299 * src[i] + 0.587 * src[i + 1] + 0.114 * src[i + 2]) / 255;
+    let c = c1;
+    if (st.pattern === 'grad') { const t = y / H; c = c1.map((v, j) => v + (c2[j] - v) * t); }
+    else if (st.pattern === 'camo') { const n = noise(x / (3 * k), y / (3 * k)) * 0.65 + noise(x / (1.5 * k), y / (1.5 * k)) * 0.35; c = n < 0.38 ? c2 : n < 0.62 ? c1 : c1.map((v, j) => (v + c2[j]) / 2 * 0.75); }
+    else if (st.pattern === 'rainbow') c = hslRgb(((x + y) / (W * 0.6)) % 1, 0.85, 0.55);
+    else if (st.pattern === 'galaxy') { const n = noise(x / (4 * k), y / (4 * k)); c = c1.map((v, j) => v * (1 - n) + c2[j] * n); if (hash(x, y) > 0.965) c = [255, 255, 255]; }
+    const shade = 0.3 + 0.95 * lum, t = [c[0] * shade, c[1] * shade, c[2] * shade].map((v) => Math.min(255, v));
+    for (let j = 0; j < 3; j++) d[i + j] = src[i + j] + (t[j] - src[i + j]) * s;
+    // glow: brighten the edges of every piece (next to an empty pixel) toward the glow colour
+    if (st.glow) {
+      let edge = 0; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (alpha(x + dx, y + dy) < 8) edge = 1;
+      const g = st.glow * (edge ? 1 : 0.18 * lum);
+      for (let j = 0; j < 3; j++) d[i + j] = Math.min(255, d[i + j] + (gc[j] * 1.1 + 40 - d[i + j]) * g);
+    }
+  }
+  return out;
+}
+// only the glowing pixels — OptiFine/Lunar draw "_e" textures at full brightness (glow in the dark)
+function emissiveOf(styled, st) {
+  if (!styled || !st || !st.glow || !st.emissive) return null;
+  const W = styled.width, H = styled.height, out = new ImageData(W, H), a = (x, y) => (x < 0 || y < 0 || x >= W || y >= H ? 0 : styled.data[(y * W + x) * 4 + 3]);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const i = (y * W + x) * 4; if (styled.data[i + 3] < 8) continue; let edge = false; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (a(x + dx, y + dy) < 8) edge = true; if (edge) { out.data.set(styled.data.subarray(i, i + 4), i); } }
+  return out;
+}
+async function putStyled(p, rel, base, st) {
+  const e = rel.replace(/\.png$/, '_e.png');
+  if (!st || !st.on) { await api.tex.reset(p.id, rel); await api.tex.reset(p.id, e); return; }
+  const im = styleTex(base, st); await api.tex.put(p.id, rel, IMG.toB64(im));
+  const em = emissiveOf(im, st);
+  if (em) { await api.tex.put(p.id, e, IMG.toB64(em)); await api.file.putRaw(p.id, 'assets/minecraft/optifine/emissive.properties', 'suffix.emissive=_e\n'); } else await api.tex.reset(p.id, e);
+}
 async function tabArmor(b) {
   const p = S.project;
   p.armorTint = p.armorTint || {};
-  const st = (m) => (p.armorTint[m] = p.armorTint[m] || { color: ARMOR_DEF[m], s: 0.85, on: false, icons: true });
-  let mat = 'diamond';
+  const st = (m) => (p.armorTint[m] = Object.assign({ color: ARMOR_DEF[m], color2: '#111111', pattern: 'solid', s: 0.9, on: false, icons: true, glow: 0, emissive: false }, p.armorTint[m] || {}));
+  const est = () => (p.elytraTint = Object.assign({ color: '#8b5cf6', color2: '#111111', pattern: 'solid', s: 0.9, on: false, glow: 0, emissive: false }, p.elytraTint || {}));
+  let mat = 'diamond', target = 'armor';
   b.innerHTML = `${p.baseJar ? '' : noBaseNotice()}
-  <div class="two" style="grid-template-columns:430px 1fr">
+  <div class="two" style="grid-template-columns:minmax(360px,460px) 1fr">
     <div class="card stack">
-      <h3 style="margin:0">${icon('shield', 18)} ألوان الدروع</h3>
-      <div class="mat-list" id="mats">${ARMOR_MATS.map(([k, n]) => `<div class="mat-row ${k === mat ? 'sel' : ''}" data-m="${k}">
-          <label class="switch" title="فعّل لون هذا الدرع"><input type="checkbox" data-on ${st(k).on ? 'checked' : ''}><span></span></label>
-          <span class="mat-name">${n}</span>
-          <input type="color" data-col value="${st(k).color}">
-          <span class="mat-state small">${st(k).on ? 'متلوّن' : 'أصلي'}</span></div>`).join('')}</div>
+      <div class="seg" id="atarget"><button data-t="armor" class="on">${icon('shield', 15)} الدروع</button><button data-t="elytra">${icon('wand', 15)} الإليترا</button></div>
+      <div id="arm-only" class="stack" style="gap:8px">
+        <div class="muted small">اضغط على اللون جنب الدرع — ينحفظ لحاله</div>
+        <div class="mat-list" id="mats">${ARMOR_MATS.map(([k, n]) => `<div class="mat-row2 ${k === mat ? 'sel' : ''}" data-m="${k}"><span class="mat-name">${n}</span>
+          <span class="sw-row">${SWATCHES.map((c) => `<button class="sw" data-c="${c}" style="background:${c}"></button>`).join('')}<input type="color" data-col title="لون من عندك"><button class="sw orig" data-orig title="الأصلي">${icon('reset', 12)}</button></span></div>`).join('')}</div>
+        <div class="row" style="gap:6px"><span class="muted small">كل الدروع بلون واحد:</span>${SWATCHES.slice(0, 8).map((c) => `<button class="sw" data-all="${c}" style="background:${c}"></button>`).join('')}<button class="btn sm ghost" id="aallorig">${icon('reset', 13)} كلها أصلي</button></div>
+      </div>
+      <div id="ely-only" class="stack" style="gap:8px;display:none">
+        <div class="row" style="gap:6px"><span class="muted small">لون الإليترا:</span>${SWATCHES.map((c) => `<button class="sw" data-ec="${c}" style="background:${c}"></button>`).join('')}<input type="color" id="ecol"><button class="sw orig" id="eorig" title="الأصلي">${icon('reset', 12)}</button></div>
+        <div class="row"><button class="btn sm" id="eimg">${icon('image', 15)} حط صورة عليها</button><button class="btn sm" id="edraw">${icon('edit', 15)} ارسمها وأنت طاير</button></div>
+      </div>
+      <h3 style="margin:8px 0 0">${icon('star', 16)} النقشة <span class="muted small" id="stfor"></span></h3>
+      <div class="seg wrap" id="apat">${PATTERNS.map(([k, n]) => `<button data-p="${k}">${n}</button>`).join('')}</div>
+      <div class="row" id="c2row"><span class="muted small">اللون الثاني:</span>${SWATCHES.map((c) => `<button class="sw" data-c2="${c}" style="background:${c}"></button>`).join('')}<input type="color" id="acol2"></div>
+      <h3 style="margin:8px 0 0">${icon('sun', 16)} الجلو</h3>
+      <div class="slider-row" style="grid-template-columns:90px 1fr 46px"><span>قوة الجلو</span><input type="range" id="aglow" min="0" max="100"><output class="ltr"></output></div>
+      <label class="check small"><span class="switch"><input type="checkbox" id="aemis"><span></span></span>يضوي بالظلام (OptiFine / Lunar)</label>
       <div class="slider-row" style="grid-template-columns:90px 1fr 46px"><span>قوة اللون</span><input type="range" id="astr" min="10" max="100"><output class="ltr"></output></div>
-      <div class="row" style="gap:6px">${['#ef4444', '#f97316', '#facc15', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#ffffff', '#1f1f1f'].map((c) => `<button class="sw" data-c="${c}" style="width:24px;height:24px;background:${c}" title="حط هذا اللون للدرع المختار"></button>`).join('')}</div>
-      <label class="check small"><span class="switch"><input type="checkbox" id="aicons"><span></span></span>لوّن أيقونات الدروع بعد (بالإنفنتوري)</label>
-      <div class="muted small">القطع اللي تبان بالمعاينة:</div>
-      <div class="row" id="aparts">${[['helmet', 'خوذة'], ['chest', 'صدرية'], ['legs', 'بنطلون'], ['boots', 'بوت']].map(([k, n]) => `<label class="check small"><span class="switch"><input type="checkbox" data-p="${k}" checked><span></span></span>${n}</label>`).join('')}</div>
-      <div class="row"><button class="btn primary" id="aapply">${icon('check', 16)} طبّق الألوان</button><button class="btn ghost" id="areset">${icon('reset', 16)} رجّع الكل للأصلي</button></div>
+      <label class="check small" id="iconsrow"><span class="switch"><input type="checkbox" id="aicons"><span></span></span>لوّن أيقونات الدروع بعد (بالإنفنتوري)</label>
+      <div class="hstat ok" id="asaved" style="visibility:hidden">${icon('check', 15)}<span>انحفظ</span></div>
     </div>
-    <div class="card"><h3>معاينة 3D <span class="muted small" id="amatn"></span></h3><div class="v3d" style="height:520px"><canvas id="a3d"></canvas></div></div></div>
-  <div class="two" style="grid-template-columns:430px 1fr;margin-top:16px">
-    <div class="card stack">
-      <h3 style="margin:0">${icon('wand', 18)} الإليترا</h3>
-      <span class="muted small" style="line-height:1.7">شوف الإليترا وأنت طاير وعدّل عليها — اللون أو ارسمها بيدك.</span>
-      <div class="row"><input type="color" id="ecol" value="${(p.elytraTint && p.elytraTint.color) || '#8b5cf6'}"><label class="check small"><span class="switch"><input type="checkbox" id="etint" ${p.elytraTint && p.elytraTint.on ? 'checked' : ''}><span></span></span>لوّنها</label></div>
-      <div class="slider-row" style="grid-template-columns:90px 1fr 46px"><span>فرد الجناح</span><input type="range" id="espread" min="0" max="100" value="100"><output class="ltr"></output></div>
-      <div class="row"><button class="btn primary" id="eapply">${icon('check', 16)} احفظ اللون</button><button class="btn" id="eimg">${icon('image', 16)} حط صورة عليها</button><button class="btn" id="edraw">${icon('edit', 16)} ارسمها وأنت طاير</button><button class="btn ghost" id="ereset">${icon('reset', 16)} الأصلي</button></div>
-    </div>
-    <div class="card"><h3>وأنت طاير ✈</h3><div class="v3d sky3d" style="height:420px"><canvas id="e3d"></canvas></div></div></div>`;
+    <div class="card"><h3 id="pvtitle">معاينة 3D</h3><div class="v3d" id="pvbox" style="height:540px"><canvas id="a3d"></canvas></div>
+      <div class="row" style="margin-top:8px" id="aparts">${[['helmet', 'خوذة'], ['chest', 'صدرية'], ['legs', 'بنطلون'], ['boots', 'بوت']].map(([k, n]) => `<label class="check small"><span class="switch"><input type="checkbox" data-p="${k}" checked><span></span></span>${n}</label>`).join('')}</div></div></div>`;
   bindBaseActions(b);
   const skin = (await realSteve()) || defaultSkin();
   const bases = {}; let v = null;
   const parts = () => Object.fromEntries($$('#aparts input', b).map((x) => [x.dataset.p, x.checked]));
-  async function baseOf(m) {
-    if (!bases[m]) { const [r1, r2] = armorPaths(m, p.packFormat); bases[m] = [await texImg(p, r1), await texImg(p, r2)]; }
-    return bases[m];
-  }
+  const baseOf = async (m) => { if (!bases[m]) { const [r1, r2] = armorPaths(m, p.packFormat); bases[m] = [await texImg(p, r1), await texImg(p, r2)]; } return bases[m]; };
+  const eRel = texPath(TEXTURES.find((t) => t.id === 'elytra_wings'), p.packFormat), eOrig = eRel ? await texImg(p, eRel) : null;
+  let eCustom = null; // a picture / drawing the user put on the elytra
+  const cur = () => (target === 'armor' ? st(mat) : est());
   async function draw() {
-    const s = st(mat); $('#astr', b).value = Math.round(s.s * 100); $('#astr', b).nextElementSibling.textContent = Math.round(s.s * 100) + '%';
-    $('#aicons', b).checked = s.icons !== false;
-    $('#amatn', b).textContent = '— ' + ARMOR_MATS.find((x) => x[0] === mat)[1];
-    const [b1, b2] = await baseOf(mat);
-    const t = (im) => im && (s.on ? IMG.tint(im, s.color, s.s, false) : im);
-    const q = [...Lite3D.skinQuads(skin, false, true), ...Lite3D.armorQuads(t(b1), t(b2), false, parts())];
-    if (!v) v = Lite3D.viewer($('#a3d', b), q, { dist: 62, pitch: 0.15 }); else v.set(q);
-  }
-  const row = (m) => $(`.mat-row[data-m="${m}"]`, b);
-  const refreshRow = (m) => { row(m).querySelector('.mat-state').textContent = st(m).on ? 'متلوّن' : 'أصلي'; row(m).querySelector('[data-on]').checked = st(m).on; row(m).querySelector('[data-col]').value = st(m).color; };
-  const select = (m) => { mat = m; $$('.mat-row', b).forEach((r) => r.classList.toggle('sel', r.dataset.m === m)); draw(); };
-  $$('.mat-row', b).forEach((r) => {
-    const m = r.dataset.m;
-    r.onclick = (e) => { if (!e.target.closest('input,label')) select(m); };
-    r.querySelector('[data-on]').onchange = (e) => { st(m).on = e.target.checked; refreshRow(m); select(m); };
-    r.querySelector('[data-col]').oninput = (e) => { st(m).color = e.target.value; st(m).on = true; refreshRow(m); if (mat !== m) select(m); else draw(); };
-  });
-  $$('.sw[data-c]', b).forEach((x) => x.onclick = () => { st(mat).color = x.dataset.c; st(mat).on = true; refreshRow(mat); draw(); });
-  $('#astr', b).oninput = () => { st(mat).s = +$('#astr', b).value / 100; draw(); };
-  $('#aicons', b).onchange = () => { st(mat).icons = $('#aicons', b).checked; };
-  $$('#aparts input', b).forEach((x) => x.onchange = draw);
-  $('#aapply', b).onclick = async () => {
-    let n = 0;
-    for (const [m] of ARMOR_MATS) {
-      const s = st(m), [r1, r2] = armorPaths(m, p.packFormat), [b1, b2] = await baseOf(m);
-      if (!b1 && !b2) continue;
-      if (s.on) {
-        if (b1) await api.tex.put(p.id, r1, IMG.toB64(IMG.tint(b1, s.color, s.s, false)));
-        if (b2) await api.tex.put(p.id, r2, IMG.toB64(IMG.tint(b2, s.color, s.s, false)));
-        for (const ip of armorItemPaths(m)) { const im = await texImg(p, ip); if (!im) continue; if (s.icons !== false) await api.tex.put(p.id, ip, IMG.toB64(IMG.tint(im, s.color, s.s, false))); else await api.tex.reset(p.id, ip); }
-        n++;
-      } else if (s.applied) { await api.tex.reset(p.id, r1); await api.tex.reset(p.id, r2); for (const ip of armorItemPaths(m)) await api.tex.reset(p.id, ip); }
-      s.applied = s.on;
+    if (target === 'armor') {
+      const s = st(mat), [b1, b2] = await baseOf(mat);
+      $('#pvtitle', b).textContent = 'معاينة 3D — ' + ARMOR_MATS.find((x) => x[0] === mat)[1];
+      const q = [...Lite3D.skinQuads(skin, false, true), ...Lite3D.armorQuads(b1 && styleTex(b1, s), b2 && styleTex(b2, s), false, parts())];
+      if (!v || v.kind !== 'a') { if (v) v.stop(); $('#pvbox', b).classList.remove('sky3d'); v = Lite3D.viewer($('#a3d', b), q, { dist: 62, pitch: 0.15 }); v.kind = 'a'; } else v.set(q);
+    } else {
+      const e = est(), im = eCustom || (e.on ? styleTex(eOrig, e) : eOrig);
+      $('#pvtitle', b).textContent = 'الإليترا وأنت طاير ✈';
+      const q = Lite3D.flyingQuads(skin, im, 1);
+      if (!v || v.kind !== 'e') { if (v) v.stop(); $('#pvbox', b).classList.add('sky3d'); v = Lite3D.viewer($('#a3d', b), q, { dist: 70, pitch: 0.55, yaw: Math.PI }); v.kind = 'e'; } else v.set(q);
     }
-    await saveProject();
-    if (!n && !Object.values(p.armorTint).some((x) => x.applied === false)) return toast('ما لقيت تكستر الدرع — حمّل ملفات اللعبة', 'err');
-    celebrate(); toast(n ? `تلوّنت ${n} أنواع دروع ✓` : 'رجعت الدروع للأصلي');
-  };
-  $('#areset', b).onclick = async () => {
-    for (const [m] of ARMOR_MATS) { const [r1, r2] = armorPaths(m, p.packFormat); await api.tex.reset(p.id, r1); await api.tex.reset(p.id, r2); for (const ip of armorItemPaths(m)) await api.tex.reset(p.id, ip); st(m).on = false; st(m).applied = false; refreshRow(m); }
-    await saveProject(); draw(); toast('رجعت كل الدروع للأصلي');
-  };
-  // ---- elytra, previewed while flying
-  const eRel = texPath(TEXTURES.find((t) => t.id === 'elytra_wings'), p.packFormat);
-  const eOrig = eRel ? await texImg(p, eRel) : null;
-  let eCur = eRel ? await texImg(p, eRel, false) : null, ev = null;
-  const eTex = () => { const im = eCur || eOrig; if (!im) return null; return $('#etint', b).checked ? IMG.tint(im, $('#ecol', b).value, 0.85, false) : im; };
-  const drawE = () => {
-    const sp = +$('#espread', b).value / 100; $('#espread', b).nextElementSibling.textContent = Math.round(sp * 100) + '%';
-    const q = Lite3D.flyingQuads(skin, eTex(), sp);
-    if (!ev) ev = Lite3D.viewer($('#e3d', b), q, { dist: 70, pitch: 0.55, yaw: Math.PI }); else ev.set(q);
-  };
-  $('#ecol', b).oninput = () => { $('#etint', b).checked = true; drawE(); }; $('#etint', b).onchange = drawE; $('#espread', b).oninput = drawE;
-  drawE();
-  $('#eapply', b).onclick = async () => {
-    if (!eOrig) return toast('ما لقيت تكستر الإليترا', 'err');
-    p.elytraTint = { color: $('#ecol', b).value, on: $('#etint', b).checked }; await saveProject();
-    await api.tex.put(p.id, eRel, IMG.toB64(eTex())); eCur = eTex(); $('#etint', b).checked = false; drawE(); celebrate(); toast('انحفظت الإليترا ✓');
-  };
+  }
+  function syncUI() {
+    const s = cur();
+    $('#stfor', b).textContent = target === 'armor' ? '— ' + ARMOR_MATS.find((x) => x[0] === mat)[1] : '— الإليترا';
+    $$('#apat button', b).forEach((x) => x.classList.toggle('on', x.dataset.p === s.pattern));
+    $('#c2row', b).style.display = s.pattern === 'grad' || s.pattern === 'camo' || s.pattern === 'galaxy' ? '' : 'none';
+    $('#acol2', b).value = s.color2; $('#aglow', b).value = Math.round((s.glow || 0) * 100); $('#aemis', b).checked = !!s.emissive; $('#astr', b).value = Math.round(s.s * 100);
+    $('#aicons', b).checked = s.icons !== false; $('#iconsrow', b).style.display = target === 'armor' ? '' : 'none';
+    $$('.slider-row output', b).forEach((o) => o.textContent = o.previousElementSibling.value + '%');
+    $$('.mat-row2', b).forEach((r) => { const m = r.dataset.m, x = st(m); r.classList.toggle('sel', m === mat && target === 'armor'); r.querySelectorAll('[data-c]').forEach((sw) => sw.classList.toggle('on', x.on && sw.dataset.c === x.color)); r.querySelector('[data-col]').value = x.color; r.querySelector('[data-orig]').classList.toggle('on', !x.on); });
+    $$('[data-ec]', b).forEach((sw) => sw.classList.toggle('on', est().on && sw.dataset.ec === est().color)); $('#ecol', b).value = est().color; $('#eorig', b).classList.toggle('on', !est().on && !eCustom);
+  }
+  // saves by itself (a moment after the last change)
+  let saveT = 0;
+  const changed = (what) => { syncUI(); draw(); clearTimeout(saveT); saveT = setTimeout(() => save(what), 450); };
+  async function save(what) {
+    if (what === 'elytra') { if (eRel && !eCustom) await putStyled(p, eRel, eOrig, est()); }
+    else for (const m of what === 'all' ? ARMOR_MATS.map((x) => x[0]) : [what]) {
+      const s = st(m), [r1, r2] = armorPaths(m, p.packFormat), [b1, b2] = await baseOf(m);
+      if (b1) await putStyled(p, r1, b1, s); if (b2) await putStyled(p, r2, b2, s);
+      for (const ip of armorItemPaths(m)) { const im = await texImg(p, ip); if (im) await putStyled(p, ip, im, s.on && s.icons !== false ? s : null); }
+    }
+    await saveProject(); const sv = $('#asaved', b); if (sv) { sv.style.visibility = 'visible'; clearTimeout(sv.t); sv.t = setTimeout(() => (sv.style.visibility = 'hidden'), 1500); }
+  }
+  const selMat = (m) => { mat = m; syncUI(); draw(); };
+  $$('.mat-row2', b).forEach((r) => {
+    const m = r.dataset.m;
+    r.onclick = (e) => { if (!e.target.closest('button,input')) selMat(m); };
+    r.querySelectorAll('[data-c]').forEach((sw) => sw.onclick = () => { mat = m; Object.assign(st(m), { color: sw.dataset.c, on: true }); changed(m); });
+    r.querySelector('[data-col]').oninput = (e) => { mat = m; Object.assign(st(m), { color: e.target.value, on: true }); changed(m); };
+    r.querySelector('[data-orig]').onclick = () => { mat = m; st(m).on = false; changed(m); };
+  });
+  $$('[data-all]', b).forEach((sw) => sw.onclick = () => { ARMOR_MATS.forEach(([m]) => Object.assign(st(m), { color: sw.dataset.all, on: true })); changed('all'); });
+  $('#aallorig', b).onclick = () => { ARMOR_MATS.forEach(([m]) => (st(m).on = false)); changed('all'); };
+  const key = () => (target === 'armor' ? mat : 'elytra');
+  $$('#apat button', b).forEach((x) => x.onclick = () => { const s = cur(); s.pattern = x.dataset.p; s.on = true; if (target === 'elytra') eCustom = null; changed(key()); });
+  $$('[data-c2]', b).forEach((sw) => sw.onclick = () => { cur().color2 = sw.dataset.c2; cur().on = true; changed(key()); });
+  $('#acol2', b).oninput = (e) => { cur().color2 = e.target.value; cur().on = true; changed(key()); };
+  $('#aglow', b).oninput = (e) => { cur().glow = +e.target.value / 100; cur().on = true; changed(key()); };
+  $('#aemis', b).onchange = (e) => { cur().emissive = e.target.checked; if (e.target.checked && !cur().glow) cur().glow = 0.6; cur().on = true; changed(key()); };
+  $('#astr', b).oninput = (e) => { cur().s = +e.target.value / 100; changed(key()); };
+  $('#aicons', b).onchange = (e) => { st(mat).icons = e.target.checked; changed(mat); };
+  $$('#aparts input', b).forEach((x) => x.onchange = draw);
+  $$('#atarget button', b).forEach((x) => x.onclick = () => { target = x.dataset.t; $$('#atarget button', b).forEach((y) => y.classList.toggle('on', y === x)); $('#arm-only', b).style.display = target === 'armor' ? '' : 'none'; $('#ely-only', b).style.display = target === 'elytra' ? '' : 'none'; $('#aparts', b).style.display = target === 'armor' ? '' : 'none'; syncUI(); draw(); });
+  // elytra colour / picture / drawing
+  $$('[data-ec]', b).forEach((sw) => sw.onclick = () => { eCustom = null; Object.assign(est(), { color: sw.dataset.ec, on: true }); changed('elytra'); });
+  $('#ecol', b).oninput = (e) => { eCustom = null; Object.assign(est(), { color: e.target.value, on: true }); changed('elytra'); };
+  $('#eorig', b).onclick = async () => { eCustom = null; est().on = false; changed('elytra'); };
   $('#eimg', b).onclick = () => elytraFromImage(p, eOrig, async (img, edit) => {
     if (edit) return drawElytra(img);
-    await api.tex.put(p.id, eRel, IMG.toB64(img)); eCur = img; $('#etint', b).checked = false; drawE(); celebrate(); toast('انحطت الصورة على الإليترا ✓');
+    eCustom = img; est().on = false; await api.tex.put(p.id, eRel, IMG.toB64(img)); await saveProject(); syncUI(); draw(); celebrate(); toast('انحطت الصورة على الإليترا ✓');
   });
-  $('#edraw', b).onclick = () => drawElytra(eTex());
+  $('#edraw', b).onclick = () => drawElytra(eCustom || (est().on ? styleTex(eOrig, est()) : eOrig));
   function drawElytra(start) {
     if (!eOrig) return toast('ما لقيت تكستر الإليترا', 'err');
     let fv = null;
@@ -1762,12 +1841,11 @@ async function tabArmor(b) {
         if (!fv || !box.querySelector('canvas')) { box.innerHTML = '<div class="v3d sky3d" style="height:260px"><canvas></canvas></div>'; fv = Lite3D.viewer(box.querySelector('canvas'), Lite3D.flyingQuads(skin, img, 1), { dist: 70, pitch: 0.55, yaw: Math.PI }); return; }
         cancelAnimationFrame(fv.pend); fv.pend = requestAnimationFrame(() => fv.set(Lite3D.flyingQuads(skin, img, 1)));
       },
-      onSave: async (img) => { await api.tex.put(p.id, eRel, IMG.toB64(img)); eCur = img; $('#etint', b).checked = false; drawE(); toast('انحفظت الإليترا ✓'); },
-      onReset: async () => { await api.tex.reset(p.id, eRel); eCur = null; drawE(); },
+      onSave: async (img) => { eCustom = img; est().on = false; await api.tex.put(p.id, eRel, IMG.toB64(img)); await saveProject(); syncUI(); draw(); toast('انحفظت الإليترا ✓'); },
+      onReset: async () => { eCustom = null; await api.tex.reset(p.id, eRel); draw(); },
     });
   }
-  $('#ereset', b).onclick = async () => { if (eRel) await api.tex.reset(p.id, eRel); eCur = null; $('#etint', b).checked = false; drawE(); toast('رجعت الأصلي'); };
-  draw();
+  syncUI(); draw();
 }
 
 // ------------------------------------------------------------- guided tour (first run)
