@@ -149,12 +149,12 @@ input[type=color]::-webkit-color-swatch { border: 2px solid var(--line2); border
 .client .det { position: absolute; top: 12px; left: 12px; width: 9px; height: 9px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 10px var(--ok); }
 
 /* ---------- workspace ---------- */
-.ws-banner { position: relative; height: 170px; border-radius: 22px; overflow: hidden; margin: 44px 32px 0; border: 1px solid var(--line2); display: flex; align-items: flex-end; padding: 22px 26px; gap: 18px; flex: none; }
+.ws-banner { position: relative; min-height: 170px; flex-wrap: wrap; border-radius: 22px; overflow: hidden; margin: 44px 32px 0; border: 1px solid var(--line2); display: flex; align-items: flex-end; padding: 22px 26px; gap: 18px; flex: none; }
 .ws-banner .bg { position: absolute; inset: -30px; background-size: cover; background-position: center; filter: blur(26px) saturate(1.6) brightness(.55); transform: scale(1.15); }
 .ws-banner::after { content: ''; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(6, 7, 11, .85), transparent 75%); }
 .ws-banner > *:not(.bg) { position: relative; z-index: 1; }
 .ws-banner .pack-icon { width: 92px; height: 92px; border-radius: 20px; cursor: pointer; box-shadow: 0 18px 40px -10px #000; border: 2px solid rgba(255, 255, 255, .15); }
-.ws-banner h1 { font-size: 28px; margin: 0 0 8px; }
+.ws-banner h1 { font-size: 26px; line-height: 1.25; margin: 0 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; padding-top: 2px; }
 .pack-icon { width: 56px; height: 56px; border-radius: 12px; image-rendering: pixelated; background: var(--panel2); flex: none; object-fit: cover; }
 .tabs { display: flex; gap: 6px; padding: 16px 32px 0; flex-wrap: wrap; flex: none; }
 .tab { height: 40px; padding: 0 16px; display: flex; align-items: center; gap: 8px; border: 1px solid transparent; background: transparent; color: var(--muted); cursor: pointer; font-weight: 650; border-radius: 12px; transition: .15s; }
@@ -619,3 +619,11 @@ html.no-anim *, html.no-anim *::before { animation: none !important; transition:
 .pname:hover .pname-ed { opacity: 1; }
 .mitem[data-id^="c:"] { border-style: dashed; }
 .mitem[data-id^="c:"] .ml b::before { content: '★ '; color: var(--a1, #8b5cf6); }
+
+.ws-banner .pname { display: flex; max-width: 100%; }
+.ws-banner .pname .pn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.ws-banner .pname .pname-ed { flex: none; }
+
+.ws-banner .ws-info { flex: 1 1 240px; min-width: 200px; }
+.ws-banner .ws-acts { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: flex-end; flex: 0 1 auto; }
+@media (max-width: 1240px) { .ws-body .two { grid-template-columns: 1fr !important; } .meas-split { grid-template-columns: 1fr; } .meas-list { max-height: 300px; min-height: 0; } .meas-ed { position: static; } }

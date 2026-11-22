@@ -649,6 +649,11 @@ ipcMain.handle('held:build', (_e, project, cfg) => {
     }
     return resolveDisplay(read(pn), depth + 1);
   };
+  // all blocks at once: their hand position comes from block/block.json, so one file changes every block
+  if (active && cfg.blocks) {
+    const bb = z.getEntry('assets/minecraft/models/block/block.json');
+    if (bb) { try { const m = JSON.parse(bb.getData().toString('utf8')); const c = cfg.blocks; if (mod(m, +c.lower || 0, +c.scale || 1, +c.x || 0, Array.isArray(c.anchor) ? c.anchor : null)) out['assets/minecraft/models/block/block.json'] = JSON.stringify(m, null, 2); } catch {} }
+  }
   for (const n of Object.keys(imp)) if (!out[pre + n + '.json'] && !skip(n)) { const m = read(n); if (m) out[pre + n + '.json'] = JSON.stringify(m, null, 2); }
   for (const [n, c] of Object.entries(active ? cfg.items || {} : {})) {
     const m = read(n); if (!m) continue;

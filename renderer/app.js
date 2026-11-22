@@ -149,7 +149,7 @@ async function renderHome(main) {
     <div class="banner" style="background-image:url(${bannerArt(7, 360, 120)})">
       <div><span class="chip-tag"><i></i>${detected.length ? `${detected.length} كلاينت جاهز على جهازك` : 'جاهز'}</span>
         <h1>صمّم <span class="grad-text">الباك</span> حقك<br>وخلّه على كيفك</h1>
-        <p>سيوف، فاير قصير، شيلد قصير، توتم، كروس هير، سكنات، وكل تكستر باللعبة — وبضغطة زر ينزل في الكلاينت.</p>
+        <p>سيوف، نار قصيرة، شيلد قصير، توتم، كروس هير، سكنات، وكل تكستر باللعبة — وبضغطة زر ينزل في الكلاينت.</p>
         <div class="row"><button class="btn primary lg" id="newp">${icon('plus', 20)} باك جديد</button><button class="btn lg" id="impp">${icon('upload', 18)} افتح باك من خويك</button>
           ${S.projects[0] ? `<button class="btn lg" id="cont">${icon('play', 18)} كمّل على "${esc(S.projects[0].name)}"</button>` : ''}</div></div>
     </div>
@@ -313,7 +313,7 @@ const FAM_AR = { sword: 'كل السيوف', axe: 'كل الفؤوس', pickaxe: 
 const FAM_SING = { sword: 'سيف', axe: 'فاس فأس', pickaxe: 'معول', shovel: 'مجرفة', hoe: 'محراث', helmet: 'خوذة', chestplate: 'صدرية درع', leggings: 'بنطلون درع', boots: 'بوت جزمة درع', potion: 'جرعة', arrow: 'سهم', horse_armor: 'درع خيل', ingot: 'سبيكة', nugget: 'قطعة' };
 const itemName = (n) => ITEM_AR[n] || n.replace(/_/g, ' ');
 const TAB_GROUPS = [
-  ['الشكل', [['textures', 'التكسترات', 'star'], ['all', 'كل تكسترات اللعبة', 'layers'], ['armor', 'الدروع والإليترا', 'shield'], ['particles', 'الجزيئات', 'wand'], ['fire', 'الفاير', 'fire'], ['sky', 'السما', 'sun'], ['font', 'الخط', 'edit']]],
+  ['الشكل', [['textures', 'التكسترات', 'star'], ['all', 'كل تكسترات اللعبة', 'layers'], ['armor', 'الدروع والإليترا', 'shield'], ['particles', 'الجزيئات', 'wand'], ['fire', 'النار', 'fire'], ['sky', 'السما', 'sun'], ['font', 'الخط', 'edit']]],
   ['PvP', [['measure', 'القياسات', 'sword'], ['tweaks', 'تحسينات PvP', 'wand'], ['cit', 'أسماء مخصصة', 'star']]],
   ['الصوت', [['sounds', 'الأصوات', 'sound']]],
   ['متقدم', [['theme', 'سمة الألوان', 'palette'], ['mods', 'المودات', 'puzzle'], ['configs', 'إعدادات المودات', 'file'], ['psettings', 'إعدادات الباك', 'gear']]],
@@ -323,15 +323,15 @@ async function renderProject(main) {
   const p = S.project, c = clientOf(p.clientId);
   main.innerHTML = `<div class="ws-banner"><div class="bg" id="pbg"></div>
       <img class="pack-icon" id="picon" title="غيّر أيقونة الباك">
-      <div style="flex:1;min-width:0"><h1 class="pname" id="pname" title="اضغط عشان تغيّر الاسم">${esc(p.name)} <span class="pname-ed">${icon('edit', 16)}</span></h1>
+      <div class="ws-info"><h1 class="pname" id="pname" title="اضغط عشان تغيّر الاسم"><span class="pn">${esc(p.name)}</span><span class="pname-ed">${icon('edit', 16)}</span></h1>
         <div class="row" style="gap:6px"><span class="badge dark"><span class="dot" style="background:${c.color};box-shadow:0 0 8px ${c.color}"></span>${esc(c.name)}${p.instance ? ' · ' + esc(p.instance) : ''}</span>
         <span class="badge dark ltr">${esc(p.version)} · pack_format ${p.packFormat}</span>
         ${p.baseJar ? `<span class="badge ok">${icon('check', 12)} ملفات اللعبة محمّلة</span>` : `<span class="badge warn">بدون ملفات اللعبة</span>`}</div></div>
-      <label class="btn live ${p.live ? 'on' : ''}" id="live" title="كل ما تحفظ شي، الباك يتثبّت لحاله — باللعبة اضغط F3+T"><span class="dotlive"></span>تثبيت تلقائي</label>
+      <div class="ws-acts"><label class="btn live ${p.live ? 'on' : ''}" id="live" title="كل ما تحفظ شي، الباك يتثبّت لحاله — باللعبة اضغط F3+T"><span class="dotlive"></span>تثبيت تلقائي</label>
       <button class="btn" id="chk">${icon('check', 17)} فحص</button>
       <button class="btn" id="exp">${icon('zip', 17)} تصدير ZIP</button>
       <button class="btn" id="where" title="${esc(p.rpPath || '')}">${icon('folder', 17)} مكان الحفظ</button>
-      <button class="btn primary lg" id="inst">${icon('play', 18)} تثبيت في ${esc(c.name)}</button>
+      <button class="btn primary lg" id="inst">${icon('play', 18)} تثبيت في ${esc(c.name)}</button></div>
     </div>
     <div class="ws-split"><nav class="tabs side">${TAB_GROUPS.map(([g, list]) => `<div class="tgrp">${g}</div>` + list.map(([id, n, ic]) => `<button class="tab ${S.tab === id ? 'on' : ''}" data-t="${id}">${icon(ic, 16)}<span>${n}</span></button>`).join('')).join('')}</nav>
     <div class="ws-col"><div id="wsh"></div><div class="ws-body" id="wsb"></div></div></div>`;
@@ -351,13 +351,13 @@ const TAB_HINTS = {
   textures: 'اضغط على أي شي تبي تغيّره (سيف، توتم، سكن...) — تقدر تعدّل على الأصلي أو ترسم من الصفر.',
   armor: 'لوّن كل نوع درع بلونه — مثلاً الدايموند أزرق والنذرايت أحمر. فعّل الأنواع اللي تبيها واضغط "طبّق الألوان". وتحت تشوف الإليترا وأنت طاير.',
   particles: 'غيّر شكل ولون الجزيئات — مثلاً خل السويب نار أو ثلج، أو حط شكل من عندك (صورة أو GIF).',
-  fire: 'نزّل الفاير عشان ما يغطي الشاشة، وغيّر لونه.',
+  fire: 'نزّل النار عشان ما تغطي الشاشة، وغيّر لونها.',
   shield: 'قصّر الشيلد عشان تشوف أكثر وقت البلوك، أو غيّر شكله.',
   sky: 'حط صورك بالسما — صورة لكل جهة أو صورة بانوراما وحدة.',
   font: 'غيّر خط الشات والقوائم لأي خط على جهازك.',
   tweaks: 'تحسينات PvP بضغطة زر: زجاج شفاف، بدون قرعة، كروس هير، وغيرها.',
   held: 'كبّر أو صغّر الأدوات اللي بيدك. وتحت تختار أي أداة من القائمة وتعطيها حجمها الخاص.',
-  measure: 'كل القياسات بمكان واحد: السيوف، الشيلد، الفاير، وكل أداة. ابحث أو اختر من القائمة، والمعاينة بنفس حسابات اللعبة.',
+  measure: 'كل القياسات بمكان واحد: السيوف، الشيلد، النار، وكل أداة. ابحث أو اختر من القائمة، والمعاينة بنفس حسابات اللعبة.',
   cit: 'خل السيف يتغيّر شكله لما تسميه بالسندان — مثلاً سمّه "Fire" ويطلع بشكل ثاني.',
   sounds: 'غيّر أي صوت باللعبة — صوت الضربة، الـ XP، وغيرها. تقدر تحط أي صوت من جهازك.',
   all: 'كل تكستر باللعبة هنا — اختر المجلد على الجنب، اضغط على أي تكستر وعدّله. المعدّل يطلع بـ "المعدّل".',
@@ -595,10 +595,10 @@ async function importShared() {
 // ------------------------------------------------------------- starter templates
 const TEMPLATES = [
   ['blank', 'فاضي', 'file', 'تبدأ من تكسترات ماينكرافت الأصلية بدون أي تغيير'],
-  ['pvp', 'PvP نظيف', 'sword', 'فاير قصير، شيلد قصير، سيف صغير، كروس هير نقطة، زجاج شفاف'],
-  ['bedwars', 'Bedwars', 'cube', 'زجاج شفاف، فاير قصير، أدوات صغيرة، بدون قرعة'],
-  ['fps', 'رؤية صافية', 'monitor', 'بدون تظليل وبدون قرعة، فاير شفاف، زجاج شفاف'],
-  ['dark', 'داكن', 'palette', 'واجهة داكنة بلون بنفسجي غامق مع فاير بنفسجي'],
+  ['pvp', 'PvP نظيف', 'sword', 'نار قصيرة، شيلد قصير، سيف صغير، كروس هير نقطة، زجاج شفاف'],
+  ['bedwars', 'Bedwars', 'cube', 'زجاج شفاف، نار قصيرة، أدوات صغيرة، بدون قرعة'],
+  ['fps', 'رؤية صافية', 'monitor', 'بدون تظليل وبدون قرعة، نار شفافة، زجاج شفاف'],
+  ['dark', 'داكن', 'palette', 'واجهة داكنة بلون بنفسجي غامق مع نار بنفسجية'],
 ];
 async function texImg(p, rel, baseOnly = true) { const r = await api.tex.get(p, rel, baseOnly) || (baseOnly ? await api.tex.get(p, rel) : null); return r ? IMG.fromB64(r.data) : null; }
 async function applyQuickTweak(p, id) {
@@ -747,7 +747,7 @@ async function tabTweaks(b) {
       <h3 style="margin:8px 0 0">${icon('wand', 18)} تحسينات بضغطة</h3>
       ${tw.map(([id, ic, t, d, rel]) => rel ? `<div class="tweak"><div class="ti">${icon(ic, 22)}</div><div class="tx"><b>${t}</b><span>${d}</span></div>
         ${has(rel) ? `<span class="badge acc">مفعّل</span><button class="btn sm ghost" data-off="${id}">${icon('reset', 14)} إلغاء</button>` : `<button class="btn sm primary" data-on="${id}">${icon('check', 14)} فعّل</button>`}</div>` : '').join('')}
-      <div class="tweak"><div class="ti">${icon('fire', 22)}</div><div class="tx"><b>فاير قصير</b><span>من صفحة الفاير</span></div><button class="btn sm" data-go="fire">افتح</button></div>
+      <div class="tweak"><div class="ti">${icon('fire', 22)}</div><div class="tx"><b>نار قصيرة</b><span>من صفحة النار</span></div><button class="btn sm" data-go="fire">افتح</button></div>
       ${pf >= 2 ? `<div class="tweak"><div class="ti">${icon('shield', 22)}</div><div class="tx"><b>شيلد قصير</b><span>من صفحة الشيلد</span></div><button class="btn sm" data-go="shield">افتح</button></div>` : ''}
     </div></div>`;
   bindBaseActions(b);
@@ -1173,7 +1173,6 @@ async function tabHeld(b) {
 }
 
 // ------------------------------------------------------------- القياسات: every size/position in one place
-const MEAS_CATS_ = 0;
 const MEAS_CATS = [['all', 'الكل'], ['changed', 'المتغيّر'], ['main', 'الأساسية'], ['weapons', 'أسلحة'], ['tools', 'أدوات'], ['throw', 'رمي'], ['food', 'أكل'], ['armor', 'دروع وتوتم'], ['misc', 'باقي الأشياء'], ['blocks', 'بلوكات']];
 async function tabMeasure(b) {
   const p = S.project, h = p.held = Object.assign({ on: false }, HELD_DEF, p.held || {});
@@ -1181,7 +1180,7 @@ async function tabMeasure(b) {
   const sh = p.shield = Object.assign({ enabled: false, lower: 0, scale: 1, blockLower: 0 }, p.shield || {});
   const nImp = Object.keys(h.imported).length + Object.keys(sh.imported || {}).length;
   b.innerHTML = `${p.baseJar ? '' : noBaseNotice()}
-    <div class="row" style="margin-bottom:12px;gap:8px"><div class="search" style="flex:1"><input class="inp" id="mq" placeholder="ابحث: سيف، شيلد، فاير، بيرل، sword...">${icon('search', 18)}</div>
+    <div class="row" style="margin-bottom:12px;gap:8px"><div class="search" style="flex:1"><input class="inp" id="mq" placeholder="ابحث: سيف، شيلد، نار، بيرل، sword...">${icon('search', 18)}</div>
       <button class="btn" id="mmeas">${icon('download', 16)} خذ القياسات من باك</button>${nImp ? `<button class="btn ghost" id="mclr">${icon('x', 15)} شيل المأخوذة (${nImp})</button>` : ''}</div>
     <div class="row" style="gap:6px;margin-bottom:12px" id="mcats">${MEAS_CATS.map(([k, n]) => `<button class="chip ${k === 'main' ? 'on' : ''}" data-c="${k}">${n}</button>`).join('')}</div>
     <div class="meas-split"><div class="meas-list" id="mlistm"></div>
@@ -1202,7 +1201,7 @@ async function tabMeasure(b) {
   const ensureOn = () => { if (!h.on) { h.on = true; h.hOn = true; h.hLower = 0; h.hScale = 1; h.hX = 0; h.gOn = true; h.gLower = 0; h.gScale = 1; } h.gOn = true; h.hOn = true; };
   const grpVals = (tool) => (!h.on ? [0, 1, 0] : tool ? [h.hLower, h.hScale, h.hX] : h.gOn ? [h.gLower, h.gScale, 0] : [0, 1, 0]);
   const itemVals = (n) => (h.on && h.items[n] ? [h.items[n].lower, h.items[n].scale, h.items[n].x] : null);
-  const effItem = (n) => { const info = disp[n] || {}, iv = itemVals(n); if (iv) return heldApply(info.disp, h.items[n].anchor || anchors[n] || info.center, ...iv); const tool = isToolN(n); return heldApply(info.disp, tool ? h.hAnchor : h.gAnchor, ...grpVals(tool)); };
+  const effItem = (n) => { const info = disp[n] || {}, iv = itemVals(n); if (iv) return heldApply(info.disp, h.items[n].anchor || anchors[n] || info.center, ...iv); const mm = modelOf(n); if (mm && mm.block && h.on && h.blocks) return heldApply(info.disp, h.blocks.anchor, h.blocks.lower, h.blocks.scale, h.blocks.x); const tool = isToolN(n); return heldApply(info.disp, tool ? h.hAnchor : h.gAnchor, ...grpVals(tool)); };
   // ---- shield
   const shBase = p.packFormat >= 2 ? await shieldBase(p) : null, shQ = shBase ? await shieldQuadsOf(p) : [], [shA, shBA] = shBase ? await shieldAnchors(p, shBase) : [null, null];
   const shEff = (block, on = sh.enabled) => { const m = block ? shBase.bl : shBase.a, d = m && m.display && m.display.firstperson_righthand; return heldApply(d, block ? shBA : shA, on ? (block ? sh.blockLower : sh.lower) : 0, on ? sh.scale : 1, 0); };
@@ -1222,39 +1221,49 @@ async function tabMeasure(b) {
     if (/^diamond_/.test(m.name) || (u.fam === 'potion' && m.name === 'potion') || (u.fam === 'arrow' && m.name === 'arrow')) u.rep = m;
   }
   const things = [];
-  things.push({ id: 'g:h', kind: 'group', tool: true, cat: 'main', label: 'كل السيوف والأدوات مع بعض', en: 'all swords tools handheld low sword سيف فاس معول أدوات', rep: 'diamond_sword', sliders: ['lower', 'scale', 'x'] });
-  things.push({ id: 'g:g', kind: 'group', tool: false, cat: 'main', label: 'كل الأشياء العادية مع بعض', en: 'all items generated pearl apple بيرل تفاح أكل', rep: 'ender_pearl', sliders: ['lower', 'scale'] });
+  const oldGrp = h.on && (h.hLower || h.hScale !== 1 || h.hX || (h.gOn && (h.gLower || h.gScale !== 1)));
+  if (oldGrp) things.push({ id: 'g:h', kind: 'group', tool: true, cat: 'main', label: 'كل السيوف والأدوات مع بعض', en: 'all swords tools handheld low sword سيف فاس معول أدوات', rep: 'diamond_sword', sliders: ['lower', 'scale', 'x'] });
+  if (oldGrp) things.push({ id: 'g:g', kind: 'group', tool: false, cat: 'main', label: 'كل الأشياء العادية مع بعض', en: 'all items generated pearl apple بيرل تفاح أكل', rep: 'ender_pearl', sliders: ['lower', 'scale'] });
   if (shBase) { things.push({ id: 'sh:0', kind: 'shield', block: false, cat: 'main', label: 'الشيلد', en: 'shield low shield', sliders: ['lower', 'scale'] }); things.push({ id: 'sh:1', kind: 'shield', block: true, cat: 'main', label: 'الشيلد وقت البلوك', en: 'shield blocking', sliders: ['lower', 'scale'] }); }
-  if (fireOrig) things.push({ id: 'fire', kind: 'fire', cat: 'main', label: 'الفاير على الشاشة', en: 'fire low fire نار فاير قصير', sliders: ['fire'] });
-  // one switch per category: every block / weapon / food… at once
-  const CAT_AR = { weapons: 'كل الأسلحة مع بعض', tools: 'كل الأدوات مع بعض', throw: 'كل أشياء الرمي مع بعض', food: 'كل الأكل مع بعض', armor: 'كل الدروع والتوتم مع بعض', misc: 'كل باقي الأشياء مع بعض', blocks: 'كل البلوكات مع بعض' };
-  h.catVals = h.catVals || {};
-  for (const c of Object.keys(CAT_AR)) {
-    const us = units.filter((u) => u.rep.tex && itemCat(u.rep) === c); if (!us.length) continue;
-    const rep = (us.find((u) => /diamond_sword|ender_pearl|golden_apple|stone$|totem/.test(u.rep.name)) || us[0]).rep.name;
-    things.push({ id: 'c:' + c, kind: 'cat', cat: c, catKey: c, units: us, members: us.flatMap((u) => u.members), label: CAT_AR[c], en: 'all ' + c + ' كل الكل', rep, sliders: ['lower', 'scale', 'x'], top: true });
+  if (fireOrig) things.push({ id: 'fire', kind: 'fire', cat: 'main', label: 'النار على الشاشة', en: 'fire low fire نار نار قصيرة', sliders: ['fire'] });
+  // whole categories at once
+  const CAT_ALL = [['blocks', 'كل البلوكات', 'stone red_wool end_stone obsidian oak_planks', 'بلوك بلوكات block'], ['weapons', 'كل الأسلحة', 'diamond_sword bow', 'سلاح أسلحة سيف'], ['tools', 'كل الأدوات', 'diamond_pickaxe fishing_rod', 'أداة أدوات معول'], ['throw', 'كل أشياء الرمي', 'ender_pearl snowball', 'رمي بيرل'], ['food', 'كل الأكل', 'golden_apple cooked_beef', 'أكل تفاح'], ['armor', 'كل الدروع والتوتم', 'totem_of_undying diamond_chestplate', 'درع دروع توتم'], ['misc', 'كل باقي الأشياء', '', 'باقي']];
+  const catMembers = (c) => models.filter((m) => m.tex && itemCat(m) === c).map((m) => m.name);
+  const catThings = [];
+  for (const [c, label, reps, ar] of CAT_ALL) {
+    const mem = catMembers(c); if (!mem.length) continue;
+    const rep = reps.split(' ').find((r) => mem.includes(r)) || mem[0];
+    const t = { id: 'c:' + c, kind: c === 'blocks' ? 'blocks' : 'cat', catKey: c, members: mem, cat: 'main', label: `${label} مرة وحدة`, en: 'all ' + c + ' ' + ar + ' كل', rep, sliders: ['lower', 'scale', 'x'] };
+    catThings.push(t); things.push(t);
   }
+  things.push({ id: 'c:*', kind: 'everything', cat: 'main', label: 'كل شي باللعبة مرة وحدة', en: 'everything all كل شي', rep: (catThings[0] || {}).rep || 'diamond_sword', sliders: ['lower', 'scale', 'x'] });
   for (const u of units) if (u.rep.tex) things.push({ id: 'u:' + u.key, kind: 'item', unit: u, cat: itemCat(u.rep), label: u.fam ? FAM_AR[u.fam] || 'كل الـ ' + u.fam.replace(/_/g, ' ') : itemName(u.key), en: u.members.join(' ').replace(/_/g, ' ') + ' ' + u.members.map(itemName).join(' ') + ' ' + (FAM_SING[u.fam] || ''), rep: u.rep.name, sliders: ['lower', 'scale', 'x'] });
   // ---- values per thing
   const valsOf = (t) => {
     if (t.kind === 'group') return grpVals(t.tool);
     if (t.kind === 'item') return itemVals(t.rep) || [0, 1, 0];
-    if (t.kind === 'cat') return h.catVals[t.catKey] || [0, 1, 0];
     if (t.kind === 'shield') return sh.enabled ? [t.block ? sh.blockLower : sh.lower, sh.scale, 0] : [0, 1, 0];
     if (t.kind === 'fire') return [fireCfg().lower];
+    if (t.kind === 'blocks') return h.on && h.blocks ? [h.blocks.lower, h.blocks.scale, h.blocks.x] : [0, 1, 0];
+    if (t.kind === 'cat' || t.kind === 'everything') { const v = (h.cats || {})[t.kind === 'cat' ? t.catKey : '*']; return h.on && v ? v.slice() : [0, 1, 0]; }
   };
-  const changed = (t) => { const v = valsOf(t); if (t.kind === 'cat') return v[0] !== 0 || v[1] !== 1 || (v[2] || 0) !== 0; if (t.kind === 'fire') return v[0] > 0.001; return v[0] !== 0 || v[1] !== 1 || (v[2] || 0) !== 0 || (t.kind === 'item' && t.unit.members.some((n) => h.imported[n])) || (t.kind === 'shield' && sh.imported && sh.imported[t.block ? 'shield_blocking' : 'shield']); };
+  const changed = (t) => { const v = valsOf(t); if (t.kind === 'cat' || t.kind === 'blocks' || t.kind === 'everything') return v[0] !== 0 || v[1] !== 1 || (v[2] || 0) !== 0; if (t.kind === 'fire') return v[0] > 0.001; return v[0] !== 0 || v[1] !== 1 || (v[2] || 0) !== 0 || (t.kind === 'item' && t.unit.members.some((n) => h.imported[n])) || (t.kind === 'shield' && sh.imported && sh.imported[t.block ? 'shield_blocking' : 'shield']); };
   let fireTimer = 0;
+  // a whole category: every item in it gets the same size (shrunk around what you see of the category's main item)
+  async function setCat(t, v) {
+    h.cats = h.cats || {}; const neutral = v[0] === 0 && v[1] === 1 && !(v[2] || 0);
+    if (neutral) { delete h.cats[t.catKey]; t.members.forEach((n) => delete h.items[n]); return; }
+    ensureOn(); h.cats[t.catKey] = v.slice(); const a = await anchorOf(t.rep);
+    t.members.forEach((n) => { h.items[n] = { lower: v[0], scale: v[1], x: v[2] || 0, ...(a ? { anchor: a } : {}) }; });
+  }
   async function setVals(t, v) {
     if (t.kind === 'group') { ensureOn(); if (t.tool) { h.hLower = v[0]; h.hScale = v[1]; h.hX = v[2] || 0; } else { h.gLower = v[0]; h.gScale = v[1]; } }
     else if (t.kind === 'item') { const neutral = v[0] === 0 && v[1] === 1 && !(v[2] || 0); if (neutral) t.unit.members.forEach((n) => delete h.items[n]); else { ensureOn(); const a = await anchorOf(t.rep); t.unit.members.forEach((n) => { h.items[n] = { lower: v[0], scale: v[1], x: v[2] || 0, ...(a ? { anchor: a } : {}) }; }); } }
-    else if (t.kind === 'cat') {
-      const neutral = v[0] === 0 && v[1] === 1 && !(v[2] || 0); h.catVals[t.catKey] = v.slice();
-      if (neutral) { t.members.forEach((n) => delete h.items[n]); delete h.catVals[t.catKey]; }
-      else { ensureOn(); const a = await anchorOf(t.rep); t.members.forEach((n) => { h.items[n] = { lower: v[0], scale: v[1], x: v[2] || 0, ...(a ? { anchor: a } : {}) }; }); }
-    }
     else if (t.kind === 'shield') { sh.enabled = true; if (t.block) sh.blockLower = v[0]; else sh.lower = v[0]; sh.scale = v[1]; if (sh.lower === 0 && sh.blockLower === 0 && sh.scale === 1) sh.enabled = false; }
     else if (t.kind === 'fire') { p.fire = Object.assign(fireCfg(), { lower: v[0] }); clearTimeout(fireTimer); fireTimer = setTimeout(() => applyFire(p, p.fire), 500); }
+    else if (t.kind === 'blocks') { const neutral = v[0] === 0 && v[1] === 1 && !(v[2] || 0); if (neutral) delete h.blocks; else { ensureOn(); h.blocks = { lower: v[0], scale: v[1], x: v[2] || 0, anchor: await anchorOf(t.rep) }; } }
+    else if (t.kind === 'cat') await setCat(t, v);
+    else if (t.kind === 'everything') { h.cats = h.cats || {}; h.cats['*'] = v.slice(); for (const ct of catThings) { if (ct.kind === 'blocks') await setVals(ct, v); else await setCat(ct, v); } }
     clearTimeout(setVals.t); setVals.t = setTimeout(saveProject, 400);
   }
   // ---- status of one thing (same maths as the game)
@@ -1263,17 +1272,18 @@ async function tabMeasure(b) {
     const n = t.rep, q = await quadsOf(n); if (!q.length) return null;
     if (neutral) { const info = disp[n] || {}; return heldProject(q, heldApply(info.disp, null, 0, 1, 0), W, H); }
     if (t.kind === 'group') { const info = disp[n] || {}; return heldProject(q, heldApply(info.disp, t.tool ? h.hAnchor : h.gAnchor, ...grpVals(t.tool)), W, H); }
-    if ((t.kind === 'item' || t.kind === 'cat') && !itemVals(n)) await anchorOf(n);
+    if (t.kind === 'blocks') { const info = disp[n] || {}, v = valsOf(t); return heldProject(q, heldApply(info.disp, (h.blocks && h.blocks.anchor) || await anchorOf(n), ...v), W, H); }
+    if ((t.kind === 'item' || t.kind === 'cat' || t.kind === 'everything') && !itemVals(n)) await anchorOf(n);
     return heldProject(q, effItem(n), W, H);
   }
   function fireFrame(lower) { const c = fireCfg(); const im = IMG.toCanvas(fireTransform(fireOrig, lower, c.opacity, c.useTint ? c.tint : null)); const w = im.width, fr = document.createElement('canvas'); fr.width = fr.height = w; fr.getContext('2d').drawImage(im, 0, 0, w, w, 0, 0, w, w); return fr; }
   async function statusOf(t) {
-    if (t.kind === 'fire') { const cv = fireCoverage(fireFrame(fireCfg().lower)), pct = Math.round(cv.cover * 100); return cv.cover < 0.005 ? { k: 'off', t: 'الفاير ما بيطلع على الشاشة أبد', s: '⚠ ما بيبان' } : cv.cover < 0.12 ? { k: 'ok', t: `فاير قصير ✓ — يغطي ${pct}% من الشاشة`, s: `✓ ${pct}%` } : { k: 'cut', t: `يغطي ${pct}% من الشاشة`, s: `${pct}%` }; }
+    if (t.kind === 'fire') { const cv = fireCoverage(fireFrame(fireCfg().lower)), pct = Math.round(cv.cover * 100); return cv.cover < 0.005 ? { k: 'off', t: 'النار ما بتطلع على الشاشة أبد', s: '⚠ ما بيبان' } : cv.cover < 0.12 ? { k: 'ok', t: `نار قصيرة ✓ — تغطي ${pct}% من الشاشة`, s: `✓ ${pct}%` } : { k: 'cut', t: `تغطي ${pct}% من الشاشة`, s: `${pct}%` }; }
     const now = await project(t, 1600, 900), base = await project(t, 1600, 900, true); if (!now) return null;
     const st = heldStatus(now, base); return { ...st, s: st.k === 'ok' ? '✓ واضح' : st.k === 'off' ? '⚠ ما بيبان' : st.k === 'tiny' ? '⚠ صغير مرة' : '⚠ نصه برا' };
   }
   // ---- list
-  let cat = 'main', sel = things[0];
+  let cat = 'main', sel = things.find((t) => t.id === 'c:weapons') || things[0];
   const listEl = $('#mlistm', b);
   const thumbOf = async (t, cv) => {
     let im = null;
@@ -1294,13 +1304,13 @@ async function tabMeasure(b) {
   $$('#mcats .chip', b).forEach((x) => x.onclick = () => { cat = x.dataset.c; $('#mq', b).value = ''; $$('#mcats .chip', b).forEach((y) => y.classList.toggle('on', y === x)); drawList(); });
   // ---- editor (one place for every measurement)
   const ed = $('#med', b); let pcv = null;
-  const SL = { lower: ['نزول', -4, 8, 0.25], scale: ['الحجم', 0.2, 1.6, 0.05], x: ['يمين/يسار', -6, 6, 0.25], fire: ['نزّل الفاير', 0, 0.9, 0.01] };
+  const SL = { lower: ['نزول', -4, 8, 0.25], scale: ['الحجم', 0.2, 1.6, 0.05], x: ['يمين/يسار', -6, 6, 0.25], fire: ['نزّل النار', 0, 0.9, 0.01] };
   function drawEditor() {
     const t = sel; if (!t) { ed.innerHTML = ''; return; }
     const v = valsOf(t);
     const presets = t.kind === 'fire' ? [['عادي', [0]], ['قصير', [0.45]], ['قصير مرة', [0.6]], ['مخفي', [0.9]]] : t.kind === 'shield' ? [['قصير', [1, 0.85]], ['قصير مرة', [2, 0.7]], ['الأصلي', [0, 1]]] : [['Low', [2.5, 0.85, 0]], ['صغير', [3, 0.65, 0.5]], ['الأصلي', [0, 1, 0]]];
     ed.innerHTML = `<div class="row" style="margin-bottom:10px"><h3 style="margin:0;flex:1">${esc(t.label)}</h3>${t.unit && t.unit.fam ? `<span class="muted small" title="${esc(t.unit.members.join(', '))}">ينطبق على ${t.unit.members.length} أنواع</span>` : t.kind === 'cat' ? `<span class="muted small">ينطبق على ${t.members.length} شي</span>` : ''}</div>
-      ${t.kind === 'cat' ? `<div class="muted small" style="margin-bottom:8px;line-height:1.6">يغيّر كل اللي بهالقسم مرة وحدة. بعدها تقدر تعدّل أي واحد لحاله من القائمة.</div>` : ''}
+      ${t.kind === 'cat' || t.kind === 'blocks' || t.kind === 'everything' ? `<div class="muted small" style="margin-bottom:8px;line-height:1.6">${t.kind === 'everything' ? 'يغيّر كل الأقسام مرة وحدة (البلوكات والأسلحة والأدوات والأكل وكل شي).' : `يغيّر ${t.members.length} شي مرة وحدة. المعاينة على ${esc(itemName(t.rep))}.`} بعدها تقدر تعدّل أي شي لحاله.</div>` : ''}
       ${t.kind === 'group' ? `<div class="muted small" style="margin-bottom:8px;line-height:1.6">ينطبق على كل ${t.tool ? 'السيوف والأدوات' : 'الأشياء العادية'} اللي ما لها قياس خاص. الأداة اللي تعطيها قياس لحالها يغلب.</div>` : ''}
       <div class="fp-stage"><canvas id="mpcv"></canvas></div><div class="hstat" id="mstat"></div>
       <div class="stack" style="gap:2px;margin-top:10px">${t.sliders.map((k, i) => `<div class="slider-row" style="grid-template-columns:90px 1fr 46px"><span>${SL[k][0]}${t.kind === 'shield' && k === 'scale' ? ' <span class="dim small">(للاثنين)</span>' : ''}</span><input type="range" data-i="${i}" min="${SL[k][1]}" max="${SL[k][2]}" step="${SL[k][3]}" value="${v[i]}"><output class="ltr">${k === 'fire' ? Math.round(v[i] * 100) + '%' : v[i]}</output></div>`).join('')}</div>
@@ -1730,7 +1740,7 @@ const TOURS = {
   ],
   project: [
     { t: 'هذا المحرر ✏', d: 'هنا تعدّل الباك حقك. خلني أوريك وين كل شي.' },
-    { el: '.tabs', t: 'الأقسام', d: 'كل قسم يغيّر شي: التكسترات، الدروع، الجزيئات، الفاير، السما، الأصوات... الأقسام مقسّمة: الشكل، PvP، الصوت، ومتقدم.' },
+    { el: '.tabs', t: 'الأقسام', d: 'كل قسم يغيّر شي: التكسترات، الدروع، الجزيئات، النار، السما، الأصوات... الأقسام مقسّمة: الشكل، PvP، الصوت، ومتقدم.' },
     { el: '#wsb', t: 'التكسترات', d: 'اضغط على أي شي (سيف، توتم...) وبيفتح لك تعدّل عليه أو تبدأ من الصفر.' },
     { el: '#live', t: 'تثبيت تلقائي', d: 'شغّله وكل ما تحفظ، الباك ينزل في الكلاينت لحاله. باللعبة اضغط F3+T يتحدّث.' },
     { el: '#inst', t: 'ثبّت الباك', d: 'لما تخلص اضغط هنا، والباك ينزل في مجلد الكلاينت. بعدها فعّله من إعدادات الريسورس باك باللعبة.' },
@@ -2340,18 +2350,18 @@ async function tabFire(b) {
   const fs = Object.assign({ lower: 0.45, opacity: 1, tint: null, useTint: false, gSize: 1, gOpacity: 1, gTint: true }, p.fire || {});
   b.innerHTML = `${noBaseNotice()}<div class="two">
     <div class="card stack">
-      <h3 style="margin:0">${icon('fire', 18)} الفاير على الشاشة <span class="muted small">(لما تحترق)</span></h3>
-      <div class="seg" id="fmode"><button data-m="normal">عادي</button><button data-m="low">فاير قصير (Low Fire)</button><button data-m="none">بدون فاير</button></div>
-      <div><div class="slider-row" style="grid-template-columns:90px 1fr 46px"><span>نزّل الفاير</span><input type="range" id="fl" min="0" max="90" value="${Math.round(fs.lower * 100)}"><output class="ltr"></output></div>
+      <h3 style="margin:0">${icon('fire', 18)} النار على الشاشة <span class="muted small">(لما تحترق)</span></h3>
+      <div class="seg" id="fmode"><button data-m="normal">عادي</button><button data-m="low">نار قصيرة (Low Fire)</button><button data-m="none">بدون نار</button></div>
+      <div><div class="slider-row" style="grid-template-columns:90px 1fr 46px"><span>نزّل النار</span><input type="range" id="fl" min="0" max="90" value="${Math.round(fs.lower * 100)}"><output class="ltr"></output></div>
       <div class="slider-row" style="grid-template-columns:90px 1fr 46px"><span>الشفافية</span><input type="range" id="fo" min="10" max="100" value="${Math.round(fs.opacity * 100)}"><output class="ltr"></output></div></div>
       <div class="hstat" id="fstat"></div>
-      <h3 style="margin:10px 0 0">${icon('fire', 18)} الفاير بالأرض <span class="muted small">(النار اللي تولّعها)</span></h3>
+      <h3 style="margin:10px 0 0">${icon('fire', 18)} النار بالأرض <span class="muted small">(النار اللي تولّعها)</span></h3>
       <div class="seg" id="gmode"><button data-g="1">عادي</button><button data-g="0.6">صغير</button><button data-g="0.35">صغير مرة</button><button data-g="0">مخفي</button></div>
       <div><div class="slider-row" style="grid-template-columns:90px 1fr 46px"><span>الطول</span><input type="range" id="gsz" min="0" max="100" value="${Math.round(fs.gSize * 100)}"><output class="ltr"></output></div>
       <div class="slider-row" style="grid-template-columns:90px 1fr 46px"><span>الشفافية</span><input type="range" id="gop" min="10" max="100" value="${Math.round(fs.gOpacity * 100)}"><output class="ltr"></output></div></div>
-      <label class="check"><span class="switch"><input type="checkbox" id="ft" ${fs.useTint ? 'checked' : ''}><span></span></span>لوّن الفاير<input type="color" id="ftc" value="${fs.tint || '#7c3aed'}" style="margin-inline-start:auto"></label>
+      <label class="check"><span class="switch"><input type="checkbox" id="ft" ${fs.useTint ? 'checked' : ''}><span></span></span>لوّن النار<input type="color" id="ftc" value="${fs.tint || '#7c3aed'}" style="margin-inline-start:auto"></label>
       <label class="check small"><span class="switch"><input type="checkbox" id="fgt" ${fs.gTint !== false ? 'checked' : ''}><span></span></span>نفس اللون للنار اللي بالأرض</label>
-      <div class="row"><button class="btn primary" id="fapply">${icon('check', 16)} طبّق على الفاير</button><button class="btn" id="fedit">${icon('pencil', 16)} ارسم بيدك</button><button class="btn ghost" id="freset">${icon('reset', 16)} الأصلي</button></div>
+      <div class="row"><button class="btn primary" id="fapply">${icon('check', 16)} طبّق على النار</button><button class="btn" id="fedit">${icon('pencil', 16)} ارسم بيدك</button><button class="btn ghost" id="freset">${icon('reset', 16)} الأصلي</button></div>
     </div>
     <div class="stack">
       <div class="card"><h3>كيف بيطلع على الشاشة <span class="muted small">(نفس حسابات ماينكرافت)</span></h3><div class="fp-stage"><canvas id="fcv"></canvas></div></div>
@@ -2375,7 +2385,7 @@ async function tabFire(b) {
     if (!scr) { st.className = 'hstat'; st.innerHTML = `<span class="muted small">المعاينة تحتاج ملفات الفانيلا</span>`; return; }
     const w = scr.width, fr = document.createElement('canvas'); fr.width = fr.height = w; fr.getContext('2d').drawImage(scr, 0, 0, w, w, 0, 0, w, w);
     const cv = fireCoverage(fr), pct = Math.round(cv.cover * 100);
-    const k = cv.cover < 0.005 ? ['off', 'الفاير ما بيطلع على الشاشة أبد — بس اللي حولك يشوفونك تحترق'] : cv.cover < 0.12 ? ['ok', `فاير قصير ✓ — يغطي ${pct}% من الشاشة بس`] : cv.cover < 0.3 ? ['cut', `يغطي ${pct}% من الشاشة`] : ['cut', `يغطي ${pct}% من الشاشة — كثير (هذا الطبيعي باللعبة)`];
+    const k = cv.cover < 0.005 ? ['off', 'النار ما بتطلع على الشاشة أبد — بس اللي حولك يشوفونك تحترق'] : cv.cover < 0.12 ? ['ok', `نار قصيرة ✓ — تغطي ${pct}% من الشاشة بس`] : cv.cover < 0.3 ? ['cut', `تغطي ${pct}% من الشاشة`] : ['cut', `تغطي ${pct}% من الشاشة — كثير (هذا الطبيعي باللعبة)`];
     st.className = 'hstat ' + k[0]; st.innerHTML = `${icon('fire', 15)}<span>${k[1]}</span>`;
   }
   ['fl', 'fo', 'ft', 'ftc', 'gsz', 'gop', 'fgt'].forEach((id) => $('#' + id, b).oninput = () => { if (mode === 'normal' && (id === 'fl' || id === 'fo')) { mode = 'low'; $$('#fmode button', b).forEach((x) => x.classList.toggle('on', x.dataset.m === 'low')); } upd(); });
@@ -2403,10 +2413,10 @@ async function tabFire(b) {
   };
   loop();
   $('#fapply', b).onclick = async () => {
-    const ok = await applyFire(p, cur()); if (!ok) return toast('ما فيه تكستر فاير أساسي — حمّل ملفات الفانيلا أو ارسمه', 'err');
-    await saveProject(); celebrate(); toast('تغيّر الفاير 🔥 — الشاشة والأرض كل واحد لحاله');
+    const ok = await applyFire(p, cur()); if (!ok) return toast('ما فيه تكستر نار أساسي — حمّل ملفات الفانيلا أو ارسمه', 'err');
+    await saveProject(); celebrate(); toast('تغيّرت النار 🔥 — الشاشة والأرض كل وحدة لحالها');
   };
-  $('#freset', b).onclick = async () => { await resetFire(p); await saveProject(); toast('رجع الفاير للأصلي'); tabFire(b); };
+  $('#freset', b).onclick = async () => { await resetFire(p); await saveProject(); toast('رجعت النار للأصلي'); tabFire(b); };
   $('#fedit', b).onclick = () => editTexture({ ...t1, path: p1 }, () => tabFire(b));
 }
 
@@ -2495,11 +2505,11 @@ async function importMeasurements(after) {
   const groupsM = []; const seen = new Set();
   for (const n of names0) { if (seen.has(n)) continue; const f = fk(n); if (f && fc[f].length >= 2) { fc[f].forEach((x) => seen.add(x)); groupsM.push({ key: 'fam:' + f, label: (FAM_AR[f] || 'كل الـ ' + f) + ` (${fc[f].length})`, members: fc[f] }); } else { seen.add(n); groupsM.push({ key: n, members: [n] }); } }
   const names = groupsM.map((g) => g.key);
-  if (!names0.length && fireLow == null) return toast('هذا الباك ما فيه قياسات مختلفة (أحجام أو فاير قصير)');
+  if (!names0.length && fireLow == null) return toast('هذا الباك ما فيه قياسات مختلفة (أحجام أو نار قصيرة)');
   const label = (n) => (n === 'shield' ? 'الشيلد' : n === 'shield_blocking' ? 'الشيلد وقت البلوك' : /^(handheld|generated|handheld_rod|handheld_mace)$/.test(n) ? `كل ${n === 'generated' ? 'الأشياء العادية' : n === 'handheld_rod' ? 'السنانير' : 'السيوف والأدوات'} (${n})` : itemName(n));
   const m = modal({ title: `${icon('download', 18)} خذ القياسات من «${esc(r.name)}»`, sub: 'آخذ الأحجام والأماكن بس — التكسترات حقتك ما تتغيّر',
     body: `<div class="stack" style="gap:6px;max-height:420px;overflow:auto">
-      ${fireLow != null ? `<label class="check mrow2"><span class="switch"><input type="checkbox" data-fire checked><span></span></span>${icon('fire', 16)} الفاير القصير <span class="muted small">(نازل ${Math.round(fireLow * 100)}%)</span></label>` : ''}
+      ${fireLow != null ? `<label class="check mrow2"><span class="switch"><input type="checkbox" data-fire checked><span></span></span>${icon('fire', 16)} النار القصيرة <span class="muted small">(نازل ${Math.round(fireLow * 100)}%)</span></label>` : ''}
       ${groupsM.map((g) => `<label class="check mrow2"><span class="switch"><input type="checkbox" data-n="${esc(g.key)}" checked><span></span></span>${esc(g.label || label(g.key))}<span class="dim small ltr" style="margin-inline-start:auto;max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(g.members.join(', '))}</span></label>`).join('')}</div>`,
     foot: `<button class="btn ghost" data-all>${icon('check', 15)} الكل</button><span class="spacer"></span><button class="btn primary" data-go>${icon('check', 16)} خذ المختار</button>` });
   m.el.querySelector('[data-all]').onclick = () => $$('input[type=checkbox]', m.el).forEach((x) => (x.checked = true));
@@ -3118,7 +3128,7 @@ async function openWizard() {
     if (step === 0) {
       body.innerHTML = `<h1 style="text-align:center">هلا والله في <span class="grad-text">MC Pack Studio</span> 👋</h1>
         <p class="sub" style="text-align:center;line-height:1.9;max-width:560px;margin:10px auto 24px">خلنا نجهّز كل شي بدقيقة: بنطلّع تكسترات ماينكرافت الأصلية من ملفات الكلاينت حقك، ونتأكد من الكلاينتات اللي عندك.</p>
-        <div class="grid" style="grid-template-columns:repeat(3,1fr)">${[['download', 'ملفات اللعبة', 'تكسترات ماينكرافت الأصلية'], ['monitor', 'الكلاينتات', 'Lunar, Badlion, Feather...'], ['wand', 'جاهز تصمم', 'سيوف، فاير، توتم، سكنات']].map(([ic, t, d]) => `<div class="tweak" style="flex-direction:column;text-align:center"><div class="ti">${icon(ic, 22)}</div><div class="tx"><b>${t}</b><span>${d}</span></div></div>`).join('')}</div>`;
+        <div class="grid" style="grid-template-columns:repeat(3,1fr)">${[['download', 'ملفات اللعبة', 'تكسترات ماينكرافت الأصلية'], ['monitor', 'الكلاينتات', 'Lunar, Badlion, Feather...'], ['wand', 'جاهز تصمم', 'سيوف، نار، توتم، سكنات']].map(([ic, t, d]) => `<div class="tweak" style="flex-direction:column;text-align:center"><div class="ti">${icon(ic, 22)}</div><div class="tx"><b>${t}</b><span>${d}</span></div></div>`).join('')}</div>`;
       foot.innerHTML = `<button class="btn primary lg" data-n>يلا نبدأ ${icon('play', 16)}</button><span class="spacer"></span><div class="lang-pick" data-noi18n><button data-lang="ar" class="${(S.settings.lang || 'ar') === 'ar' ? 'on' : ''}">العربية</button><button data-lang="en" class="${S.settings.lang === 'en' ? 'on' : ''}">English</button></div><button class="btn ghost" data-skip>تخطّي</button>`;
       $$('[data-lang]', foot).forEach((x) => x.onclick = async () => { S.settings.lang = x.dataset.lang; await api.settings.set(S.settings); if (x.dataset.lang === 'en') { I18N.set('en'); draw(); } else location.reload(); });
     } else if (step === 1) {
