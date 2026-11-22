@@ -589,3 +589,5 @@ html.no-anim *, html.no-anim *::before { animation: none !important; transition:
 .mrow { justify-content: flex-start; }
 .mrow > b { flex: none; }
 .where-box { padding: 14px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid var(--line); }
+.icell em { position: absolute; top: 5px; inset-inline-end: 6px; font-style: normal; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 99px; background: rgba(255,255,255,.1); color: var(--muted); }
+.icell.fam canvas { filter: drop-shadow(4px -3px 0 rgba(255,255,255,.12)); }

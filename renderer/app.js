@@ -309,6 +309,7 @@ function itemCat(m) {
   return 'misc';
 }
 const ITEM_AR = { diamond_sword: 'سيف دايموند', netherite_sword: 'سيف نذرايت', iron_sword: 'سيف حديد', golden_sword: 'سيف ذهب', stone_sword: 'سيف حجر', wooden_sword: 'سيف خشب', diamond_axe: 'فاس دايموند', netherite_axe: 'فاس نذرايت', iron_axe: 'فاس حديد', bow: 'القوس', crossbow: 'الكروس بو', trident: 'الترايدنت', mace: 'الميس', shield: 'الشيلد', ender_pearl: 'إندر بيرل', snowball: 'كرة ثلج', egg: 'البيضة', totem_of_undying: 'التوتم', golden_apple: 'تفاحة ذهبية', enchanted_golden_apple: 'تفاحة ذهبية مإنشانت', fishing_rod: 'السنارة', flint_and_steel: 'ولّاعة', water_bucket: 'سطل ماء', lava_bucket: 'سطل لافا', cooked_beef: 'ستيك', elytra: 'الإليترا', diamond_pickaxe: 'معول دايموند', netherite_pickaxe: 'معول نذرايت', experience_bottle: 'قارورة XP', fire_charge: 'كرة نار', wind_charge: 'شحنة الريح', ender_eye: 'عين الإندر', arrow: 'السهم', compass: 'البوصلة', clock: 'الساعة', spyglass: 'المنظار', shears: 'المقص' };
+const FAM_AR = { sword: 'كل السيوف', axe: 'كل الفؤوس', pickaxe: 'كل المعاول', shovel: 'كل المجارف', hoe: 'كل المحاريث', helmet: 'كل الخوذ', chestplate: 'كل الصدريات', leggings: 'كل البناطيل', boots: 'كل البوتات', potion: 'كل الجرعات', arrow: 'كل الأسهم', horse_armor: 'كل دروع الخيل', ingot: 'كل السبايك', nugget: 'كل القطع', apple: 'كل التفاح', carrot: 'كل الجزر' };
 const itemName = (n) => ITEM_AR[n] || n.replace(/_/g, ' ');
 const TAB_GROUPS = [
   ['الشكل', [['textures', 'التكسترات', 'star'], ['all', 'كل تكسترات اللعبة', 'layers'], ['armor', 'الدروع والإليترا', 'shield'], ['particles', 'الجزيئات', 'wand'], ['fire', 'الفاير', 'fire'], ['shield', 'الشيلد', 'shield'], ['sky', 'السما', 'sun'], ['font', 'الخط', 'edit']]],
@@ -1063,39 +1064,55 @@ async function tabHeld(b) {
   ['hon', 'hl', 'hs', 'hx', 'gon', 'gl', 'gs'].forEach((id) => $('#' + id, b).oninput = upd);
   $$('[data-hp]', b).forEach((x) => x.onclick = () => { const [l, s, xx] = x.dataset.hp.split(',').map(Number); $('#hl', b).value = l; $('#hs', b).value = s; $('#hx', b).value = xx; $('#gl', b).value = l * 0.8; $('#gs', b).value = s; upd(); });
   $$('#hpv button', b).forEach((x) => x.onclick = () => { pv = x.dataset.v; $('#hpvn', b).textContent = ''; $$('#hpv button', b).forEach((y) => y.classList.toggle('on', y === x)); draw(); });
-  // ---- per-item list
+  // ---- per-item list — the same kind of item (all swords, all axes…) is handled together
+  const MAT_RE = /^(wooden|stone|iron|golden|gold|diamond|netherite|copper|leather|chainmail|turtle)_(.+)$/;
+  const famKey = (n) => { if (/^(splash_|lingering_)?potion$/.test(n)) return 'potion'; if (/^(spectral_|tipped_)?arrow$/.test(n)) return 'arrow'; const m = n.match(MAT_RE); return m ? m[2] : null; };
+  const famCount = {}; models.forEach((m) => { const f = famKey(m.name); if (f) famCount[f] = (famCount[f] || 0) + 1; });
+  const units = []; const unitOf = {};
+  for (const m of models) {
+    const f = famKey(m.name), key = f && famCount[f] >= 2 ? 'fam:' + f : m.name;
+    let u = units.find((x) => x.key === key);
+    if (!u) { u = { key, fam: key.startsWith('fam:') ? f : null, members: [], rep: m }; units.push(u); }
+    u.members.push(m.name); unitOf[m.name] = u;
+    if (/^diamond_/.test(m.name) || (u.fam === 'potion' && m.name === 'potion') || (u.fam === 'arrow' && m.name === 'arrow')) u.rep = m;
+  }
+  const unitLabel = (u) => (u.fam ? (FAM_AR[u.fam] || 'كل الـ ' + u.fam.replace(/_/g, ' ')) : itemName(u.key));
+  const unitOn = (u) => u.members.some((n) => h.items[n]);
+  // old saves: items added one by one still show (as their own row)
+  Object.keys(h.items).forEach((n) => { if (!unitOf[n]) { const u = { key: n, fam: null, members: [n], rep: { name: n } }; units.push(u); unitOf[n] = u; } });
   const showItem = async (m) => { pvItem = m; pv = 'item'; await thumb(m); $$('#hpv button', b).forEach((y) => y.classList.remove('on')); $('#hpvn', b).textContent = m.name; draw(); };
   const drawItems = async () => {
-    const box = $('#hitems', b); const names = Object.keys(h.items);
-    if (!names.length) { box.innerHTML = `<div class="muted small">${models.length ? 'ما اخترت أدوات للحين — اضغط على أي أداة من القائمة تحت' : 'تحتاج ملفات اللعبة محمّلة عشان تطلع قائمة الأدوات'}</div>`; return; }
-    box.innerHTML = names.map((n) => { const c = h.items[n]; return `<div class="hitem" data-n="${esc(n)}"><canvas class="hth"></canvas><b style="width:150px;overflow:hidden;text-overflow:ellipsis" title="${esc(n)}">${esc(itemName(n))}</b>
-      <div class="slider-row" style="grid-template-columns:40px 1fr 34px;margin:0;flex:1"><span>نزول</span><input type="range" data-k="lower" min="-4" max="8" step="0.25" value="${c.lower}"><output class="ltr">${c.lower}</output></div>
-      <div class="slider-row" style="grid-template-columns:40px 1fr 34px;margin:0;flex:1"><span>الحجم</span><input type="range" data-k="scale" min="0.2" max="1.6" step="0.05" value="${c.scale}"><output class="ltr">${c.scale}</output></div>
-      <div class="slider-row" style="grid-template-columns:40px 1fr 34px;margin:0;flex:1"><span>جنب</span><input type="range" data-k="x" min="-6" max="6" step="0.25" value="${c.x}"><output class="ltr">${c.x}</output></div>
+    const box = $('#hitems', b); const sel = units.filter(unitOn);
+    if (!sel.length) { box.innerHTML = `<div class="muted small">${models.length ? 'ما اخترت أدوات للحين — اضغط على أي أداة من القائمة تحت' : 'تحتاج ملفات اللعبة محمّلة عشان تطلع قائمة الأدوات'}</div>`; return; }
+    box.innerHTML = sel.map((u) => { const c = h.items[u.members.find((n) => h.items[n])]; return `<div class="hitem" data-k="${esc(u.key)}"><canvas class="hth"></canvas><div style="width:150px;overflow:hidden"><b style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(unitLabel(u))}</b>${u.fam ? `<span class="dim small">${u.members.length} أنواع</span>` : ''}</div>
+      <div class="slider-row" style="grid-template-columns:40px 1fr 34px;margin:0;flex:1"><span>نزول</span><input type="range" data-p="lower" min="-4" max="8" step="0.25" value="${c.lower}"><output class="ltr">${c.lower}</output></div>
+      <div class="slider-row" style="grid-template-columns:40px 1fr 34px;margin:0;flex:1"><span>الحجم</span><input type="range" data-p="scale" min="0.2" max="1.6" step="0.05" value="${c.scale}"><output class="ltr">${c.scale}</output></div>
+      <div class="slider-row" style="grid-template-columns:40px 1fr 34px;margin:0;flex:1"><span>جنب</span><input type="range" data-p="x" min="-6" max="6" step="0.25" value="${c.x}"><output class="ltr">${c.x}</output></div>
       <button class="btn sm ghost icon" data-v="1" title="معاينة">${icon('monitor', 15)}</button><button class="btn sm ghost icon danger" data-d="1" title="شيل">${icon('x', 15)}</button></div>`; }).join('');
     for (const row of $$('.hitem', box)) {
-      const n = row.dataset.n, m = models.find((x) => x.name === n) || { name: n };
+      const u = units.find((x) => x.key === row.dataset.k), m = u.rep;
       thumb(m).then((c) => { const cv = $('.hth', row); if (c) { cv.width = c.width; cv.height = Math.min(c.width, c.height); cv.getContext('2d').drawImage(c, 0, 0); } });
-      $$('input', row).forEach((inp) => inp.oninput = () => { h.items[n][inp.dataset.k] = +inp.value; inp.nextElementSibling.textContent = inp.value; if (pvItem && pvItem.name === n) draw(); clearTimeout(upd.t); upd.t = setTimeout(saveProject, 400); });
+      $$('input', row).forEach((inp) => inp.oninput = () => { u.members.forEach((n) => { h.items[n] = h.items[n] || { lower: 2, scale: 0.8, x: 0 }; h.items[n][inp.dataset.p] = +inp.value; }); inp.nextElementSibling.textContent = inp.value; if (pvItem && u.members.includes(pvItem.name)) draw(); clearTimeout(upd.t); upd.t = setTimeout(saveProject, 400); });
       $('[data-v]', row).onclick = () => showItem(m);
-      $('[data-d]', row).onclick = async () => { delete h.items[n]; await saveProject(); drawItems(); };
+      $('[data-d]', row).onclick = async () => { u.members.forEach((n) => delete h.items[n]); await saveProject(); drawItems(); drawGrid(); };
     }
   };
   // ---- browsable list of every item (no typing needed)
   let cat = 'weapons';
   const gridEl = $('#hgrid', b);
-  const io = new IntersectionObserver((ents) => ents.forEach((en) => { if (!en.isIntersecting) return; io.unobserve(en.target); const m = models.find((x) => x.name === en.target.dataset.n); thumb(m).then((c) => { const cv = $('canvas', en.target); if (c && cv) { cv.width = c.width; cv.height = Math.min(c.width, c.height); cv.getContext('2d').drawImage(c, 0, 0); } }); }), { rootMargin: '150px' });
+  const io = new IntersectionObserver((ents) => ents.forEach((en) => { if (!en.isIntersecting) return; io.unobserve(en.target); const u = units.find((x) => x.key === en.target.dataset.k); thumb(u && u.rep).then((c) => { const cv = $('canvas', en.target); if (c && cv) { cv.width = c.width; cv.height = Math.min(c.width, c.height); cv.getContext('2d').drawImage(c, 0, 0); } }); }), { rootMargin: '150px' });
   function drawGrid() {
     if (!models.length) { gridEl.innerHTML = `<div class="muted small">تحتاج ملفات اللعبة محمّلة عشان تطلع قائمة الأدوات</div>`; return; }
-    const list = models.filter((m) => itemCat(m) === cat || (cat === 'all' && m.tex));
-    gridEl.innerHTML = list.map((m) => `<button class="icell ${h.items[m.name] ? 'on' : ''}" data-n="${esc(m.name)}" title="${esc(m.name)}"><canvas></canvas><span>${esc(itemName(m.name))}</span>${h.items[m.name] ? `<i>${icon('check', 12)}</i>` : ''}</button>`).join('') || `<div class="muted small">ما فيه شي بهالقسم</div>`;
+    const list = units.filter((u) => models.includes(u.rep) && (itemCat(u.rep) === cat || (cat === 'all' && u.rep.tex)));
+    gridEl.innerHTML = list.map((u) => `<button class="icell ${unitOn(u) ? 'on' : ''} ${u.fam ? 'fam' : ''}" data-k="${esc(u.key)}" title="${esc(u.members.join(', '))}"><canvas></canvas><span>${esc(unitLabel(u))}</span>${u.fam ? `<em>${u.members.length}</em>` : ''}${unitOn(u) ? `<i>${icon('check', 12)}</i>` : ''}</button>`).join('') || `<div class="muted small">ما فيه شي بهالقسم</div>`;
     $$('.icell', gridEl).forEach((x) => io.observe(x));
   }
   $$('#hcats .chip', b).forEach((x) => x.onclick = () => { cat = x.dataset.c; $$('#hcats .chip', b).forEach((y) => y.classList.toggle('on', y === x)); drawGrid(); });
   gridEl.onclick = async (e) => {
-    const el = e.target.closest('.icell'); if (!el) return; const n = el.dataset.n;
-    if (h.items[n]) { delete h.items[n]; } else { h.items[n] = { lower: 2, scale: 0.8, x: 0 }; if (!$('#hon', b).checked) { $('#hon', b).checked = true; upd(); } }
-    await saveProject(); await drawItems(); drawGrid(); if (h.items[n]) { showItem(models.find((x) => x.name === n)); $('#hitems', b).scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+    const el = e.target.closest('.icell'); if (!el) return; const u = units.find((x) => x.key === el.dataset.k);
+    if (unitOn(u)) u.members.forEach((n) => delete h.items[n]);
+    else { u.members.forEach((n) => { h.items[n] = { lower: 2, scale: 0.8, x: 0 }; }); if (!$('#hon', b).checked) { $('#hon', b).checked = true; upd(); } }
+    await saveProject(); await drawItems(); drawGrid(); if (unitOn(u)) { showItem(u.rep); $('#hitems', b).scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
   };
   drawGrid();
   drawItems();
