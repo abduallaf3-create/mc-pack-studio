@@ -300,7 +300,7 @@ const saveProject = async () => { const saved = await api.projects.save(S.projec
 const ITEM_CATS = [['weapons', 'أسلحة'], ['tools', 'أدوات'], ['throw', 'رمي'], ['food', 'أكل'], ['armor', 'دروع وتوتم'], ['misc', 'باقي الأشياء'], ['blocks', 'بلوكات'], ['all', 'الكل']];
 function itemCat(m) {
   const n = m.name;
-  if (!m.tex) return 'blocks';
+  if (!m.tex || m.block) return 'blocks';
   if (/sword|_axe$|^bow$|crossbow|trident|^mace$|^shield$/.test(n)) return 'weapons';
   if (/pickaxe|shovel|_hoe$|fishing_rod|shears|flint_and_steel|brush|spyglass|compass|clock|lead$|bucket/.test(n)) return 'tools';
   if (/ender_pearl|snowball|^egg$|potion|experience_bottle|fire_charge|wind_charge|ender_eye|firework_rocket|arrow$/.test(n)) return 'throw';
@@ -323,7 +323,7 @@ async function renderProject(main) {
   const p = S.project, c = clientOf(p.clientId);
   main.innerHTML = `<div class="ws-banner"><div class="bg" id="pbg"></div>
       <img class="pack-icon" id="picon" title="غيّر أيقونة الباك">
-      <div style="flex:1;min-width:0"><h1>${esc(p.name)}</h1>
+      <div style="flex:1;min-width:0"><h1 class="pname" id="pname" title="اضغط عشان تغيّر الاسم">${esc(p.name)} <span class="pname-ed">${icon('edit', 16)}</span></h1>
         <div class="row" style="gap:6px"><span class="badge dark"><span class="dot" style="background:${c.color};box-shadow:0 0 8px ${c.color}"></span>${esc(c.name)}${p.instance ? ' · ' + esc(p.instance) : ''}</span>
         <span class="badge dark ltr">${esc(p.version)} · pack_format ${p.packFormat}</span>
         ${p.baseJar ? `<span class="badge ok">${icon('check', 12)} ملفات اللعبة محمّلة</span>` : `<span class="badge warn">بدون ملفات اللعبة</span>`}</div></div>
@@ -340,6 +340,7 @@ async function renderProject(main) {
   $$('.tab').forEach((t) => t.onclick = () => { S.tab = t.dataset.t; $$('.tab').forEach((x) => x.classList.toggle('on', x === t)); renderTab(); });
   $('#inst').onclick = () => installPack();
   $('#where').onclick = () => openSaveWhere();
+  $('#pname').onclick = () => renamePack();
   if (!(S.settings.tours || {}).project && !$('.tour-box')) setTimeout(() => { if (S.view === 'project' && !$('.tour-box') && !$('.modal-bg')) startTour('project'); }, 900);
   $('#chk').onclick = () => openChecker();
   $('#live').onclick = async () => { p.live = !p.live; $('#live').classList.toggle('on', p.live); await saveProject(); toast(p.live ? 'التثبيت التلقائي شغال — عدّل واحفظ، وباللعبة اضغط F3+T' : 'وقّفت التثبيت التلقائي'); if (p.live) installPack(true); };
@@ -1192,7 +1193,7 @@ async function tabMeasure(b) {
   const texCache = {}, qCache = {}, anchors = {};
   const imgOf = async (rel) => { if (texCache[rel] !== undefined) return texCache[rel]; const r = await api.tex.get(p, rel); return (texCache[rel] = r ? await IMG.fromB64(r.data) : null); };
   const modelOf = (n) => models.find((x) => x.name === n);
-  async function quadsOf(n) { if (qCache[n]) return qCache[n]; const m = modelOf(n); const im = m && m.tex ? await imgOf(m.tex) : null; return (qCache[n] = heldQuads(im, disp[n] && disp[n].special, n)); }
+  async function quadsOf(n) { if (qCache[n]) return qCache[n]; const m = modelOf(n); const im = m && m.tex ? await imgOf(m.tex) : null; return (qCache[n] = heldQuads(im, (disp[n] && disp[n].special) || (m && m.special), n, m && m.block)); }
   async function anchorOf(n) { if (anchors[n] !== undefined) return anchors[n]; const q = await quadsOf(n), info = disp[n] || {}; return (anchors[n] = (q.length && heldAnchor(q, heldApply(info.disp, null, 0, 1, 0))) || info.center || null); }
   const isToolN = (n) => /(_sword|_axe|_pickaxe|_shovel|_hoe|_spear)$/.test(n) || /^(stick|blaze_rod|breeze_rod|bone|fishing_rod|carrot_on_a_stick|warped_fungus_on_a_stick|mace|trident)$/.test(n);
   if (p.baseJar) { h.hAnchor = await anchorOf('diamond_sword'); h.gAnchor = await anchorOf('ender_pearl'); }
@@ -1344,8 +1345,16 @@ function heldApply(disp, center, lower, scale, xs) {
   return { r, t: t.map((v) => Math.max(-80, Math.min(80, v)) / 16), s: S1.map((v) => Math.max(-4, Math.min(4, v))) };
 }
 // item-space quads (blocks). Normal items are centred; the shield is drawn flipped around the -0.5 corner
-function heldQuads(img, special, name) {
+function cubeQuads(img, size = 1) {
+  const w = img.width, h = Math.min(img.width, img.height), d = img.data, q = [], N = Math.min(16, w), k = w / N, s = size / N, o = -size / 2;
+  const px = (x, y) => { const i = (Math.floor(y * k) * w + Math.floor(x * k)) * 4; return [d[i], d[i + 1], d[i + 2], d[i + 3]]; };
+  const faces = [[[0, 0, 1], (a, b) => [o + a * s, -o - b * s, -o]], [[0, 0, -1], (a, b) => [-o - a * s, -o - b * s, o]], [[1, 0, 0], (a, b) => [-o, -o - b * s, -o - a * s]], [[-1, 0, 0], (a, b) => [o, -o - b * s, o + a * s]], [[0, 1, 0], (a, b) => [o + a * s, -o, o + b * s]], [[0, -1, 0], (a, b) => [o + a * s, o, -o - b * s]]];
+  for (const [n, f] of faces) for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const c = px(x, y); if (c[3] < 10) continue; q.push({ p: [f(x, y), f(x + 1, y), f(x + 1, y + 1), f(x, y + 1)], c, n }); }
+  return q;
+}
+function heldQuads(img, special, name, block) {
   if (!img) return [];
+  if (block || (special && !/shield|trident/.test(name))) return cubeQuads(img);
   if (special && /shield/.test(name) && img.width >= 64) {
     const k = img.width / 64, q = [];
     Lite3D.boxQuads(img, k, 0, 0, 12, 22, 1, 0, 0, 1.5, 0, q);
@@ -1481,6 +1490,11 @@ async function openMerge() {
   const ok = packs.filter((x) => !x.error);
   if (!ok.length) return toast('ما قدرت أقرأ الباكات', 'err');
   const pf = p.packFormat;
+  // old packs (1.8…1.12: textures/blocks, wool_colored_red…) get the modern names so every block works
+  let legacyN = 0;
+  for (const k of ok) { k.src = {}; k.files = k.files.map((f) => { const d = pf >= 4 ? LEGACY.map(f, pf) : f; if (d !== f) legacyN++; k.src[d] = f; return d; }); }
+  const srcOf = (i, rel) => ok[i].src[rel] || rel;
+  const pairs = (i, rels) => rels.flatMap((r) => (r.endsWith('.png') ? [[srcOf(i, r), r], [srcOf(i, r + '.mcmeta'), r + '.mcmeta']] : [[srcOf(i, r), r]]));
   // every file that any of the packs changes (not just the textures the app knows by name)
   const known = {}; TEXTURES.forEach((t) => { const r = texPath(t, pf); if (r) known['assets/minecraft/' + r] = t; });
   const sets = ok.map((k) => new Set(k.files));
@@ -1508,7 +1522,7 @@ async function openMerge() {
     foot: `<button class="btn primary" id="mgo">${icon('check', 16)} ادمج في الباك</button><span class="muted small" id="mcount"></span>` });
   const list = $('#mlist', m.el);
   const groups = [...CATEGORIES.map((c) => [c.id, c.name, c.icon]), ...MERGE_GROUPS].filter(([id]) => items.some((x) => x.cat === id));
-  list.innerHTML = `<div class="muted small" style="margin-bottom:6px">${items.length} ملف متغيّر بالباكات</div>` + groups.map(([id, name, ic]) => { const its = items.filter((x) => x.cat === id); return `<details class="mgrp" open id="mg-${id}"><summary><h3 style="display:inline-flex;gap:8px;align-items:center;margin:14px 0 10px">${icon(ic, 16)} ${name} <span class="badge">${its.length}</span></h3>
+  list.innerHTML = `<div class="muted small" style="margin-bottom:6px">${items.length} ملف متغيّر بالباكات${legacyN ? ` · ${icon('check', 13)} حوّلت ${legacyN} ملف من باك قديم (1.8) لأسماء النسخة الجديدة` : ''}</div>` + groups.map(([id, name, ic]) => { const its = items.filter((x) => x.cat === id); return `<details class="mgrp" open id="mg-${id}"><summary><h3 style="display:inline-flex;gap:8px;align-items:center;margin:14px 0 10px">${icon(ic, 16)} ${name} <span class="badge">${its.length}</span></h3>
       <span class="mg-all">${ok.map((k, i) => `<button class="btn sm ghost" data-gall="${i}" data-g="${id}">كله من ${esc(k.name.slice(0, 12))}</button>`).join('')}</span></summary>` + its.map((x) => `
     <div class="mrow" data-rel="${esc(x.rel)}" title="${esc(x.rel)}"><b class="small" style="width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.name)}</b>
       <div class="mopt on" data-i="-1"><span class="small muted">بدون تغيير</span></div>
@@ -1526,18 +1540,18 @@ async function openMerge() {
   const io = new IntersectionObserver((ents) => ents.forEach(async (en) => {
     if (!en.isIntersecting) return; io.unobserve(en.target); const row = en.target;
     const it = items.find((x) => x.rel === row.dataset.rel);
-    for (const o of $$('.mopt[data-i]', row)) { const i = +o.dataset.i; if (i < 0 || !$('canvas', o)) continue; const tr = it && it.fam ? (it.members.find((r) => /diamond/.test(r) && sets[i].has(r)) || it.members.find((r) => sets[i].has(r))) : row.dataset.rel; const b64 = await api.merge.read(ok[i].path, tr); if (!b64) continue; const im = await IMG.fromB64(b64); const c = $('canvas', o); c.width = im.width; c.height = Math.min(im.width, im.height); c.getContext('2d').putImageData(im, 0, 0); }
+    for (const o of $$('.mopt[data-i]', row)) { const i = +o.dataset.i; if (i < 0 || !$('canvas', o)) continue; const tr = it && it.fam ? (it.members.find((r) => /diamond/.test(r) && sets[i].has(r)) || it.members.find((r) => sets[i].has(r))) : row.dataset.rel; const b64 = await api.merge.read(ok[i].path, srcOf(i, tr)); if (!b64) continue; const im = await IMG.fromB64(b64); const c = $('canvas', o); c.width = im.width; c.height = Math.min(im.width, im.height); c.getContext('2d').putImageData(im, 0, 0); }
   }), { root: $('#mmain', m.el), rootMargin: '200px' });
   $$('.mrow', list).forEach((r) => io.observe(r));
   $('#mgo', m.el).onclick = async () => {
     $('#mgo', m.el).disabled = true;
     await api.snap.create(p.id, 'تلقائي: قبل دمج الباكات');
     const base = +$('#mbase', m.el).value; let n = 0;
-    if (base >= 0) n += await api.merge.copy(p.id, ok[base].path, ok[base].files);
+    if (base >= 0) n += await api.merge.copy(p.id, ok[base].path, ok[base].files.map((r) => [srcOf(base, r), r]));
     for (const [rel, i] of Object.entries(choice)) {
       if (i < 0) continue; const it = items.find((x) => x.rel === rel);
       const rels = it && it.fam ? it.members.filter((r) => sets[i].has(r)) : [rel];
-      for (const r of rels) n += await api.merge.copy(p.id, ok[i].path, r.endsWith('.png') ? [r, r + '.mcmeta'] : [r]);
+      n += await api.merge.copy(p.id, ok[i].path, pairs(i, rels));
     }
     m.close(true); toast(`اندمج ✓ (${n} ملف) — حفظت نسخة احتياطية قبل الدمج`); renderTab();
   };
@@ -2804,6 +2818,19 @@ function renderClients(main) {
 }
 
 // ------------------------------------------------------------- app settings
+async function renamePack() {
+  const p = S.project, old = p.name;
+  const m = modal({ title: `${icon('edit', 18)} اسم الباك`, body: `<input class="inp" id="rn" value="${esc(old)}" maxlength="60" style="width:100%"><div class="muted small" style="margin-top:8px">الاسم اللي يطلع باللعبة بقائمة الريسورس باك. لو الباك مثبّت، أغيّر اسمه هناك بعد.</div>`,
+    foot: `<button class="btn ghost" data-c>إلغاء</button><span class="spacer"></span><button class="btn primary" data-s>${icon('check', 16)} احفظ الاسم</button>` });
+  const inp = $('#rn', m.el); inp.focus(); inp.select();
+  const save = async () => {
+    const name = inp.value.trim(); if (!name || name === old) return m.close(true);
+    p.name = name; await saveProject(); const moved = await api.pack.renameInstalled(p.rpPath, old, name);
+    m.close(true); toast(moved ? 'تغيّر الاسم ✓ (وتغيّر بالكلاينت بعد)' : 'تغيّر الاسم ✓'); render(); renderRail();
+  };
+  m.el.querySelector('[data-s]').onclick = save; m.el.querySelector('[data-c]').onclick = () => m.close(true);
+  inp.onkeydown = (e) => { if (e.key === 'Enter') save(); };
+}
 // where the pack gets saved (installed) — any folder the user wants
 function openSaveWhere() {
   const p = S.project, c = clientOf(p.clientId);

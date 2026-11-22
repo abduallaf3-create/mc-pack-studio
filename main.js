@@ -523,8 +523,9 @@ ipcMain.handle('merge:read', (_e, zipPath, rel) => {
 ipcMain.handle('merge:copy', (_e, id, zipPath, rels) => {
   setImmediate(() => notify(id));
   const { z, prefix } = packEntries(zipPath); let n = 0;
-  for (const rel of rels) {
-    const e = z.getEntry(prefix + rel);
+  for (const it of rels) {
+    const [src, rel] = Array.isArray(it) ? it : [it, it]; // [path in the source pack, path in this pack] (old packs get renamed)
+    const e = z.getEntry(prefix + src);
     if (!e) { if (rel.endsWith('.mcmeta')) fs.rmSync(path.join(filesDir(id), safeRel(rel)), { force: true }); continue; }
     const f = path.join(filesDir(id), safeRel(rel)); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, e.getData()); n++;
   }
@@ -591,7 +592,8 @@ function heldRot(v, r, left) {
   return [x, y, zz];
 }
 // centre of code-drawn items in item space (blocks): shield plate is drawn flipped around the -0.5 corner
-const SPECIAL_CENTER = (n) => (/shield/.test(n) ? [-0.5, -0.5, -0.41] : [-0.5, -0.5, -0.5]);
+// shield & trident models are drawn around the corner; chests, beds, heads… fill the normal 0..1 box
+const SPECIAL_CENTER = (n) => (/shield/.test(n) ? [-0.5, -0.5, -0.41] : /trident/.test(n) ? [-0.5, -0.5, -0.5] : [0, 0, 0]);
 ipcMain.handle('held:build', (_e, project, cfg) => {
   const z = openJar(project.baseJar); if (!z) return { error: 'nojar', extras: {}, count: 0 };
   const pre = 'assets/minecraft/models/item/';
@@ -690,8 +692,31 @@ ipcMain.handle('jar:packFormat', (_e, jarPath) => {
 ipcMain.handle('models:list', (_e, project) => {
   const z = openJar(project.baseJar); if (!z) return [];
   const pre = 'assets/minecraft/models/item/';
+  const J = (rel) => { const en = z.getEntry(rel); if (!en) return null; try { return JSON.parse(en.getData().toString('utf8')); } catch { return null; } };
+  const tpath = (t) => 'textures/' + String(t).replace(/^minecraft:/, '') + '.png';
+  // block items: follow the block model chain and pick the most visible face texture
+  const blockTex = (pn, depth = 0) => {
+    let vars = {}, cur = J('assets/minecraft/models/' + pn.replace(/^minecraft:/, '') + '.json'), d = 0;
+    while (cur && d++ < 8) { vars = { ...(cur.textures || {}), ...vars }; const pp = String(cur.parent || '').replace(/^minecraft:/, ''); if (!pp || pp.startsWith('builtin/')) break; cur = J('assets/minecraft/models/' + pp + '.json'); }
+    const look = (k, n = 0) => { const v = vars[k]; if (!v || n > 5) return null; return String(v).startsWith('#') ? look(String(v).slice(1), n + 1) : v; };
+    for (const k of ['all', 'side', 'front', 'end', 'top', 'texture', 'cross', 'particle', 'layer0']) { const v = look(k); if (v) return tpath(v); }
+    const any = Object.keys(vars).map((k) => look(k)).find(Boolean); return any ? tpath(any) : null;
+  };
   return z.getEntries().map((e) => e.entryName).filter((n) => n.startsWith(pre) && n.endsWith('.json') && !n.slice(pre.length).includes('/'))
-    .map((n) => { let tex = null; try { const j = JSON.parse(z.getEntry(n).getData().toString('utf8')); const l = j.textures && (j.textures.layer0 || Object.values(j.textures)[0]); if (l) tex = 'textures/' + String(l).replace(/^minecraft:/, '') + '.png'; } catch {} return { name: n.slice(pre.length, -5), tex }; })
+    .map((n) => {
+      let tex = null, block = false, special = false;
+      try {
+        const j = J(n), l = j.textures && (j.textures.layer0 || null);
+        if (l) tex = tpath(l);
+        else {
+          let cur = j, d = 0;
+          while (cur && d++ < 6) { const pp = String(cur.parent || '').replace(/^minecraft:/, ''); if (pp.startsWith('block/')) { block = true; tex = blockTex(pp); break; } if (/builtin\/entity/.test(pp)) { special = true; break; } if (!pp || pp.startsWith('builtin/')) break; cur = J('assets/minecraft/models/' + pp.replace(/^item\//, 'item/') + '.json'); }
+          if (!tex && j.textures) { const v = j.textures.particle || Object.values(j.textures)[0]; if (v) { tex = tpath(v); special = special || !block; } }
+          if (!tex && !block) { const it = z.getEntry('assets/minecraft/items/' + n.slice(pre.length)); if (it && /special/.test(it.getData().toString('utf8'))) { special = true; tex = 'textures/block/oak_planks.png'; } }
+        }
+      } catch {}
+      return { name: n.slice(pre.length, -5), tex, block, special };
+    })
     .filter((x) => !/^(template_|generated|handheld|air$)/.test(x.name)).sort((a, b) => a.name.localeCompare(b.name));
 });
 
@@ -811,6 +836,13 @@ ipcMain.handle('pack:install', (_e, project, extra, activate, target) => {
   let activated = false;
   if (activate && /^resourcepacks$/i.test(path.basename(project.rpPath))) { try { activated = activateInOptions(path.dirname(project.rpPath), name, project.packFormat <= 3); } catch {} }
   return { path: out, activated };
+});
+// renaming a pack also renames the copy that's already installed in the client
+ipcMain.handle('pack:renameInstalled', (_e, rpPath, oldName, newName) => {
+  if (!rpPath) return false;
+  const a = path.join(rpPath, safeName(oldName) + '.zip'), b = path.join(rpPath, safeName(newName) + '.zip');
+  if (a === b || !exists(a)) return false;
+  try { fs.renameSync(a, b); const opt = path.join(path.dirname(rpPath), 'options.txt'); if (exists(opt)) { const t = fs.readFileSync(opt, 'utf8'); fs.writeFileSync(opt, t.split('file/' + path.basename(a)).join('file/' + path.basename(b))); } return true; } catch { return false; }
 });
 ipcMain.handle('pack:export', async (_e, project, extra) => {
   const r = await dialog.showSaveDialog(win, { defaultPath: safeName(project.name) + '.zip', filters: [{ name: 'Zip', extensions: ['zip'] }] });

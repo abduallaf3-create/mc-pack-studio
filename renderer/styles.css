@@ -614,3 +614,6 @@ html.no-anim *, html.no-anim *::before { animation: none !important; transition:
 .mbadge { font-size: 11px; font-weight: 700; color: var(--muted); white-space: nowrap; }
 .mbadge.ok { color: #34d399; } .mbadge.tiny, .mbadge.off { color: #f87171; } .mbadge.cut { color: #facc15; }
 .meas-ed { position: sticky; top: 0; }
+.pname { cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+.pname .pname-ed { opacity: 0; transition: opacity .15s; color: var(--muted); }
+.pname:hover .pname-ed { opacity: 1; }
