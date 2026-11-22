@@ -627,3 +627,4 @@ html.no-anim *, html.no-anim *::before { animation: none !important; transition:
 .ws-banner .ws-info { flex: 1 1 240px; min-width: 200px; }
 .ws-banner .ws-acts { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: flex-end; flex: 0 1 auto; }
 @media (max-width: 1240px) { .ws-body .two { grid-template-columns: 1fr !important; } .meas-split { grid-template-columns: 1fr; } .meas-list { max-height: 300px; min-height: 0; } .meas-ed { position: static; } }
+.mhint { display: flex; gap: 6px; align-items: center; margin-top: 6px; }

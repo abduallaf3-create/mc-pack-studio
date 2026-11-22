@@ -611,17 +611,21 @@ ipcMain.handle('held:build', (_e, project, cfg) => {
     let cur = m, d = 0; while (cur && d++ < 6) { const pn = String(cur.parent || '').replace(/^minecraft:/, ''); if (/builtin\/entity/.test(pn)) return true; if (!pn || pn.startsWith('builtin/')) break; cur = read(pn.replace(/^item\//, '')); }
     return false;
   };
-  const mod = (m, lower, scale, xs, center) => {
-    if (!lower && (scale === 1 || !scale) && !xs) return false; // nothing to change
+  // lower = down, xs = right, z = closer(-)/further(+), rot = tilt (degrees). The visible part (center) stays put.
+  const mod = (m, lower, scale, xs, center, z = 0, rot = 0) => {
+    if (!lower && (scale === 1 || !scale) && !xs && !z && !rot) return false; // nothing to change
     let ch = false;
     for (const k of Object.keys(m.display || {})) {
       if (!/^firstperson/.test(k)) continue;
-      const d = m.display[k];
+      const d = m.display[k], left = /left/.test(k);
       d.translation = [...(d.translation || [0, 0, 0])];
+      const r0 = [...(d.rotation || [0, 0, 0])], r1 = [r0[0], r0[1], r0[2] + rot];
       const S0 = d.scale || [1, 1, 1], S1 = S0.map((v) => v * scale);
-      if (center) { const dv = heldRot([0, 1, 2].map((i) => (S0[i] - S1[i]) * center[i]), d.rotation || [0, 0, 0], /left/.test(k)); if (/left/.test(k)) dv[0] = -dv[0]; for (let i = 0; i < 3; i++) d.translation[i] += dv[i] * 16; }
+      if (center) { const a = heldRot([0, 1, 2].map((i) => S0[i] * center[i]), r0, left), b = heldRot([0, 1, 2].map((i) => S1[i] * center[i]), r1, left); const dv = [a[0] - b[0], a[1] - b[1], a[2] - b[2]]; if (left) dv[0] = -dv[0]; for (let i = 0; i < 3; i++) d.translation[i] += dv[i] * 16; }
+      if (rot) d.rotation = r1.map((v) => +v.toFixed(2));
       d.translation[1] = d.translation[1] - lower;
-      if (xs) d.translation[0] = d.translation[0] + (/left/.test(k) ? -xs : xs);
+      if (xs) d.translation[0] = d.translation[0] + (left ? -xs : xs);
+      if (z) d.translation[2] = d.translation[2] + z;
       d.translation = d.translation.map((v) => +Math.max(-80, Math.min(80, v)).toFixed(3));
       d.scale = S1.map((v) => +Math.max(-4, Math.min(4, v)).toFixed(3));
       ch = true;
@@ -652,7 +656,7 @@ ipcMain.handle('held:build', (_e, project, cfg) => {
   // all blocks at once: their hand position comes from block/block.json, so one file changes every block
   if (active && cfg.blocks) {
     const bb = z.getEntry('assets/minecraft/models/block/block.json');
-    if (bb) { try { const m = JSON.parse(bb.getData().toString('utf8')); const c = cfg.blocks; if (mod(m, +c.lower || 0, +c.scale || 1, +c.x || 0, Array.isArray(c.anchor) ? c.anchor : null)) out['assets/minecraft/models/block/block.json'] = JSON.stringify(m, null, 2); } catch {} }
+    if (bb) { try { const m = JSON.parse(bb.getData().toString('utf8')); const c = cfg.blocks; if (mod(m, +c.lower || 0, +c.scale || 1, +c.x || 0, Array.isArray(c.anchor) ? c.anchor : null, +c.z || 0, +c.rot || 0)) out['assets/minecraft/models/block/block.json'] = JSON.stringify(m, null, 2); } catch {} }
   }
   for (const n of Object.keys(imp)) if (!out[pre + n + '.json'] && !skip(n)) { const m = read(n); if (m) out[pre + n + '.json'] = JSON.stringify(m, null, 2); }
   for (const [n, c] of Object.entries(active ? cfg.items || {} : {})) {
@@ -660,7 +664,7 @@ ipcMain.handle('held:build', (_e, project, cfg) => {
     const disp = resolveDisplay(m);
     if (!disp) continue;
     const mm = { ...m, display: { ...(m.display || {}), ...disp } };
-    if (mod(mm, +c.lower || 0, +c.scale || 1, +c.x || 0, Array.isArray(c.anchor) && c.anchor.length === 3 ? c.anchor : isSpecial(n, m) ? SPECIAL_CENTER(n) : null)) out[pre + n + '.json'] = JSON.stringify(mm, null, 2);
+    if (mod(mm, +c.lower || 0, +c.scale || 1, +c.x || 0, Array.isArray(c.anchor) && c.anchor.length === 3 ? c.anchor : isSpecial(n, m) ? SPECIAL_CENTER(n) : null, +c.z || 0, +c.rot || 0)) out[pre + n + '.json'] = JSON.stringify(mm, null, 2);
   }
   return { extras: out, count: Object.keys(out).length };
 });

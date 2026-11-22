@@ -1227,12 +1227,14 @@ async function tabMeasure(b) {
   if (p.baseJar) { h.hAnchor = await anchorOf('diamond_sword'); h.gAnchor = await anchorOf('ender_pearl'); }
   // turning held sizes on for the first time must not wake up old default group values
   const ensureOn = () => { if (!h.on) { h.on = true; h.hOn = true; h.hLower = 0; h.hScale = 1; h.hX = 0; h.gOn = true; h.gLower = 0; h.gScale = 1; } h.gOn = true; h.hOn = true; };
-  const grpVals = (tool) => (!h.on ? [0, 1, 0] : tool ? [h.hLower, h.hScale, h.hX] : h.gOn ? [h.gLower, h.gScale, 0] : [0, 1, 0]);
-  const itemVals = (n) => (h.on && h.items[n] ? [h.items[n].lower, h.items[n].scale, h.items[n].x] : null);
-  const effItem = (n) => { const info = disp[n] || {}, iv = itemVals(n); if (iv) return heldApply(info.disp, h.items[n].anchor || anchors[n] || info.center, ...iv); const mm = modelOf(n); if (mm && mm.block && h.on && h.blocks) return heldApply(info.disp, h.blocks.anchor, h.blocks.lower, h.blocks.scale, h.blocks.x); const tool = isToolN(n); return heldApply(info.disp, tool ? h.hAnchor : h.gAnchor, ...grpVals(tool)); };
+  const N5 = [0, 1, 0, 0, 0], pad5 = (v) => [v[0] || 0, v[1] === undefined ? 1 : v[1], v[2] || 0, v[3] || 0, v[4] || 0], isNeutral = (v) => !v[0] && v[1] === 1 && !v[2] && !v[3] && !v[4];
+  const grpVals = (tool) => (!h.on ? N5 : tool ? [h.hLower, h.hScale, h.hX, 0, 0] : h.gOn ? [h.gLower, h.gScale, 0, 0, 0] : N5);
+  const itemVals = (n) => (h.on && h.items[n] ? pad5([h.items[n].lower, h.items[n].scale, h.items[n].x, h.items[n].z, h.items[n].rot]) : null);
+  const effItem = (n) => { const info = disp[n] || {}, iv = itemVals(n); if (iv) return heldApply(info.disp, h.items[n].anchor || anchors[n] || info.center, ...iv); const mm = modelOf(n); if (mm && mm.block && h.on && h.blocks) return heldApply(info.disp, h.blocks.anchor, h.blocks.lower, h.blocks.scale, h.blocks.x || 0, h.blocks.z || 0, h.blocks.rot || 0); const tool = isToolN(n); return heldApply(info.disp, tool ? h.hAnchor : h.gAnchor, ...grpVals(tool)); };
   // ---- shield
   const shBase = p.packFormat >= 2 ? await shieldBase(p) : null, shQ = shBase ? await shieldQuadsOf(p) : [], [shA, shBA] = shBase ? await shieldAnchors(p, shBase) : [null, null];
-  const shEff = (block, on = sh.enabled) => { const m = block ? shBase.bl : shBase.a, d = m && m.display && m.display.firstperson_righthand; return heldApply(d, block ? shBA : shA, on ? (block ? sh.blockLower : sh.lower) : 0, on ? sh.scale : 1, 0); };
+  const shVals = (block) => (block ? [sh.blockLower, sh.bscale || sh.scale, sh.bx || 0, sh.bz || 0, sh.brot || 0] : [sh.lower, sh.scale, sh.x || 0, sh.z || 0, sh.rot || 0]);
+  const shEff = (block, on = sh.enabled) => { const m = block ? shBase.bl : shBase.a, d = m && m.display && m.display.firstperson_righthand; return heldApply(d, block ? shBA : shA, ...(on ? shVals(block) : N5)); };
   // ---- fire (screen)
   const f1rel = texPath(TEXTURES.find((t) => t.id === 'fire_1'), p.packFormat), fireOrig = f1rel ? await texImg(p, f1rel) : null;
   const fireCfg = () => Object.assign({ lower: 0, opacity: 1 }, p.fire || {});
@@ -1250,9 +1252,9 @@ async function tabMeasure(b) {
   }
   const things = [];
   const oldGrp = h.on && (h.hLower || h.hScale !== 1 || h.hX || (h.gOn && (h.gLower || h.gScale !== 1)));
-  if (oldGrp) things.push({ id: 'g:h', kind: 'group', tool: true, cat: 'main', label: 'كل السيوف والأدوات مع بعض', en: 'all swords tools handheld low sword سيف فاس معول أدوات', rep: 'diamond_sword', sliders: ['lower', 'scale', 'x'] });
+  if (oldGrp) things.push({ id: 'g:h', kind: 'group', tool: true, cat: 'main', label: 'كل السيوف والأدوات مع بعض', en: 'all swords tools handheld low sword سيف فاس معول أدوات', rep: 'diamond_sword', sliders: ['lower', 'scale', 'x', 'z', 'rot'] });
   if (oldGrp) things.push({ id: 'g:g', kind: 'group', tool: false, cat: 'main', label: 'كل الأشياء العادية مع بعض', en: 'all items generated pearl apple بيرل تفاح أكل', rep: 'ender_pearl', sliders: ['lower', 'scale'] });
-  if (shBase) { things.push({ id: 'sh:0', kind: 'shield', block: false, cat: 'main', label: 'الشيلد', en: 'shield low shield', sliders: ['lower', 'scale'] }); things.push({ id: 'sh:1', kind: 'shield', block: true, cat: 'main', label: 'الشيلد وقت البلوك', en: 'shield blocking', sliders: ['lower', 'scale'] }); }
+  if (shBase) { things.push({ id: 'sh:0', kind: 'shield', block: false, cat: 'main', label: 'الشيلد', en: 'shield low shield', sliders: ['lower', 'scale', 'x', 'z', 'rot'] }); things.push({ id: 'sh:1', kind: 'shield', block: true, cat: 'main', label: 'الشيلد وقت البلوك', en: 'shield blocking', sliders: ['lower', 'scale', 'x', 'z', 'rot'] }); }
   if (fireOrig) things.push({ id: 'fire', kind: 'fire', cat: 'main', label: 'النار على الشاشة', en: 'fire low fire نار نار قصيرة', sliders: ['fire'] });
   // whole categories at once
   const CAT_ALL = [['blocks', 'كل البلوكات', 'stone red_wool end_stone obsidian oak_planks', 'بلوك بلوكات block'], ['weapons', 'كل الأسلحة', 'diamond_sword bow', 'سلاح أسلحة سيف'], ['tools', 'كل الأدوات', 'diamond_pickaxe fishing_rod', 'أداة أدوات معول'], ['throw', 'كل أشياء الرمي', 'ender_pearl snowball', 'رمي بيرل'], ['food', 'كل الأكل', 'golden_apple cooked_beef', 'أكل تفاح'], ['armor', 'كل الدروع والتوتم', 'totem_of_undying diamond_chestplate', 'درع دروع توتم'], ['misc', 'كل باقي الأشياء', '', 'باقي']];
@@ -1261,35 +1263,35 @@ async function tabMeasure(b) {
   for (const [c, label, reps, ar] of CAT_ALL) {
     const mem = catMembers(c); if (!mem.length) continue;
     const rep = reps.split(' ').find((r) => mem.includes(r)) || mem[0];
-    const t = { id: 'c:' + c, kind: c === 'blocks' ? 'blocks' : 'cat', catKey: c, members: mem, cat: 'main', label: `${label} مرة وحدة`, en: 'all ' + c + ' ' + ar + ' كل', rep, sliders: ['lower', 'scale', 'x'] };
+    const t = { id: 'c:' + c, kind: c === 'blocks' ? 'blocks' : 'cat', catKey: c, members: mem, cat: 'main', label: `${label} مرة وحدة`, en: 'all ' + c + ' ' + ar + ' كل', rep, sliders: ['lower', 'scale', 'x', 'z', 'rot'] };
     catThings.push(t); things.push(t);
   }
-  things.push({ id: 'c:*', kind: 'everything', cat: 'main', label: 'كل شي باللعبة مرة وحدة', en: 'everything all كل شي', rep: (catThings[0] || {}).rep || 'diamond_sword', sliders: ['lower', 'scale', 'x'] });
-  for (const u of units) if (u.rep.tex) things.push({ id: 'u:' + u.key, kind: 'item', unit: u, cat: itemCat(u.rep), label: u.fam ? famLabel(u.fam) : itemName(u.key), en: u.members.join(' ').replace(/_/g, ' ') + ' ' + u.members.map(itemName).join(' ') + ' ' + (FAM_SING[u.fam] || ''), rep: u.rep.name, sliders: ['lower', 'scale', 'x'] });
+  things.push({ id: 'c:*', kind: 'everything', cat: 'main', label: 'كل شي باللعبة مرة وحدة', en: 'everything all كل شي', rep: (catThings[0] || {}).rep || 'diamond_sword', sliders: ['lower', 'scale', 'x', 'z', 'rot'] });
+  for (const u of units) if (u.rep.tex) things.push({ id: 'u:' + u.key, kind: 'item', unit: u, cat: itemCat(u.rep), label: u.fam ? famLabel(u.fam) : itemName(u.key), en: u.members.join(' ').replace(/_/g, ' ') + ' ' + u.members.map(itemName).join(' ') + ' ' + (FAM_SING[u.fam] || ''), rep: u.rep.name, sliders: ['lower', 'scale', 'x', 'z', 'rot'] });
   // ---- values per thing
   const valsOf = (t) => {
     if (t.kind === 'group') return grpVals(t.tool);
-    if (t.kind === 'item') return itemVals(t.rep) || [0, 1, 0];
-    if (t.kind === 'shield') return sh.enabled ? [t.block ? sh.blockLower : sh.lower, sh.scale, 0] : [0, 1, 0];
+    if (t.kind === 'item') return itemVals(t.rep) || N5;
+    if (t.kind === 'shield') return sh.enabled ? shVals(t.block) : N5;
     if (t.kind === 'fire') return [fireCfg().lower];
-    if (t.kind === 'blocks') return h.on && h.blocks ? [h.blocks.lower, h.blocks.scale, h.blocks.x] : [0, 1, 0];
-    if (t.kind === 'cat' || t.kind === 'everything') { const v = (h.cats || {})[t.kind === 'cat' ? t.catKey : '*']; return h.on && v ? v.slice() : [0, 1, 0]; }
+    if (t.kind === 'blocks') return h.on && h.blocks ? pad5([h.blocks.lower, h.blocks.scale, h.blocks.x, h.blocks.z, h.blocks.rot]) : N5;
+    if (t.kind === 'cat' || t.kind === 'everything') { const v = (h.cats || {})[t.kind === 'cat' ? t.catKey : '*']; return h.on && v ? pad5(v) : N5; }
   };
-  const changed = (t) => { const v = valsOf(t); if (t.kind === 'cat' || t.kind === 'blocks' || t.kind === 'everything') return v[0] !== 0 || v[1] !== 1 || (v[2] || 0) !== 0; if (t.kind === 'fire') return v[0] > 0.001; return v[0] !== 0 || v[1] !== 1 || (v[2] || 0) !== 0 || (t.kind === 'item' && t.unit.members.some((n) => h.imported[n])) || (t.kind === 'shield' && sh.imported && sh.imported[t.block ? 'shield_blocking' : 'shield']); };
+  const changed = (t) => { const v = valsOf(t); if (t.kind === 'fire') return v[0] > 0.001; return !isNeutral(pad5(v)) || (t.kind === 'item' && t.unit.members.some((n) => h.imported[n])) || (t.kind === 'shield' && !!(sh.imported && sh.imported[t.block ? 'shield_blocking' : 'shield'])); };
   let fireTimer = 0;
   // a whole category: every item in it gets the same size (shrunk around what you see of the category's main item)
   async function setCat(t, v) {
-    h.cats = h.cats || {}; const neutral = v[0] === 0 && v[1] === 1 && !(v[2] || 0);
-    if (neutral) { delete h.cats[t.catKey]; t.members.forEach((n) => delete h.items[n]); return; }
+    h.cats = h.cats || {}; v = pad5(v);
+    if (isNeutral(v)) { delete h.cats[t.catKey]; t.members.forEach((n) => delete h.items[n]); return; }
     ensureOn(); h.cats[t.catKey] = v.slice(); const a = await anchorOf(t.rep);
-    t.members.forEach((n) => { h.items[n] = { lower: v[0], scale: v[1], x: v[2] || 0, ...(a ? { anchor: a } : {}) }; });
+    t.members.forEach((n) => { h.items[n] = { lower: v[0], scale: v[1], x: v[2], z: v[3], rot: v[4], ...(a ? { anchor: a } : {}) }; });
   }
   async function setVals(t, v) {
     if (t.kind === 'group') { ensureOn(); if (t.tool) { h.hLower = v[0]; h.hScale = v[1]; h.hX = v[2] || 0; } else { h.gLower = v[0]; h.gScale = v[1]; } }
-    else if (t.kind === 'item') { const neutral = v[0] === 0 && v[1] === 1 && !(v[2] || 0); if (neutral) t.unit.members.forEach((n) => delete h.items[n]); else { ensureOn(); const a = await anchorOf(t.rep); t.unit.members.forEach((n) => { h.items[n] = { lower: v[0], scale: v[1], x: v[2] || 0, ...(a ? { anchor: a } : {}) }; }); } }
-    else if (t.kind === 'shield') { sh.enabled = true; if (t.block) sh.blockLower = v[0]; else sh.lower = v[0]; sh.scale = v[1]; if (sh.lower === 0 && sh.blockLower === 0 && sh.scale === 1) sh.enabled = false; }
+    else if (t.kind === 'item') { v = pad5(v); if (isNeutral(v)) t.unit.members.forEach((n) => delete h.items[n]); else { ensureOn(); const a = await anchorOf(t.rep); t.unit.members.forEach((n) => { h.items[n] = { lower: v[0], scale: v[1], x: v[2], z: v[3], rot: v[4], ...(a ? { anchor: a } : {}) }; }); } }
+    else if (t.kind === 'shield') { v = pad5(v); sh.enabled = true; if (t.block) { sh.blockLower = v[0]; sh.bscale = v[1]; sh.bx = v[2]; sh.bz = v[3]; sh.brot = v[4]; } else { sh.lower = v[0]; sh.scale = v[1]; sh.x = v[2]; sh.z = v[3]; sh.rot = v[4]; } if (isNeutral(shVals(false)) && isNeutral(shVals(true))) sh.enabled = false; }
     else if (t.kind === 'fire') { p.fire = Object.assign(fireCfg(), { lower: v[0] }); clearTimeout(fireTimer); fireTimer = setTimeout(() => applyFire(p, p.fire), 500); }
-    else if (t.kind === 'blocks') { const neutral = v[0] === 0 && v[1] === 1 && !(v[2] || 0); if (neutral) delete h.blocks; else { ensureOn(); h.blocks = { lower: v[0], scale: v[1], x: v[2] || 0, anchor: await anchorOf(t.rep) }; } }
+    else if (t.kind === 'blocks') { v = pad5(v); if (isNeutral(v)) delete h.blocks; else { ensureOn(); h.blocks = { lower: v[0], scale: v[1], x: v[2], z: v[3], rot: v[4], anchor: await anchorOf(t.rep) }; } }
     else if (t.kind === 'cat') await setCat(t, v);
     else if (t.kind === 'everything') { h.cats = h.cats || {}; h.cats['*'] = v.slice(); for (const ct of catThings) { if (ct.kind === 'blocks') await setVals(ct, v); else await setCat(ct, v); } }
     clearTimeout(setVals.t); setVals.t = setTimeout(saveProject, 400);
@@ -1298,7 +1300,7 @@ async function tabMeasure(b) {
   async function project(t, W, H, neutral) {
     if (t.kind === 'shield') return shQ.length ? heldProject(shQ, shEff(t.block, !neutral && sh.enabled), W, H) : null;
     const n = t.rep, q = await quadsOf(n); if (!q.length) return null;
-    if (neutral) { const info = disp[n] || {}; return heldProject(q, heldApply(info.disp, null, 0, 1, 0), W, H); }
+    if (neutral) { const info = disp[n] || {}; return heldProject(q, heldApply(info.disp, null, ...N5), W, H); }
     if (t.kind === 'group') { const info = disp[n] || {}; return heldProject(q, heldApply(info.disp, t.tool ? h.hAnchor : h.gAnchor, ...grpVals(t.tool)), W, H); }
     if (t.kind === 'blocks') { const info = disp[n] || {}, v = valsOf(t); return heldProject(q, heldApply(info.disp, (h.blocks && h.blocks.anchor) || await anchorOf(n), ...v), W, H); }
     if ((t.kind === 'item' || t.kind === 'cat' || t.kind === 'everything') && !itemVals(n)) await anchorOf(n);
@@ -1332,22 +1334,36 @@ async function tabMeasure(b) {
   $$('#mcats .chip', b).forEach((x) => x.onclick = () => { cat = x.dataset.c; $('#mq', b).value = ''; $$('#mcats .chip', b).forEach((y) => y.classList.toggle('on', y === x)); drawList(); });
   // ---- editor (one place for every measurement)
   const ed = $('#med', b); let pcv = null;
-  const SL = { lower: ['نزول', -4, 8, 0.25], scale: ['الحجم', 0.2, 1.6, 0.05], x: ['يمين/يسار', -6, 6, 0.25], fire: ['نزّل النار', 0, 0.9, 0.01] };
+  const SL = { lower: ['فوق/تحت', -6, 10, 0.25], scale: ['الحجم', 0.2, 1.6, 0.05], x: ['يمين/يسار', -10, 10, 0.25], z: ['قدام/ورا', -10, 10, 0.25], rot: ['الميلان', -90, 90, 1], fire: ['نزّل النار', 0, 0.9, 0.01] };
   function drawEditor() {
     const t = sel; if (!t) { ed.innerHTML = ''; return; }
     const v = valsOf(t);
-    const presets = t.kind === 'fire' ? [['عادي', [0]], ['قصير', [0.45]], ['قصير مرة', [0.6]], ['مخفي', [0.9]]] : t.kind === 'shield' ? [['قصير', [1, 0.85]], ['قصير مرة', [2, 0.7]], ['الأصلي', [0, 1]]] : [['Low', [2.5, 0.85, 0]], ['صغير', [3, 0.65, 0.5]], ['الأصلي', [0, 1, 0]]];
+    const presets = t.kind === 'fire' ? [['عادي', [0]], ['قصير', [0.45]], ['قصير مرة', [0.6]], ['مخفي', [0.9]]] : t.kind === 'shield' ? [['قصير', [1, 0.85, 0, 0, 0]], ['قصير مرة', [2, 0.7, 0, 0, 0]], ['الأصلي', N5]] : [['Low', [2.5, 0.85, 0, 0, 0]], ['صغير', [3, 0.65, 0.5, 0, 0]], ['الأصلي', N5]];
     ed.innerHTML = `<div class="row" style="margin-bottom:10px"><h3 style="margin:0;flex:1">${esc(t.label)}</h3>${t.unit && t.unit.fam ? `<span class="muted small" title="${esc(t.unit.members.join(', '))}">ينطبق على ${t.unit.members.length} أنواع</span>` : t.kind === 'cat' ? `<span class="muted small">ينطبق على ${t.members.length} شي</span>` : ''}</div>
       ${t.kind === 'cat' || t.kind === 'blocks' || t.kind === 'everything' ? `<div class="muted small" style="margin-bottom:8px;line-height:1.6">${t.kind === 'everything' ? 'يغيّر كل الأقسام مرة وحدة (البلوكات والأسلحة والأدوات والأكل وكل شي).' : `يغيّر ${t.members.length} شي مرة وحدة. المعاينة على ${esc(itemName(t.rep))}.`} بعدها تقدر تعدّل أي شي لحاله.</div>` : ''}
       ${t.kind === 'group' ? `<div class="muted small" style="margin-bottom:8px;line-height:1.6">ينطبق على كل ${t.tool ? 'السيوف والأدوات' : 'الأشياء العادية'} اللي ما لها قياس خاص. الأداة اللي تعطيها قياس لحالها يغلب.</div>` : ''}
-      <div class="fp-stage"><canvas id="mpcv"></canvas></div><div class="hstat" id="mstat"></div>
-      <div class="stack" style="gap:2px;margin-top:10px">${t.sliders.map((k, i) => `<div class="slider-row" style="grid-template-columns:90px 1fr 46px"><span>${SL[k][0]}${t.kind === 'shield' && k === 'scale' ? ' <span class="dim small">(للاثنين)</span>' : ''}</span><input type="range" data-i="${i}" min="${SL[k][1]}" max="${SL[k][2]}" step="${SL[k][3]}" value="${v[i]}"><output class="ltr">${k === 'fire' ? Math.round(v[i] * 100) + '%' : v[i]}</output></div>`).join('')}</div>
+      <div class="fp-stage"><canvas id="mpcv"></canvas></div><div class="muted small mhint">${icon('wand', 13)}<span>${t.kind === 'fire' ? 'اسحب لفوق أو لتحت عشان تنزّل النار' : 'اسحب الأداة بالماوس عشان تحرّكها — العجلة تكبّر وتصغّر، ومع Shift تميّلها'}</span></div><div class="hstat" id="mstat"></div>
+      <div class="stack" style="gap:2px;margin-top:10px">${t.sliders.map((k, i) => `<div class="slider-row" style="grid-template-columns:90px 1fr 46px"><span>${SL[k][0]}</span><input type="range" data-i="${i}" min="${SL[k][1]}" max="${SL[k][2]}" step="${SL[k][3]}" value="${v[i]}"><output class="ltr">${k === 'fire' ? Math.round(v[i] * 100) + '%' : v[i]}</output></div>`).join('')}</div>
       <div class="row" style="margin-top:8px;gap:6px">${presets.map(([n, pv], i) => `<button class="btn sm ${n === 'الأصلي' || n === 'عادي' ? 'ghost' : ''}" data-pre="${i}">${n}</button>`).join('')}</div>`;
     pcv = $('#mpcv', ed);
     const inputs = $$('input[type=range]', ed);
     const readV = () => inputs.map((x) => +x.value);
-    inputs.forEach((inp) => inp.oninput = async () => { inp.nextElementSibling.textContent = t.kind === 'fire' ? Math.round(+inp.value * 100) + '%' : inp.value; await setVals(t, t.kind === 'shield' ? [...readV(), 0] : readV()); render(); });
-    $$('[data-pre]', ed).forEach((x) => x.onclick = async () => { const pv = presets[+x.dataset.pre][1]; inputs.forEach((inp, i) => { inp.value = pv[i]; inp.nextElementSibling.textContent = t.kind === 'fire' ? Math.round(pv[i] * 100) + '%' : pv[i]; }); await setVals(t, t.kind === 'shield' ? [...pv, 0] : pv); render(); });
+    // drag the item in the preview to move it; the wheel makes it bigger/smaller
+    const byKey = (k) => inputs[t.sliders.indexOf(k)];
+    const nudge = (k, d) => { const inp = byKey(k); if (!inp) return; const v = Math.max(+inp.min, Math.min(+inp.max, +inp.value + d)); inp.value = Math.round(v / +inp.step) * +inp.step; inp.nextElementSibling.textContent = k === 'fire' ? Math.round(+inp.value * 100) + '%' : (+inp.value).toFixed(2).replace(/\.?0+$/, ''); };
+    let drag = null, pend = 0;
+    const commit = () => { cancelAnimationFrame(pend); pend = requestAnimationFrame(async () => { await setVals(t, readV()); render(); }); };
+    pcv.style.cursor = 'grab'; pcv.style.touchAction = 'none';
+    pcv.onpointerdown = (e) => { drag = { x: e.clientX, y: e.clientY }; pcv.setPointerCapture(e.pointerId); pcv.style.cursor = 'grabbing'; };
+    pcv.onpointermove = (e) => {
+      if (!drag) return; const r = pcv.getBoundingClientRect(), dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag = { x: e.clientX, y: e.clientY };
+      if (t.kind === 'fire') nudge('fire', dy / r.height * 0.9); else { nudge('x', dx / r.width * 16); nudge('lower', dy / r.height * 12); }
+      commit();
+    };
+    pcv.onpointerup = pcv.onpointercancel = () => { drag = null; pcv.style.cursor = 'grab'; };
+    pcv.onwheel = (e) => { if (t.kind === 'fire') return; e.preventDefault(); nudge(e.shiftKey ? 'rot' : 'scale', (e.deltaY < 0 ? 1 : -1) * (e.shiftKey ? 5 : 0.05)); commit(); };
+    inputs.forEach((inp) => inp.oninput = async () => { inp.nextElementSibling.textContent = t.kind === 'fire' ? Math.round(+inp.value * 100) + '%' : inp.value; await setVals(t, readV()); render(); });
+    $$('[data-pre]', ed).forEach((x) => x.onclick = async () => { const pv = presets[+x.dataset.pre][1]; inputs.forEach((inp, i) => { inp.value = pv[i]; inp.nextElementSibling.textContent = t.kind === 'fire' ? Math.round(pv[i] * 100) + '%' : pv[i]; }); await setVals(t, pv); render(); });
     render();
   }
   async function render() {
@@ -1369,9 +1385,9 @@ async function tabMeasure(b) {
     for (let i = 0; i < 40; i++) {
       const st = await statusOf(t); if (!st || st.k === 'ok') break;
       if (t.kind === 'fire') v[0] = Math.max(0, v[0] - 0.05);
-      else { v[0] = v[0] > 0 ? Math.max(0, v[0] - 0.5) : Math.min(0, v[0] + 0.5); v[1] = v[1] < 1 ? Math.min(1, v[1] + 0.05) : Math.max(1, v[1] - 0.05); if (v[2] !== undefined) v[2] = v[2] > 0 ? Math.max(0, v[2] - 0.25) : Math.min(0, v[2] + 0.25); }
+      else { v = pad5(v); const toward = (x, z0, st) => (x > z0 ? Math.max(z0, x - st) : Math.min(z0, x + st)); v[0] = toward(v[0], 0, 0.5); v[1] = toward(v[1], 1, 0.05); v[2] = toward(v[2], 0, 0.25); v[3] = toward(v[3], 0, 0.5); v[4] = toward(v[4], 0, 5); }
       v = v.map((x) => Math.round(x * 100) / 100);
-      await setVals(t, t.kind === 'shield' ? [v[0], v[1], 0] : v);
+      await setVals(t, v);
     }
     toast('ضبطتها عشان تبان زين ✓'); drawEditor();
   }
@@ -1391,11 +1407,11 @@ function heldRot(v, r, left) {
   return [x, y, z];
 }
 // same change the pack gets on install (keep in step with held:build in main.js)
-function heldApply(disp, center, lower, scale, xs) {
+function heldApply(disp, center, lower, scale, xs, z = 0, rot = 0) {
   const d = disp || { rotation: [0, -90, 25], translation: [1.13, 3.2, 1.13], scale: [0.68, 0.68, 0.68] };
-  const r = d.rotation || [0, 0, 0], t = [...(d.translation || [0, 0, 0])], S0 = d.scale || [1, 1, 1], S1 = S0.map((v) => v * scale);
-  if (center) { const dv = heldRot([0, 1, 2].map((i) => (S0[i] - S1[i]) * center[i]), r); for (let i = 0; i < 3; i++) t[i] += dv[i] * 16; }
-  t[1] -= lower; t[0] += xs;
+  const r0 = d.rotation || [0, 0, 0], r = [r0[0], r0[1], r0[2] + (rot || 0)], t = [...(d.translation || [0, 0, 0])], S0 = d.scale || [1, 1, 1], S1 = S0.map((v) => v * scale);
+  if (center) { const a = heldRot([0, 1, 2].map((i) => S0[i] * center[i]), r0), b = heldRot([0, 1, 2].map((i) => S1[i] * center[i]), r); for (let i = 0; i < 3; i++) t[i] += (a[i] - b[i]) * 16; }
+  t[1] -= lower; t[0] += xs || 0; t[2] += z || 0;
   return { r, t: t.map((v) => Math.max(-80, Math.min(80, v)) / 16), s: S1.map((v) => Math.max(-4, Math.min(4, v))) };
 }
 // item-space quads (blocks). Normal items are centred; the shield is drawn flipped around the -0.5 corner
@@ -2486,15 +2502,16 @@ async function shieldQuadsOf(p) {
   return r ? heldQuads(await IMG.fromB64(r.data), true, 'shield') : [];
 }
 // same maths as held:build — shrink around the part you see, then lower
-function shieldMod(m, lower, scale, anchor, p) {
+function shieldMod(m, lower, scale, anchor, p, xs = 0, z = 0, rot = 0) {
   if (!m || !m.display) return m;
   if (p && p.packFormat <= 3) delete m.gui_light;
   for (const k of ['firstperson_righthand', 'firstperson_lefthand']) {
     const d = m.display[k]; if (!d) continue; const left = k.includes('left');
     d.translation = [...(d.translation || [0, 0, 0])];
-    const S0 = d.scale || [1, 1, 1], S1 = S0.map((v) => v * scale);
-    if (anchor) { const dv = heldRot([0, 1, 2].map((i) => (S0[i] - S1[i]) * anchor[i]), d.rotation || [0, 0, 0], left); if (left) dv[0] = -dv[0]; for (let i = 0; i < 3; i++) d.translation[i] += dv[i] * 16; }
-    d.translation[1] -= lower;
+    const r0 = [...(d.rotation || [0, 0, 0])], r1 = [r0[0], r0[1], r0[2] + rot], S0 = d.scale || [1, 1, 1], S1 = S0.map((v) => v * scale);
+    if (anchor) { const a = heldRot([0, 1, 2].map((i) => S0[i] * anchor[i]), r0, left), b = heldRot([0, 1, 2].map((i) => S1[i] * anchor[i]), r1, left); const dv = [a[0] - b[0], a[1] - b[1], a[2] - b[2]]; if (left) dv[0] = -dv[0]; for (let i = 0; i < 3; i++) d.translation[i] += dv[i] * 16; }
+    if (rot) d.rotation = r1.map((v) => +v.toFixed(2));
+    d.translation[1] -= lower; d.translation[0] += left ? -xs : xs; d.translation[2] += z;
     d.translation = d.translation.map((v) => +Math.max(-80, Math.min(80, v)).toFixed(3));
     d.scale = S1.map((v) => +Math.max(-4, Math.min(4, v)).toFixed(3));
   }
@@ -2511,8 +2528,8 @@ async function buildExtras() {
   if (sh && (sh.enabled || sh.imported) && p.packFormat >= 2) {
     const base = await shieldBase(p), [an, abl] = sh.enabled ? await shieldAnchors(p, base) : [null, null];
     const on = !!sh.enabled;
-    if (base.a) ex['assets/minecraft/models/item/shield.json'] = JSON.stringify(on ? shieldMod(base.a, sh.lower, sh.scale, an, p) : base.a, null, 2);
-    if (base.bl) ex['assets/minecraft/models/item/shield_blocking.json'] = JSON.stringify(on ? shieldMod(base.bl, sh.blockLower, sh.scale, abl, p) : base.bl, null, 2);
+    if (base.a) ex['assets/minecraft/models/item/shield.json'] = JSON.stringify(on ? shieldMod(base.a, sh.lower, sh.scale, an, p, sh.x || 0, sh.z || 0, sh.rot || 0) : base.a, null, 2);
+    if (base.bl) ex['assets/minecraft/models/item/shield_blocking.json'] = JSON.stringify(on ? shieldMod(base.bl, sh.blockLower, sh.bscale || sh.scale, abl, p, sh.bx || 0, sh.bz || 0, sh.brot || 0) : base.bl, null, 2);
   }
   if (p.held && (p.held.on || Object.keys(p.held.imported || {}).length) && p.baseJar) { const r = await api.held.build(p, p.held); Object.assign(ex, r.extras || {}); }
   return ex;
