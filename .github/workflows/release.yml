@@ -39,17 +39,29 @@ jobs:
 
       - name: Install NSIS (if missing)
         shell: pwsh
-        run: if (-not (Test-Path "C:\Program Files (x86)\NSIS\makensis.exe")) { choco install nsis -y }
+        run: |
+          $m = "C:\Program Files (x86)\NSIS\makensis.exe"
+          if (-not (Test-Path $m)) {
+            # Chocolatey is sometimes down (503), so use the NSIS build that electron-builder hosts on GitHub
+            $url = "https://github.com/electron-userland/electron-builder-binaries/releases/download/nsis-3.0.4.1/nsis-3.0.4.1.7z"
+            Invoke-WebRequest $url -OutFile nsis.7z -MaximumRetryCount 5 -RetryIntervalSec 5
+            7z x nsis.7z -o"$env:RUNNER_TEMP\nsis" -y | Out-Null
+            $m = (Get-ChildItem "$env:RUNNER_TEMP\nsis" -Recurse -Filter makensis.exe | Where-Object { $_.FullName -notmatch "\\Bin\\" } | Select-Object -First 1).FullName
+          }
+          "MAKENSIS=$m" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          Write-Host "makensis: $m"
 
       - name: Build installer
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force release | Out-Null
-          & "C:\Program Files (x86)\NSIS\makensis.exe" /V2 "/DVER=$env:VER" build\installer.nsi
+          & $env:MAKENSIS /V2 "/DVER=$env:VER" build\installer.nsi
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: v${{ env.VER }}
           name: MC Pack Studio ${{ env.VER }}
           files: release/*.exe
           body_path: RELEASE_NOTES.md
