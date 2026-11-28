@@ -651,3 +651,11 @@ html.no-anim *, html.no-anim *::before { animation: none !important; transition:
 .pat-grid button canvas { width: 36px; height: 36px; image-rendering: pixelated; border-radius: 6px; }
 .pat-grid button.on { border-color: var(--a1, #8b5cf6); background: rgba(139,92,246,.14); }
 .pat-grid button:hover { border-color: rgba(255,255,255,.2); }
+
+.phide-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px; max-height: 420px; overflow: auto; padding: 2px; }
+.phc { position: relative; padding-inline-end: 30px; }
+.phc .phx { position: absolute; inset-inline-end: 8px; top: 50%; transform: translateY(-50%); opacity: .55; display: flex; }
+.phc.hid { border-color: #ef4444; background: rgba(239,68,68,.1); }
+.phc.hid canvas { opacity: .25; }
+.phc.hid span { text-decoration: line-through; opacity: .7; }
+.phc.hid .phx { opacity: 1; color: #ef4444; }

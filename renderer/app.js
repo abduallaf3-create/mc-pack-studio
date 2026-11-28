@@ -2321,7 +2321,13 @@ async function tabParticles(b) {
     </div>
     <div class="card"><h3>كيف بتطلع باللعبة <span class="muted small">(معاينة متحركة)</span></h3>
       <div class="pstage"><canvas id="pcv"></canvas></div>
-      <div class="pframes" id="pfr"></div></div></div>`;
+      <div class="pframes" id="pfr"></div></div></div>
+  <div class="card stack" id="phide" style="margin-top:14px">
+    <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h3 style="margin:0">${icon('eye', 18)} شيل جزيئات <span class="muted small">(اختر وش تبي يختفي من اللعبة)</span></h3>
+      <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn sm" data-hp="pvp">${icon('wand', 14)} PvP نظيف</button><button class="btn sm" data-hp="fps">${icon('wand', 14)} أف بي إس أعلى</button><button class="btn sm ghost" data-hp="none">${icon('reset', 14)} رجّع الكل</button></div></div>
+    <div class="search"><input class="inp" id="phq" placeholder="ابحث: سويب، دخان، فقاعات، smoke...">${icon('search', 18)}</div>
+    <div class="phide-grid" id="phg"><div class="muted small">جاري التحميل...</div></div>
+    <div class="muted small" id="phn"></div></div>`;
   bindBaseActions(b);
   const frames = () => {
     const c = cfg(), S0 = base[0] ? base[0].width : cur.size, n = cur.frames;
@@ -2431,6 +2437,60 @@ async function tabParticles(b) {
   };
   $('#preset', b).onclick = async () => { for (let i = 0; i < cur.frames; i++) await api.tex.reset(p.id, cur.file(i)); p.particles[cur.id] = null; own = null; await saveProject(); sync(); toast('رجع للأصلي'); };
   load(cur);
+  initHideParticles(b, p);
+}
+
+// ---------- hide particles: pick any particle and it becomes invisible in game (transparent texture, same size)
+const P_AR = {
+  sweep: 'السويب (ضربة السيف)', critical_hit: 'الكريتكال', enchanted_hit: 'ضربة الإنشانت', damage: 'قلوب الضرر', glitter: 'جزيئات التوتم',
+  flame: 'اللهب', soul_fire_flame: 'لهب الأرواح', copper_fire_flame: 'لهب النحاس', small_flame: 'لهب صغير', explosion: 'الانفجار', generic: 'الدخان العادي', big_smoke: 'الدخان الكبير',
+  splash: 'رشّ الماي', bubble: 'الفقاعات', bubble_pop: 'فرقعة الفقاعات', drip_hang: 'القطرات (معلّقة)', drip_fall: 'القطرات (طايحة)', drip_land: 'القطرات (على الأرض)',
+  heart: 'القلوب', angry: 'الزعل (الدخان الأسود)', glint: 'لمعة', note: 'النوتات', effect: 'جزيئات الجرعات', spell: 'جزيئات السحر', spark: 'الشرار', lava: 'شرار اللافا',
+  sga: 'حروف طاولة الإنشانت', soul: 'الأرواح', sculk_soul: 'أرواح السكلك', sculk_charge: 'شحنة السكلك', sculk_charge_pop: 'فرقعة السكلك', shriek: 'صرخة الشريكر', vibration: 'الاهتزاز',
+  bubble_pop_: '', cherry: 'ورق الكرز', pale_oak: 'ورق البلوط الشاحب', leaf: 'ورق الشجر', spore_blossom: 'غبار زهرة الأبواغ', nautilus: 'النوتيلوس', nectar: 'الرحيق', firefly: 'اليراعات',
+  sonic_boom: 'ضربة الواردن', ominous_spawning: 'جزيئات الشؤم', trial_spawner_detection: 'كشف سبونر التجارب', vault_connection: 'وصلة الخزنة', flash: 'الفلاش (الألعاب النارية)',
+  campfire_cosy_smoke: 'دخان النار', dust: 'الغبار', dust_plume: 'غبار', gust: 'الهبّة (البريز)', small_gust: 'هبّة صغيرة', trial_omen: 'نذير التجارب', infested: 'الإصابة', item_slime: 'السلايم',
+  particles: 'كل الجزيئات (نسخة قديمة)', squid_ink: 'حبر الحبّار', glow: 'اللمعة', wax_on: 'الشمع', wax_off: 'إزالة الشمع', scrape: 'الكشط', electric_spark: 'شرارة كهربا', white_ash: 'الرماد', ash: 'الرماد',
+};
+const P_HIDE_PRESETS = {
+  pvp: ['damage', 'sweep', 'enchanted_hit', 'glitter'],
+  fps: ['generic', 'big_smoke', 'explosion', 'splash', 'bubble', 'bubble_pop', 'drip_hang', 'drip_fall', 'drip_land', 'effect', 'spell', 'campfire_cosy_smoke', 'sga', 'note', 'angry', 'heart', 'cherry', 'pale_oak', 'leaf', 'spore_blossom', 'ash', 'white_ash', 'firefly'],
+};
+const pGroupOf = (rel) => rel.split('/').pop().replace(/\.png$/, '').replace(/_\d+$/, '');
+async function initHideParticles(b, p) {
+  const box = $('#phg', b); if (!box) return;
+  const all = (await api.assets.list(p)).filter((a) => a.path.startsWith('textures/particle/'));
+  if (!all.length) { box.innerHTML = '<div class="muted small">حمّل ملفات اللعبة عشان تطلع لك كل الجزيئات</div>'; return; }
+  const groups = {};
+  for (const a of all) (groups[pGroupOf(a.path)] = groups[pGroupOf(a.path)] || []).push(a.path);
+  p.hiddenParticles = (p.hiddenParticles || []).filter((g) => groups[g]);
+  const keys = Object.keys(groups).sort((x, y) => (P_AR[y] ? 1 : 0) - (P_AR[x] ? 1 : 0) || x.localeCompare(y));
+  const name = (g) => P_AR[g] || g.replace(/_/g, ' ');
+  box.innerHTML = keys.map((g) => `<button class="pchip phc" data-g="${g}" title="${g}"><canvas width="28" height="28"></canvas><span>${name(g)}${groups[g].length > 1 ? ` <i class="muted">×${groups[g].length}</i>` : ''}</span><b class="phx">${icon('eye', 14)}</b></button>`).join('');
+  const isHidden = (g) => p.hiddenParticles.includes(g);
+  const paint = () => {
+    $$('.phc', box).forEach((x) => { const h = isHidden(x.dataset.g); x.classList.toggle('hid', h); x.querySelector('.phx').innerHTML = icon(h ? 'eyeOff' : 'eye', 14); });
+    const n = p.hiddenParticles.length; $('#phn', b).textContent = n ? `مخفي ${n} — ثبّت الباك وبتختفي باللعبة` : 'اضغط على أي جزيء عشان تخفيه';
+  };
+  // thumbnails (lazy, from the game files)
+  for (const g of keys) { const x = $(`.phc[data-g="${g}"] canvas`, box); const im = await texImg(p, groups[g][Math.floor(groups[g].length / 2)]); if (!x || !x.isConnected) return; if (im) { const c = x.getContext('2d'); c.imageSmoothingEnabled = false; c.drawImage(IMG.toCanvas(im), 0, 0, 28, 28); } }
+  async function setHidden(g, h) {
+    if (h === isHidden(g)) return;
+    for (const rel of groups[g]) {
+      if (h) { const im = await texImg(p, rel); await api.tex.put(p.id, rel, IMG.toB64(IMG.blank(im ? im.width : 16, im ? im.height : 16))); }
+      else await api.tex.reset(p.id, rel);
+    }
+    p.hiddenParticles = h ? [...p.hiddenParticles, g] : p.hiddenParticles.filter((x) => x !== g);
+  }
+  $$('.phc', box).forEach((x) => x.onclick = async () => { const g = x.dataset.g; await setHidden(g, !isHidden(g)); await saveProject(); paint(); });
+  $$('[data-hp]', b).forEach((x) => x.onclick = async () => {
+    const k = x.dataset.hp;
+    if (k === 'none') { for (const g of [...p.hiddenParticles]) await setHidden(g, false); await saveProject(); paint(); return toast('رجعت كل الجزيئات'); }
+    const list = P_HIDE_PRESETS[k].filter((g) => groups[g]); for (const g of list) await setHidden(g, true);
+    await saveProject(); paint(); toast(`انخفى ${list.length} جزيء ✓`);
+  });
+  $('#phq', b).oninput = () => { const q = $('#phq', b).value.trim().toLowerCase(); $$('.phc', box).forEach((x) => { x.style.display = !q || x.dataset.g.includes(q) || name(x.dataset.g).includes(q) ? '' : 'none'; }); };
+  paint();
 }
 
 // ------------------------------------------------------------- font generator
